@@ -60,6 +60,8 @@ struct RootConfigResolution
     QString errorMessage;
 };
 
+using NamespaceEntriesByFile = QHash<QString, QVector<ProjectStructureEntry>>;
+
 QString normalizedFilePathKey(const QString &path)
 {
     if (path.trimmed().isEmpty()) {
@@ -94,6 +96,15 @@ QString sectionNameFromLine(const TherionParsedLine &parsedLine);
 ProjectStructureEntryKind objectKindFromLine(const TherionParsedLine &parsedLine);
 QString objectNameFromLine(const TherionParsedLine &parsedLine);
 QString normalizedStructureDirective(const QString &directive);
+void appendProjectIndexDiagnostic(QVector<ProjectIndexDiagnostic> *diagnostics,
+                                  ProjectIndexDiagnosticKind kind,
+                                  const QString &sourceObjectId,
+                                  const QString &sourceFile,
+                                  int lineNumber,
+                                  int columnNumber,
+                                  int columnLength,
+                                  const QString &referencedName,
+                                  int candidateCount = 0);
 
 QString normalizedIdentityToken(const QString &value)
 {
@@ -496,6 +507,82 @@ bool stationReferenceShouldReportMissing(const QString &referenceName)
     return referenceName.contains(QLatin1Char('@'));
 }
 
+std::optional<TherionSourceLogicalArgumentRange> pointStationNameReferenceRange(
+    const TherionSourceLogicalCommand &command)
+{
+    if (command.metadata.commandName != QStringLiteral("point")
+        || command.positionalArgumentRanges.size() < 3) {
+        return std::nullopt;
+    }
+
+    const QString pointType = command.positionalArgumentRanges.at(2).text.trimmed().section(QLatin1Char(':'), 0, 0);
+    if (pointType.compare(QStringLiteral("station"), Qt::CaseInsensitive) != 0) {
+        return std::nullopt;
+    }
+
+    for (const TherionSourceLogicalOptionEntryRange &optionEntry : command.optionEntryRanges) {
+        if (normalizedCommandOptionName(optionEntry.key) != QStringLiteral("name")) {
+            continue;
+        }
+        for (const TherionSourceLogicalArgumentRange &valueRange : optionEntry.valueRanges) {
+            if (!valueRange.text.trimmed().isEmpty()) {
+                return valueRange;
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
+void appendStationReferenceDiagnosticsForRange(QVector<ProjectIndexDiagnostic> *diagnostics,
+                                               const StationReferenceIndex &stationIndex,
+                                               const ProjectStructureEntry &ownerEntry,
+                                               const QString &sourceFile,
+                                               const TherionSourceLogicalArgumentRange &referenceRange,
+                                               bool reportPlainMissingReferences)
+{
+    if (diagnostics == nullptr) {
+        return;
+    }
+
+    const QString referenceName = referenceRange.text.trimmed();
+    if (referenceName.isEmpty()) {
+        return;
+    }
+
+    const ReferenceResolution resolution =
+        resolveStationReference(stationIndex, referenceName, ownerEntry.namespacePath);
+    if (resolution.state == ReferenceResolutionState::Unique) {
+        return;
+    }
+
+    if (resolution.state == ReferenceResolutionState::Ambiguous) {
+        appendProjectIndexDiagnostic(diagnostics,
+                                     ProjectIndexDiagnosticKind::AmbiguousStationReference,
+                                     ownerEntry.objectId,
+                                     sourceFile,
+                                     referenceRange.physicalRange.lineNumber,
+                                     referenceRange.physicalRange.columnNumber,
+                                     referenceRange.physicalRange.columnLength,
+                                     referenceName,
+                                     resolution.candidateCount);
+        return;
+    }
+
+    if (!reportPlainMissingReferences && !stationReferenceShouldReportMissing(referenceName)) {
+        return;
+    }
+
+    appendProjectIndexDiagnostic(diagnostics,
+                                 ProjectIndexDiagnosticKind::UnknownStationReference,
+                                 ownerEntry.objectId,
+                                 sourceFile,
+                                 referenceRange.physicalRange.lineNumber,
+                                 referenceRange.physicalRange.columnNumber,
+                                 referenceRange.physicalRange.columnLength,
+                                 referenceName);
+}
+
 QString mapCompositionReferenceToken(const TherionParsedLine &parsedLine)
 {
     // Preview links describe spatial context, not map ownership, and commonly form cycles.
@@ -599,7 +686,7 @@ void appendProjectIndexDiagnostic(QVector<ProjectIndexDiagnostic> *diagnostics,
                                   int columnNumber,
                                   int columnLength,
                                   const QString &referencedName,
-                                  int candidateCount = 0)
+                                  int candidateCount)
 {
     if (diagnostics == nullptr) {
         return;
@@ -650,6 +737,52 @@ ProjectStructureEntry nearestNamespaceEntryForLine(const QVector<ProjectStructur
         }
     }
     return nearestEntry;
+}
+
+NamespaceEntriesByFile namespaceEntriesByFile(const QVector<ProjectStructureEntry> &entries)
+{
+    NamespaceEntriesByFile entriesByFile;
+    for (const ProjectStructureEntry &entry : entries) {
+        if (!entry.createsNamespace
+            || entry.sourceFile.trimmed().isEmpty()
+            || entry.lineNumber <= 0) {
+            continue;
+        }
+        entriesByFile[normalizedFilePathKey(entry.sourceFile)].append(entry);
+    }
+
+    for (auto it = entriesByFile.begin(); it != entriesByFile.end(); ++it) {
+        std::sort(it->begin(), it->end(), [](const ProjectStructureEntry &left, const ProjectStructureEntry &right) {
+            if (left.lineNumber != right.lineNumber) {
+                return left.lineNumber < right.lineNumber;
+            }
+            return left.depth < right.depth;
+        });
+    }
+
+    return entriesByFile;
+}
+
+ProjectStructureEntry nearestNamespaceEntryForLine(const NamespaceEntriesByFile &entriesByFile,
+                                                   const QString &sourceFile,
+                                                   int lineNumber)
+{
+    const auto entriesIt = entriesByFile.constFind(normalizedFilePathKey(sourceFile));
+    if (entriesIt == entriesByFile.constEnd()) {
+        return ProjectStructureEntry();
+    }
+
+    const QVector<ProjectStructureEntry> &entries = entriesIt.value();
+    const auto upper = std::upper_bound(entries.cbegin(),
+                                        entries.cend(),
+                                        lineNumber,
+                                        [](int value, const ProjectStructureEntry &entry) {
+                                            return value < entry.lineNumber;
+                                        });
+    if (upper == entries.cbegin()) {
+        return ProjectStructureEntry();
+    }
+    return *(upper - 1);
 }
 
 QString escapedIdentityToken(QString value)
@@ -1479,6 +1612,7 @@ QVector<ProjectIndexDiagnostic> scanJoinReferences(const QVector<ProjectStructur
          ProjectStructureEntryKind::Point,
          ProjectStructureEntryKind::Station});
     const QHash<QString, ProjectStructureEntry> entriesByKey = entriesByStructureKey(entries);
+    const NamespaceEntriesByFile namespaceEntries = namespaceEntriesByFile(entries);
 
     QSet<QString> sourceFiles;
     for (const ProjectStructureEntry &entry : entries) {
@@ -1496,7 +1630,7 @@ QVector<ProjectIndexDiagnostic> scanJoinReferences(const QVector<ProjectStructur
             }
 
             const ProjectStructureEntry ownerEntry =
-                nearestNamespaceEntryForLine(entries, sourceFile, command.startLineNumber);
+                nearestNamespaceEntryForLine(namespaceEntries, sourceFile, command.startLineNumber);
             for (int tokenIndex = 1; tokenIndex < command.parsed.tokens.size(); ++tokenIndex) {
                 const QString referenceName = command.parsed.tokens.value(tokenIndex).trimmed();
                 if (referenceName.isEmpty() || referenceName.startsWith(QLatin1Char('-'))) {
@@ -1574,16 +1708,7 @@ StationReferenceIndex stationReferencesFromProject(const QVector<ProjectStructur
                                                    const QHash<QString, QString> &inMemoryFileContentsByPath)
 {
     StationReferenceIndex index;
-    for (const ProjectStructureEntry &entry : entries) {
-        if (entry.kind != ProjectStructureEntryKind::Station || entry.name.trimmed().isEmpty()) {
-            continue;
-        }
-        addStationReferenceKey(&index,
-                               entry.name,
-                               entry.namespacePath,
-                               ProjectStructureIndex::structureEntryNodeKey(entry));
-    }
-
+    const NamespaceEntriesByFile namespaceEntries = namespaceEntriesByFile(entries);
     for (const QString &sourceFile : sourceFiles) {
         const TherionSourceLogicalDocument &logicalDocument =
             logicalDocumentForFile(sourceFile, cache, inMemoryFileContentsByPath);
@@ -1610,7 +1735,7 @@ StationReferenceIndex stationReferencesFromProject(const QVector<ProjectStructur
                     }
                 }
                 const ProjectStructureEntry ownerEntry =
-                    nearestNamespaceEntryForLine(entries, sourceFile, command.startLineNumber);
+                    nearestNamespaceEntryForLine(namespaceEntries, sourceFile, command.startLineNumber);
                 dataNamespacePath = ownerEntry.namespacePath;
                 continue;
             }
@@ -1661,55 +1786,45 @@ QVector<ProjectIndexDiagnostic> scanStationReferences(const QVector<ProjectStruc
 
     const StationReferenceIndex stationIndex =
         stationReferencesFromProject(entries, sourceFiles, cache, inMemoryFileContentsByPath);
+    const NamespaceEntriesByFile namespaceEntries = namespaceEntriesByFile(entries);
 
     for (const QString &sourceFile : std::as_const(sourceFiles)) {
         const TherionSourceLogicalDocument &logicalDocument =
             logicalDocumentForFile(sourceFile, cache, inMemoryFileContentsByPath);
         for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
+            if (const std::optional<TherionSourceLogicalArgumentRange> stationPointReference =
+                    pointStationNameReferenceRange(command)) {
+                const ProjectStructureEntry ownerEntry =
+                    nearestNamespaceEntryForLine(namespaceEntries, sourceFile, command.startLineNumber);
+                appendStationReferenceDiagnosticsForRange(&diagnostics,
+                                                          stationIndex,
+                                                          ownerEntry,
+                                                          sourceFile,
+                                                          *stationPointReference,
+                                                          true);
+                continue;
+            }
+
             if (command.metadata.commandName != QStringLiteral("equate")) {
                 continue;
             }
 
             const ProjectStructureEntry ownerEntry =
-                nearestNamespaceEntryForLine(entries, sourceFile, command.startLineNumber);
+                nearestNamespaceEntryForLine(namespaceEntries, sourceFile, command.startLineNumber);
             for (int tokenIndex = 1; tokenIndex < command.parsed.tokens.size(); ++tokenIndex) {
                 const QString referenceName = command.parsed.tokens.value(tokenIndex).trimmed();
                 if (referenceName.isEmpty() || referenceName.startsWith(QLatin1Char('-'))) {
                     break;
                 }
 
-                const ReferenceResolution resolution =
-                    resolveStationReference(stationIndex, referenceName, ownerEntry.namespacePath);
-                if (resolution.state == ReferenceResolutionState::Unique) {
-                    continue;
-                }
-
                 const TherionSourcePhysicalRange referenceRange =
                     parsedLineTokenPhysicalRange(command.parsed, tokenIndex);
-                if (resolution.state == ReferenceResolutionState::Ambiguous) {
-                    appendProjectIndexDiagnostic(&diagnostics,
-                                                 ProjectIndexDiagnosticKind::AmbiguousStationReference,
-                                                 ownerEntry.objectId,
-                                                 sourceFile,
-                                                 referenceRange.lineNumber,
-                                                 referenceRange.columnNumber,
-                                                 referenceRange.columnLength,
-                                                 referenceName,
-                                                 resolution.candidateCount);
-                    continue;
-                }
-
-                if (!stationReferenceShouldReportMissing(referenceName)) {
-                    continue;
-                }
-                appendProjectIndexDiagnostic(&diagnostics,
-                                             ProjectIndexDiagnosticKind::UnknownStationReference,
-                                             ownerEntry.objectId,
-                                             sourceFile,
-                                             referenceRange.lineNumber,
-                                             referenceRange.columnNumber,
-                                             referenceRange.columnLength,
-                                             referenceName);
+                appendStationReferenceDiagnosticsForRange(&diagnostics,
+                                                          stationIndex,
+                                                          ownerEntry,
+                                                          sourceFile,
+                                                          TherionSourceLogicalArgumentRange{tokenIndex, referenceName, referenceRange},
+                                                          false);
             }
         }
     }

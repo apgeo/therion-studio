@@ -64,7 +64,7 @@ Therion namespace and reference semantics are compatibility-critical. In particu
 
 ## UI Surface Ownership
 
-The main project sidebars have distinct responsibilities:
+The main project sidebar surfaces have distinct responsibilities. `Files`, `Survey`, and `Map` may be presented as tabs in one project navigation sidebar opened from the `Structure` rail entry, but their ownership stays separate:
 
 - `Files`: filesystem/project file operations and file navigation.
 - `Structure`: orientation and navigation for project objects and relationships. It may show structural relationship warnings that affect orientation, such as unresolved map/scrap composition references, but shall not become the general validation UI.
@@ -115,7 +115,7 @@ Validation should be conservative and catalog-backed.
 - map/scrap composition references
 - non-hierarchical relationships such as preview, revise, join, and equate when represented as graph data
 
-The Structure sidebar displays the ownership/navigation projection. It should not list general validation diagnostics. Validation-owned diagnostics should be surfaced in the Validation panel and may reference project-index objects when that improves navigation.
+The project navigation sidebar displays file navigation and project structure projections. Its default `Survey` tree follows survey namespace and definition ownership; map composition references are graph relationships and must not reparent map or scrap definition nodes in that projection. A separate `Map` projection may display map composition using those graph relationships. Structure should not list general validation diagnostics. Validation-owned diagnostics should be surfaced in the Validation panel and may reference project-index objects when that improves navigation.
 
 The Therion compiler remains authoritative for final export behavior. The project index is a lightweight navigation and early-feedback projection, not a compiler replacement.
 

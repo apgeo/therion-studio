@@ -42,6 +42,7 @@
 #include <QStyle>
 #include <QStyledItemDelegate>
 #include <QStyleOptionViewItem>
+#include <QTabWidget>
 #include <QTimer>
 #include <QToolButton>
 #include <QTreeView>
@@ -338,10 +339,11 @@ void MainWindow::buildProjectBrowser()
     }
 
     auto *projectPage = new QWidget(sidebarPages_);
+    projectFilesPage_ = projectPage;
     projectPage->setMinimumWidth(0);
     projectPage->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
     auto *projectLayout = new QVBoxLayout(projectPage);
-    projectLayout->setContentsMargins(12, 12, 12, 12);
+    projectLayout->setContentsMargins(4, 4, 4, 4);
     projectLayout->setSpacing(8);
 
     projectFilesDescriptionLabel_ = new QLabel(tr("Browse the files in the current project."), projectPage);
@@ -389,7 +391,10 @@ void MainWindow::buildProjectBrowser()
     connect(projectTree_, &QTreeView::customContextMenuRequested, this, &MainWindow::handleProjectTreeContextMenuRequested);
 
     projectLayout->addWidget(projectTree_, 1);
-    sidebarPages_->addWidget(projectPage);
+
+    auto *fileBrowserPlaceholder = new QWidget(sidebarPages_);
+    fileBrowserPlaceholder->setObjectName(QStringLiteral("fileBrowserSidebarPlaceholder"));
+    sidebarPages_->addWidget(fileBrowserPlaceholder);
 
     resetProjectBrowser();
 }
@@ -929,7 +934,6 @@ void MainWindow::buildStructureSidebar()
     activityLayout->setContentsMargins(6, 10, 6, 10);
     activityLayout->setSpacing(7);
 
-    const QString filesIconName = QStringLiteral("folder-tree");
     const QString structureIconName = QStringLiteral("network");
     const QString searchIconName = QStringLiteral("search");
     const QString validationIconName = QStringLiteral("spell-check");
@@ -968,19 +972,16 @@ void MainWindow::buildStructureSidebar()
             setSidebarPane(pane);
             return;
         }
+        if (pane == SidebarPane::StructureBrowser && activeSidebarPane_ == SidebarPane::FileBrowser) {
+            setSidebarPane(pane);
+            return;
+        }
         if (activeSidebarPane_ == pane) {
             setSidebarCollapsed(true);
             return;
         }
         setSidebarPane(pane);
     };
-
-    sidebarFilesButton_ = new QToolButton(activityBar);
-    configureActivityButton(sidebarFilesButton_, filesIconName, tr("Files"));
-    connect(sidebarFilesButton_, &QToolButton::clicked, this, [handleActivityButtonClick]() {
-        handleActivityButtonClick(SidebarPane::FileBrowser);
-    });
-    activityLayout->addWidget(sidebarFilesButton_);
 
     sidebarStructureButton_ = new QToolButton(activityBar);
     configureActivityButton(sidebarStructureButton_, structureIconName, tr("Structure"));
@@ -1025,13 +1026,11 @@ void MainWindow::buildStructureSidebar()
     activityLayout->addWidget(sidebarCompileButton_);
 
     const auto applyActivityRailTheme = [activityBar,
-                                         filesButton = sidebarFilesButton_,
                                          structureButton = sidebarStructureButton_,
                                          searchButton = sidebarSearchButton_,
                                          validationButton = sidebarValidationButton_,
                                          compilerButton = sidebarConsoleButton_,
                                          compileButton = sidebarCompileButton_,
-                                         filesIconName,
                                          structureIconName,
                                          searchIconName,
                                          validationIconName,
@@ -1048,9 +1047,6 @@ void MainWindow::buildStructureSidebar()
 
         const int extent = activityIconSize.width();
         const qreal devicePixelRatio = activityBar->devicePixelRatioF();
-        if (filesButton != nullptr) {
-            filesButton->setIcon(TherionStudio::themedLucideIcon(filesIconName, palette, extent, devicePixelRatio));
-        }
         if (structureButton != nullptr) {
             structureButton->setIcon(TherionStudio::themedLucideIcon(structureIconName, palette, extent, devicePixelRatio));
         }
@@ -1106,11 +1102,55 @@ void MainWindow::buildStructureSidebar()
     structureLayout->setContentsMargins(12, 12, 12, 12);
     structureLayout->setSpacing(8);
 
-    auto *structureDescription = new QLabel(tr("Browse the survey, map, and scrap structure in the current project."), structurePage);
+    auto *structureDescription = new QLabel(tr("Browse project files, surveys, maps, and scraps."), structurePage);
     structureDescription->setWordWrap(true);
     structureLayout->addWidget(structureDescription);
 
-    structureTree_ = new QTreeView(structurePage);
+    structureViewTabs_ = new QTabWidget(structurePage);
+    structureViewTabs_->setObjectName(QStringLiteral("structureViewTabs"));
+    structureViewTabs_->setDocumentMode(false);
+    if (projectFilesPage_ == nullptr) {
+        projectFilesPage_ = new QWidget(structureViewTabs_);
+    }
+    auto *surveyStructurePage = new QWidget(structureViewTabs_);
+    auto *surveyStructureLayout = new QVBoxLayout(surveyStructurePage);
+    surveyStructureLayout->setContentsMargins(4, 4, 4, 4);
+    surveyStructureLayout->setSpacing(0);
+    auto *mapStructurePage = new QWidget(structureViewTabs_);
+    auto *mapStructureLayout = new QVBoxLayout(mapStructurePage);
+    mapStructureLayout->setContentsMargins(4, 4, 4, 4);
+    mapStructureLayout->setSpacing(0);
+    structureViewTabs_->addTab(projectFilesPage_, tr("Files"));
+    structureViewTabs_->addTab(surveyStructurePage, tr("Survey"));
+    structureViewTabs_->addTab(mapStructurePage, tr("Map"));
+    structureViewTabs_->setCurrentIndex(1);
+    connect(structureViewTabs_, &QTabWidget::currentChanged, this, [this](int index) {
+        if (index == 0) {
+            activeSidebarPane_ = SidebarPane::FileBrowser;
+            if (sidebarStructureButton_ != nullptr) {
+                sidebarStructureButton_->setChecked(true);
+            }
+            return;
+        }
+
+        activeSidebarPane_ = SidebarPane::StructureBrowser;
+        if (sidebarStructureButton_ != nullptr) {
+            sidebarStructureButton_->setChecked(true);
+        }
+
+        const StructureViewMode nextMode = index == 2 ? StructureViewMode::Map : StructureViewMode::Survey;
+        if (structureViewMode_ == nextMode) {
+            return;
+        }
+        structureViewMode_ = nextMode;
+        hasAppliedStructureSidebarIndex_ = false;
+        lastAppliedStructureSidebarSignature_.clear();
+        if (!lastStructureSidebarProjectIndex_.projectRootPath.isEmpty()) {
+            applyStructureSidebarIndex(lastStructureSidebarProjectIndex_);
+        }
+    });
+
+    structureTree_ = new QTreeView(surveyStructurePage);
     structureTree_->setMinimumWidth(0);
     structureTree_->setModel(structureModel_);
     structureTree_->setRootIsDecorated(true);
@@ -1123,7 +1163,18 @@ void MainWindow::buildStructureSidebar()
         handleStructureItemActivated(index, structureTree_);
     });
 
-    structureLayout->addWidget(structureTree_, 1);
+    surveyStructureLayout->addWidget(structureTree_, 1);
+    connect(structureViewTabs_, &QTabWidget::currentChanged, this, [surveyStructureLayout, mapStructureLayout, this](int index) {
+        if (structureTree_ == nullptr) {
+            return;
+        }
+        if (index == 2) {
+            mapStructureLayout->addWidget(structureTree_, 1);
+        } else if (index == 1) {
+            surveyStructureLayout->addWidget(structureTree_, 1);
+        }
+    });
+    structureLayout->addWidget(structureViewTabs_, 1);
     sidebarPages_->addWidget(structurePage);
 
     buildSearchSidebar();
@@ -1167,12 +1218,19 @@ void MainWindow::setSidebarPane(SidebarPane pane)
     }
 
     activeSidebarPane_ = pane;
-    sidebarPages_->setCurrentIndex(static_cast<int>(pane));
-    if (sidebarFilesButton_ != nullptr) {
-        sidebarFilesButton_->setChecked(pane == SidebarPane::FileBrowser);
+    const int sidebarPageIndex = pane == SidebarPane::FileBrowser
+        ? static_cast<int>(SidebarPane::StructureBrowser)
+        : static_cast<int>(pane);
+    sidebarPages_->setCurrentIndex(sidebarPageIndex);
+    if (structureViewTabs_ != nullptr) {
+        if (pane == SidebarPane::FileBrowser) {
+            structureViewTabs_->setCurrentIndex(0);
+        } else if (pane == SidebarPane::StructureBrowser && structureViewTabs_->currentIndex() == 0) {
+            structureViewTabs_->setCurrentIndex(structureViewMode_ == StructureViewMode::Map ? 2 : 1);
+        }
     }
     if (sidebarStructureButton_ != nullptr) {
-        sidebarStructureButton_->setChecked(pane == SidebarPane::StructureBrowser);
+        sidebarStructureButton_->setChecked(pane == SidebarPane::FileBrowser || pane == SidebarPane::StructureBrowser);
     }
     if (sidebarSearchButton_ != nullptr) {
         sidebarSearchButton_->setChecked(pane == SidebarPane::Search);

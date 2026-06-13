@@ -516,6 +516,8 @@ int runProjectIndexDiagnosticProjectionTest()
     }
     if (!expect(writeTextFile(mapAFile,
                               QStringLiteral("scrap target.s\n"
+                                             "point 0 0 station -name known\n"
+                                             "point 1 1 station -name missing-map\n"
                                              "endscrap\n")),
                 "Project-index diagnostic first map fixture could not be written.")) {
         return 1;
@@ -573,6 +575,13 @@ int runProjectIndexDiagnosticProjectionTest()
                 "Project validation should expose unresolved station references from the project index.")) {
         return 1;
     }
+    if (!expect(findingHasSeverity(waitResult.result,
+                                   mapAFile,
+                                   QStringLiteral("unknown-station-reference"),
+                                   TherionSourceDiagnosticSeverity::Error),
+                "Project validation should expose unresolved point station -name references from the project index.")) {
+        return 1;
+    }
     const TherionSourceDiagnostic *unknownMapDiagnostic =
         findingDiagnostic(waitResult.result, rootFile, QStringLiteral("unknown-map-reference"));
     if (!expect(unknownMapDiagnostic != nullptr,
@@ -589,6 +598,78 @@ int runProjectIndexDiagnosticProjectionTest()
                                    QStringLiteral("mixed-map-and-scrap-references"),
                                    TherionSourceDiagnosticSeverity::Warning),
                 "Project validation should expose mixed map/scrap composition as a warning.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runUnindexedMapStationNameValidationTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary unindexed-map project directory creation failed.")) {
+        return 1;
+    }
+
+    const QString rootFile = QDir(tempDir.path()).filePath(QStringLiteral("root.th"));
+    const QString configFile = QDir(tempDir.path()).filePath(QStringLiteral("thconfig"));
+    const QString looseMapFile = QDir(tempDir.path()).filePath(QStringLiteral("loose.th2"));
+    if (!expect(writeTextFile(configFile,
+                              QStringLiteral("source root.th\n")),
+                "Unindexed-map config fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(rootFile,
+                              QStringLiteral("survey cave\n"
+                                             "centerline\n"
+                                             "  data normal from to tape compass clino\n"
+                                             "  1 2 1 0 0\n"
+                                             "endcenterline\n"
+                                             "endsurvey cave\n")),
+                "Unindexed-map root fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(looseMapFile,
+                              QStringLiteral("scrap loose\n"
+                                             "point 0 0 station -name test\n"
+                                             "point 1 1 station -name 1@survey\n"
+                                             "endscrap\n")),
+                "Unindexed-map TH2 fixture could not be written.")) {
+        return 1;
+    }
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(0);
+    scanner.requestScan(tempDir.path(), contextualDocumentTypeCatalog(), {});
+
+    const ValidationWaitResult waitResult = waitForValidation(scanner);
+    if (!expect(waitResult.received, "Unindexed-map station validation did not emit validationFinished before timeout.")) {
+        return 1;
+    }
+    if (!expect(findingHasSeverity(waitResult.result,
+                                   looseMapFile,
+                                   QStringLiteral("unknown-station-reference"),
+                                   TherionSourceDiagnosticSeverity::Error),
+                "Project validation should report station -name references in unindexed TH2 files.")) {
+        return 1;
+    }
+
+    const TherionSourceDiagnostic *diagnostic =
+        findingDiagnostic(waitResult.result, looseMapFile, QStringLiteral("unknown-station-reference"));
+    if (!expect(diagnostic != nullptr,
+                "Unindexed-map station diagnostic should be available for range checks.")) {
+        return 1;
+    }
+    if (!expect(diagnostic->lineNumber == 2
+                    && diagnostic->columnLength == QStringLiteral("test").size()
+                    && diagnostic->currentText == QStringLiteral("test"),
+                "Unindexed-map station diagnostic should cover the station name token.")) {
+        return 1;
+    }
+    if (!expect(findingCount(waitResult.result,
+                             looseMapFile,
+                             QStringLiteral("unknown-station-reference")) == 1,
+                "Unindexed-map validation should not report namespaced station references without project context.")) {
         return 1;
     }
 
@@ -1083,7 +1164,6 @@ int runBabiceSampleValidationWithOpenDocumentsTest()
     QHash<QString, QString> inMemoryContents;
     for (const QString &relativePath : {
              QStringLiteral("babice.th"),
-             QStringLiteral("untitled.th2"),
              QStringLiteral("untitled2.th2"),
          }) {
         const QString filePath = QDir(sampleProjectPath).filePath(relativePath);
@@ -1091,6 +1171,9 @@ int runBabiceSampleValidationWithOpenDocumentsTest()
         if (!expect(DocumentFile::readTextFile(filePath, &text, nullptr, nullptr, nullptr),
                     "Babice open-document fixture could not be read.")) {
             return 1;
+        }
+        if (relativePath == QStringLiteral("babice.th")) {
+            text.append(QStringLiteral("\ninput __missing_validation_fixture__.th\n"));
         }
         inMemoryContents.insert(canonicalOrAbsolutePath(filePath), text);
     }
@@ -1144,6 +1227,9 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runProjectIndexDiagnosticProjectionTest() != 0) {
+        return 1;
+    }
+    if (runUnindexedMapStationNameValidationTest() != 0) {
         return 1;
     }
     if (runDuplicateObjectIdDiagnosticIsNotDuplicatedTest() != 0) {

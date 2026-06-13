@@ -123,6 +123,12 @@ private:
         Console = 4
     };
 
+    enum class StructureViewMode
+    {
+        Survey,
+        Map
+    };
+
     void buildUi();
     void buildMenus();
     void buildProjectBrowser();
@@ -302,7 +308,9 @@ private:
     QLabel *projectFilesDescriptionLabel_ = nullptr;
     QWidget *projectFilesEmptyState_ = nullptr;
     QPushButton *projectFilesOpenProjectButton_ = nullptr;
+    QWidget *projectFilesPage_ = nullptr;
     QTreeView *projectTree_ = nullptr;
+    QTabWidget *structureViewTabs_ = nullptr;
     QTreeView *structureTree_ = nullptr;
     QTreeView *searchResultsTree_ = nullptr;
     QTreeView *validationResultsTree_ = nullptr;
@@ -327,7 +335,6 @@ private:
     QSplitter *mainContentSplitter_ = nullptr;
     QWidget *sidebarContainer_ = nullptr;
     QWidget *sidebarContentContainer_ = nullptr;
-    QToolButton *sidebarFilesButton_ = nullptr;
     QToolButton *sidebarStructureButton_ = nullptr;
     QToolButton *sidebarSearchButton_ = nullptr;
     QToolButton *sidebarValidationButton_ = nullptr;
@@ -457,10 +464,12 @@ private:
     QHash<QString, QString> projectFileWatcherSignatures_;
     QString projectStructureSummary_;
     QString lastAppliedStructureSidebarSignature_;
+    TherionStudio::ProjectIndexSnapshot lastStructureSidebarProjectIndex_;
     QString structureExpansionProjectRootPath_;
     QSet<QString> structureExpandedNodeKeys_;
     QHash<QString, QString> structureNameOverrides_;
     SidebarPane activeSidebarPane_ = SidebarPane::FileBrowser;
+    StructureViewMode structureViewMode_ = StructureViewMode::Survey;
     int sidebarExpandedWidth_ = 320;
     int sidebarRailWidth_ = 56;
     int consoleExpandedHeight_ = 240;

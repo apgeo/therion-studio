@@ -475,71 +475,6 @@ QString projectIndexStructuralSignature(const TherionStudio::ProjectIndexSnapsho
     return parts.join(QChar(0x1f));
 }
 
-bool forcedParentWouldCreateCycle(const QHash<QString, QString> &parentByChildKey,
-                                  const QString &childKey,
-                                  const QString &parentKey)
-{
-    QString currentKey = parentKey;
-    QSet<QString> visitedKeys;
-    while (!currentKey.isEmpty()) {
-        if (currentKey == childKey) {
-            return true;
-        }
-        if (visitedKeys.contains(currentKey)) {
-            return true;
-        }
-
-        visitedKeys.insert(currentKey);
-        currentKey = parentByChildKey.value(currentKey);
-    }
-
-    return false;
-}
-
-void recordForcedStructureParent(QHash<QString, QString> *parentByChildKey,
-                                 QSet<QString> *ambiguousChildKeys,
-                                 const QString &childKey,
-                                 const QString &parentKey)
-{
-    if (parentByChildKey == nullptr
-        || ambiguousChildKeys == nullptr
-        || childKey.isEmpty()
-        || parentKey.isEmpty()
-        || childKey == parentKey
-        || ambiguousChildKeys->contains(childKey)) {
-        return;
-    }
-
-    const auto existingParent = parentByChildKey->constFind(childKey);
-    if (existingParent != parentByChildKey->constEnd()) {
-        if (existingParent.value() == parentKey) {
-            return;
-        }
-
-        parentByChildKey->remove(childKey);
-        ambiguousChildKeys->insert(childKey);
-        return;
-    }
-
-    if (forcedParentWouldCreateCycle(*parentByChildKey, childKey, parentKey)) {
-        ambiguousChildKeys->insert(childKey);
-        return;
-    }
-
-    parentByChildKey->insert(childKey, parentKey);
-}
-
-void recordMapReferenceParents(QHash<QString, QString> *parentByChildKey,
-                               QSet<QString> *ambiguousChildKeys,
-                               const QHash<QString, QSet<QString>> &referencesByParentKey)
-{
-    for (auto it = referencesByParentKey.constBegin(); it != referencesByParentKey.constEnd(); ++it) {
-        for (const QString &childKey : it.value()) {
-            recordForcedStructureParent(parentByChildKey, ambiguousChildKeys, childKey, it.key());
-        }
-    }
-}
-
 int structureCategorySortRank(const QString &category)
 {
     if (category == QStringLiteral("Surveys")) {
@@ -757,6 +692,8 @@ void MainWindow::rebuildStructureSidebar()
 
 void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSnapshot &projectIndex)
 {
+    lastStructureSidebarProjectIndex_ = projectIndex;
+
     const QString currentExpansionProjectRootPath = normalizedStructurePathKey(projectRootPath_);
     if (structureExpansionProjectRootPath_ != currentExpansionProjectRootPath) {
         structureExpansionProjectRootPath_ = currentExpansionProjectRootPath;
@@ -764,7 +701,9 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
         hasStructureExpansionState_ = false;
     }
 
-    const QString nextSignature = projectIndexStructuralSignature(projectIndex);
+    const QString nextSignature = QStringLiteral("%1|%2")
+                                      .arg(QString::number(static_cast<int>(structureViewMode_)),
+                                           projectIndexStructuralSignature(projectIndex));
     if (hasAppliedStructureSidebarIndex_ && nextSignature == lastAppliedStructureSidebarSignature_) {
         updateStructureSidebarSourceLocations(projectIndex);
         return;
@@ -830,32 +769,7 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
         emptyItem->setEditable(false);
         structureModel_->appendRow(emptyItem);
     } else {
-        struct VisibleStructureNode
-        {
-            TherionStudio::ProjectStructureEntry entry;
-            QString entryName;
-            QString nodeKey;
-            QString forcedMapParentKey;
-            QStandardItem *item = nullptr;
-        };
-
-        QHash<QString, QString> forcedParentByChildKey;
-        QSet<QString> ambiguousForcedParentKeys;
-        recordMapReferenceParents(&forcedParentByChildKey,
-                                  &ambiguousForcedParentKeys,
-                                  projectIndex.mapChildReferencesByMapKey);
-        recordMapReferenceParents(&forcedParentByChildKey,
-                                  &ambiguousForcedParentKeys,
-                                  projectIndex.mapScrapReferencesByMapKey);
-
-        QVector<VisibleStructureNode> nodes;
-        nodes.reserve(entries.size());
-
-        for (const TherionStudio::ProjectStructureEntry &entry : entries) {
-            if (!includeInStructureView(entry.category)) {
-                continue;
-            }
-
+        const auto createStructureItem = [&](const TherionStudio::ProjectStructureEntry &entry) {
             QString entryName = entry.name;
             if (entry.lineNumber > 0 && entry.category != QStringLiteral("File")) {
                 const QString overrideKey = structureOverrideKey(entry.sourceFile, entry.lineNumber);
@@ -881,12 +795,157 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
                 entryItem->setData(overrideKey, OverrideKeyRole);
             }
 
+            return entryItem;
+        };
+
+        if (structureViewMode_ == StructureViewMode::Map) {
+            QHash<QString, TherionStudio::ProjectStructureEntry> entriesByKey;
+            QStringList mapKeys;
+            QSet<QString> referencedMapKeys;
+            for (const TherionStudio::ProjectStructureEntry &entry : entries) {
+                const QString key = TherionStudio::ProjectStructureIndex::structureEntryNodeKey(entry);
+                entriesByKey.insert(key, entry);
+                if (entry.category == QStringLiteral("Maps")) {
+                    mapKeys.append(key);
+                }
+            }
+
+            for (auto it = projectIndex.mapChildReferencesByMapKey.constBegin();
+                 it != projectIndex.mapChildReferencesByMapKey.constEnd();
+                 ++it) {
+                for (const QString &childKey : it.value()) {
+                    referencedMapKeys.insert(childKey);
+                }
+            }
+
+            QHash<QString, QVector<TherionStudio::ProjectIndexDiagnostic>> diagnosticsByMapKey;
+            for (const TherionStudio::ProjectIndexDiagnostic &diagnostic : projectIndex.diagnostics) {
+                if (isStructureRelationshipDiagnostic(diagnostic)) {
+                    diagnosticsByMapKey[diagnostic.sourceObjectId].append(diagnostic);
+                }
+            }
+
+            const auto sortedStructureKeys = [&](QSet<QString> keys) {
+                QStringList sortedKeys = keys.values();
+                std::sort(sortedKeys.begin(), sortedKeys.end(), [&](const QString &leftKey, const QString &rightKey) {
+                    const TherionStudio::ProjectStructureEntry leftEntry = entriesByKey.value(leftKey);
+                    const TherionStudio::ProjectStructureEntry rightEntry = entriesByKey.value(rightKey);
+                    const int leftRank = structureCategorySortRank(leftEntry.category);
+                    const int rightRank = structureCategorySortRank(rightEntry.category);
+                    if (leftRank != rightRank) {
+                        return leftRank < rightRank;
+                    }
+                    const int nameComparison = QString::localeAwareCompare(leftEntry.name.toLower(), rightEntry.name.toLower());
+                    if (nameComparison != 0) {
+                        return nameComparison < 0;
+                    }
+                    return leftKey < rightKey;
+                });
+                return sortedKeys;
+            };
+
+            const auto appendDiagnosticsForMap = [&](QStandardItem *parentItem, const QString &mapKey) {
+                if (parentItem == nullptr) {
+                    return;
+                }
+                const QVector<TherionStudio::ProjectIndexDiagnostic> diagnostics = diagnosticsByMapKey.value(mapKey);
+                for (const TherionStudio::ProjectIndexDiagnostic &diagnostic : diagnostics) {
+                    parentItem->appendRow(createDiagnosticItem(diagnostic, projectRootPath_));
+                }
+            };
+
+            std::function<QStandardItem *(const QString &, QSet<QString>)> createMapCompositionItem =
+                [&](const QString &key, QSet<QString> ancestorKeys) -> QStandardItem * {
+                const auto entryIt = entriesByKey.constFind(key);
+                if (entryIt == entriesByKey.constEnd()) {
+                    return nullptr;
+                }
+
+                QStandardItem *item = createStructureItem(entryIt.value());
+                if (ancestorKeys.contains(key)) {
+                    auto *cycleItem = new QStandardItem(tr("Cycle: %1").arg(entryIt->name));
+                    cycleItem->setEditable(false);
+                    cycleItem->setData(QStringLiteral("Diagnostics"), CategoryRole);
+                    item->appendRow(cycleItem);
+                    return item;
+                }
+
+                ancestorKeys.insert(key);
+
+                for (const QString &childMapKey : sortedStructureKeys(projectIndex.mapChildReferencesByMapKey.value(key))) {
+                    QStandardItem *childItem = createMapCompositionItem(childMapKey, ancestorKeys);
+                    if (childItem != nullptr) {
+                        item->appendRow(childItem);
+                    }
+                }
+
+                for (const QString &scrapKey : sortedStructureKeys(projectIndex.mapScrapReferencesByMapKey.value(key))) {
+                    const auto scrapIt = entriesByKey.constFind(scrapKey);
+                    if (scrapIt != entriesByKey.constEnd()) {
+                        item->appendRow(createStructureItem(scrapIt.value()));
+                    }
+                }
+
+                appendDiagnosticsForMap(item, key);
+                return item;
+            };
+
+            QStringList rootMapKeys;
+            for (const QString &mapKey : std::as_const(mapKeys)) {
+                if (!referencedMapKeys.contains(mapKey)) {
+                    rootMapKeys.append(mapKey);
+                }
+            }
+            if (rootMapKeys.isEmpty()) {
+                rootMapKeys = mapKeys;
+            }
+            std::sort(rootMapKeys.begin(), rootMapKeys.end(), [&](const QString &leftKey, const QString &rightKey) {
+                const TherionStudio::ProjectStructureEntry leftEntry = entriesByKey.value(leftKey);
+                const TherionStudio::ProjectStructureEntry rightEntry = entriesByKey.value(rightKey);
+                const int nameComparison = QString::localeAwareCompare(leftEntry.name.toLower(), rightEntry.name.toLower());
+                if (nameComparison != 0) {
+                    return nameComparison < 0;
+                }
+                return leftKey < rightKey;
+            });
+
+            if (rootMapKeys.isEmpty()) {
+                auto *emptyItem = new QStandardItem(tr("No map composition was found in the selected project"));
+                emptyItem->setEditable(false);
+                structureModel_->appendRow(emptyItem);
+            } else {
+                for (const QString &mapKey : std::as_const(rootMapKeys)) {
+                    QStandardItem *mapItem = createMapCompositionItem(mapKey, {});
+                    if (mapItem != nullptr) {
+                        structureModel_->appendRow(mapItem);
+                    }
+                }
+            }
+            sortStructureSiblingRows(structureModel_->invisibleRootItem());
+        } else {
+        struct VisibleStructureNode
+        {
+            TherionStudio::ProjectStructureEntry entry;
+            QString entryName;
+            QString nodeKey;
+            QStandardItem *item = nullptr;
+        };
+
+        QVector<VisibleStructureNode> nodes;
+        nodes.reserve(entries.size());
+
+        for (const TherionStudio::ProjectStructureEntry &entry : entries) {
+            if (!includeInStructureView(entry.category)) {
+                continue;
+            }
+
+            QStandardItem *entryItem = createStructureItem(entry);
+
             VisibleStructureNode node;
             node.entry = entry;
-            node.entryName = entryName;
+            node.entryName = entryItem->data(NameRole).toString();
             node.nodeKey = TherionStudio::ProjectStructureIndex::structureEntryNodeKey(entry);
             node.item = entryItem;
-            node.forcedMapParentKey = forcedParentByChildKey.value(node.nodeKey);
 
             nodes.append(node);
         }
@@ -924,19 +983,14 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
             }
 
             QStandardItem *parentItem = nullptr;
-            if (!node.forcedMapParentKey.isEmpty()) {
-                parentItem = mapItemByKey.value(node.forcedMapParentKey, nullptr);
-            }
-            if (parentItem == nullptr) {
-                for (int parentDepth = node.entry.depth - 1; parentDepth >= 0; --parentDepth) {
-                    if (parentDepth >= visibleNodeIndexByDepth.size()) {
-                        continue;
-                    }
-                    const int parentNodeIndex = visibleNodeIndexByDepth.at(parentDepth);
-                    if (parentNodeIndex >= 0 && parentNodeIndex < nodes.size()) {
-                        parentItem = nodes.at(parentNodeIndex).item;
-                        break;
-                    }
+            for (int parentDepth = node.entry.depth - 1; parentDepth >= 0; --parentDepth) {
+                if (parentDepth >= visibleNodeIndexByDepth.size()) {
+                    continue;
+                }
+                const int parentNodeIndex = visibleNodeIndexByDepth.at(parentDepth);
+                if (parentNodeIndex >= 0 && parentNodeIndex < nodes.size()) {
+                    parentItem = nodes.at(parentNodeIndex).item;
+                    break;
                 }
             }
 
@@ -961,6 +1015,7 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
             parentItem->appendRow(createDiagnosticItem(diagnostic, projectRootPath_));
         }
         sortStructureSiblingRows(structureModel_->invisibleRootItem());
+        }
     }
 
     if (hasExpansionState) {

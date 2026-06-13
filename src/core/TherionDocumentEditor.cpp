@@ -1684,12 +1684,6 @@ bool TherionDocumentEditor::appendDraftGeometryEdits(const QString &contents,
         if (pointOptions.type.trimmed().isEmpty()) {
             pointOptions.type = QStringLiteral("station");
         }
-        if (!pointOptions.nameEnabled
-            && pointOptions.name.trimmed().isEmpty()
-            && pointOptions.type.trimmed().compare(QStringLiteral("station"), Qt::CaseInsensitive) == 0) {
-            pointOptions.name = QStringLiteral("draft-point");
-            pointOptions.nameEnabled = true;
-        }
         geometryLines.append(QStringLiteral("  point %1 %2 %3")
                                  .arg(formatCoordinate(anchor.x()),
                                       formatCoordinate(anchor.y()),

@@ -74,7 +74,6 @@ void MapEditorTab::beginPendingInsertObject(const QString &commandKind)
     if (normalizedCommand == QStringLiteral("scrap")) {
         fields.identifier = QStringLiteral("new-scrap");
     } else if (normalizedCommand == QStringLiteral("point")) {
-        fields.name = QStringLiteral("draft-point");
         fields.nameVisible = true;
     }
     fields.textVisible = pendingLabelTextVisible(normalizedCommand, fields.type, fields.text);
@@ -157,10 +156,6 @@ void MapEditorTab::setPendingInsertQuickFields(const InspectorObjectQuickFields 
         interactiveDrawState_.pendingInsertFields_.type = defaultPendingTypeForCommand(normalizedCommand);
     }
     if (normalizedCommand == QStringLiteral("point")) {
-        if (interactiveDrawState_.pendingInsertFields_.type.trimmed().compare(QStringLiteral("station"), Qt::CaseInsensitive) != 0
-            && interactiveDrawState_.pendingInsertFields_.name.trimmed() == QStringLiteral("draft-point")) {
-            interactiveDrawState_.pendingInsertFields_.name.clear();
-        }
         interactiveDrawState_.pendingInsertFields_.nameVisible = pendingPointNameVisible(interactiveDrawState_.pendingInsertFields_.type,
                                                                    interactiveDrawState_.pendingInsertFields_.name);
     } else {

@@ -49,7 +49,7 @@ The main window contains:
 
 - the menu bar (`File`, `Edit`, `View`, `Help`)
 - a top command bar with project, save, editor, and map actions
-- the left activity rail (`Files`, `Structure`, `Compiler`) and a quick compile action
+- the left activity rail (`Structure`, `Search`, `Validation`, `Compiler`) and a quick compile action
 - document tabs in the center
 - a status bar with compile, encoding, and map state
 
@@ -150,7 +150,7 @@ For `.th2` files:
 - command, option, value, and path autocomplete while typing; command suggestions are filtered for the current document type (`.th`, `.th2`, or Therion config)
 - `Ctrl+Space` to open autocomplete manually
 - contextual help for the current command or option; Raw and Blocks show the same complete command help, positional arguments stay in documented order, options are listed alphabetically, and the help panel is titled with the current command or selected help target
-- `Validate Document` in the main toolbar scans the current source, opens the left `Validation` panel, and lists issues such as malformed option tokens, unknown commands or options, commands used in the wrong document type or block context, missing arguments, unclosed blocks, duplicate IDs, unresolved object references, and area references to lines missing from the current scrap. Project validation additionally reports missing files referenced by `input` and `source` plus map/scrap/join/station references that the project index cannot resolve unambiguously, including `join` references to named line-point marks that are missing from the resolved line. Opening or restoring a project, saving or editing a project document, and external changes to project `.th`, `.th2`, or `thconfig` files refresh project validation in the background without switching panels, and `Validate Project` in the same panel manually refreshes all `.th`, `.th2`, and `thconfig` files in the open project. Background refreshes keep the previous visible findings and rail severity until the new result is ready. The Validation rail icon, findings list, and Raw editor diagnostics distinguish warning-only results from results that contain errors. Inline wave underlines and subtle backgrounds in Raw mode are editor projections of the same validation findings shown in the panel or tooltip; normal syntax colors only identify token roles. The Context Help panel continues to show command documentation. Activate a finding to jump to the affected raw source line, or use `Apply Fix` / `Apply All Safe Fixes` when the panel shows an explicit safe source edit.
+- `Validate Document` in the main toolbar scans the current source, opens the left `Validation` panel, and lists issues such as malformed option tokens, unknown commands or options, commands used in the wrong document type or block context, missing arguments, unclosed blocks, duplicate IDs, unresolved object references, and area references to lines missing from the current scrap. Project validation additionally reports missing files referenced by `input` and `source` plus map/scrap/join/station references that the project index cannot resolve unambiguously, including `point station -name` references that do not resolve to survey data and `join` references to named line-point marks that are missing from the resolved line. `point ... station` objects without `-name` are allowed; they are not validated against survey stations. Opening or restoring a project, saving or editing a project document, and external changes to project `.th`, `.th2`, or `thconfig` files refresh project validation in the background without switching panels, and `Validate Project` in the same panel manually refreshes all `.th`, `.th2`, and `thconfig` files in the open project. Background refreshes keep the previous visible findings and rail severity until the new result is ready. The Validation rail icon, findings list, and Raw editor diagnostics distinguish warning-only results from results that contain errors. Inline wave underlines and subtle backgrounds in Raw mode are editor projections of the same validation findings shown in the panel or tooltip; normal syntax colors only identify token roles. The Context Help panel continues to show command documentation. Activate a finding to jump to the affected raw source line, or use `Apply Fix` / `Apply All Safe Fixes` when the panel shows an explicit safe source edit.
 - a `Selection` inspector tab in Blocks mode for editing the selected block header and supported inline options; the first panel is titled with the selected Therion command and shows its source line
 - when no block is selected, the Blocks `Selection` tab shows `No block selected.`; when the fixed root `encoding` card is selected, it shows the command and encoding value as read-only text
 - find and replace from the `Edit` menu
@@ -169,9 +169,11 @@ Open the Search activity from the left rail or press `Command/Ctrl+Shift+F`. Ent
 
 Project search scans Therion text sources (`.th`, `.th2`, and Therion config files), includes unsaved edits from open tabs, and lists matches grouped by file with line and column locations. Double-click a file or match row to open the file at the matching text with the inline find bar ready for next/previous navigation. `.th2` matches open as map-editor documents with the Raw workspace active, so you can switch back to the visual map editor afterward.
 
-### 5.2 Structure Pane
+### 5.2 Project Navigation Pane
 
-The `Structure` pane is a lightweight navigation index for the opened project. Its sidebar description identifies it as the survey, map, and scrap structure for the current project. It shows `survey`, `map`, and `scrap` hierarchy and recognizes both Therion centerline spellings: `centreline` and `centerline`.
+The `Structure` activity opens the project navigation pane with `Files`, `Survey`, and `Map` tabs.
+
+`Files` shows the project folder tree and supports file navigation and file/folder context-menu actions. `Survey` shows the survey namespace and definition hierarchy for `survey`, `map`, and `scrap` objects and recognizes both Therion centerline spellings: `centreline` and `centerline`. `Map` shows map composition: top-level maps, child maps, and referenced scraps.
 
 Select a row to inspect it in the tree. Double-click a source row, or select it and press `Enter`, to open its source document and navigate to the matching line.
 
@@ -179,7 +181,7 @@ Within each parent, rows are grouped as surveys, maps, then scraps, and each gro
 
 The index uses the selected `Target Config` when it points inside the opened project. Without an explicit target config, Therion Studio tries the root `thconfig`; if that does not exist and exactly one named root config exists (`*.thconfig` or `thconfig.*`), that file is used. If several config files are possible, choose the intended `Target Config` in the `Compiler` pane.
 
-Maps and scraps referenced inside `map ... endmap` are shown under that map when the reference is unambiguous. Unresolved or ambiguous references appear as warning rows that navigate to the source line. The Therion compiler remains the authoritative validator for export behavior.
+In the `Survey` tab, maps and scraps remain under the survey namespace where they are defined, even when another map references them as part of map composition. In the `Map` tab, maps and scraps are shown under the maps that reference them. Unresolved or ambiguous map composition references appear as warning rows that navigate to the source line. The Therion compiler remains the authoritative validator for export behavior.
 
 ## 6. Visual Map Editing (`.th2`)
 

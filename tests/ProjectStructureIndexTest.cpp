@@ -905,6 +905,8 @@ int runProjectIndexStationReferenceDiagnosticsTest()
                               QStringLiteral(
                                   "scrap s1\n"
                                   "point 0 0 station -name dup@cave\n"
+                                  "point 1 1 station -name missing-map@cave\n"
+                                  "point 2 2 station -name plain-missing\n"
                                   "endscrap\n")),
                 "The station-reference map file could not be written.")) {
         return 1;
@@ -933,11 +935,25 @@ int runProjectIndexStationReferenceDiagnosticsTest()
     }
 
     bool foundMissingStation = false;
+    bool foundMissingPointStation = false;
+    bool foundPlainMissingPointStation = false;
     for (const ProjectIndexDiagnostic &diagnostic : snapshot.diagnostics) {
         if (diagnostic.kind == ProjectIndexDiagnosticKind::UnknownStationReference
             && diagnostic.referencedName == QStringLiteral("missing@cave")
             && diagnostic.lineNumber == 8) {
             foundMissingStation = true;
+        }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::UnknownStationReference
+            && diagnostic.referencedName == QStringLiteral("missing-map@cave")
+            && diagnostic.lineNumber == 3
+            && diagnostic.columnLength == QStringLiteral("missing-map@cave").size()) {
+            foundMissingPointStation = true;
+        }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::UnknownStationReference
+            && diagnostic.referencedName == QStringLiteral("plain-missing")
+            && diagnostic.lineNumber == 4
+            && diagnostic.columnLength == QStringLiteral("plain-missing").size()) {
+            foundPlainMissingPointStation = true;
         }
         if (!expect(diagnostic.referencedName != QStringLiteral("a1@cave"),
                     "Resolved equate station references should not produce diagnostics.")) {
@@ -967,6 +983,14 @@ int runProjectIndexStationReferenceDiagnosticsTest()
 
     if (!expect(foundMissingStation,
                 "The project index should report explicit unknown equate station references.")) {
+        return 1;
+    }
+    if (!expect(foundMissingPointStation,
+                "The project index should report unknown point station -name references.")) {
+        return 1;
+    }
+    if (!expect(foundPlainMissingPointStation,
+                "The project index should report plain unknown point station -name references.")) {
         return 1;
     }
 

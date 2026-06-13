@@ -239,7 +239,7 @@ TherionSourceValidationCatalog basicCatalog()
     catalog.commandOptionNames.insert(QStringLiteral("map"), {QStringLiteral("-title")});
     catalog.commandOptionNames.insert(QStringLiteral("export"), {QStringLiteral("-output"), QStringLiteral("-o"), QStringLiteral("-layout")});
     catalog.commandOptionNames.insert(QStringLiteral("revise"), {QStringLiteral("-stations")});
-    catalog.commandOptionNames.insert(QStringLiteral("point"), {QStringLiteral("-text")});
+    catalog.commandOptionNames.insert(QStringLiteral("point"), {QStringLiteral("-name"), QStringLiteral("-text")});
     catalog.commandOptionNames.insert(QStringLiteral("line"),
                                       {QStringLiteral("-close"), QStringLiteral("-clip"), QStringLiteral("-subtype")});
     catalog.commandOptionNames.insert(QStringLiteral("scrap"), {QStringLiteral("-projection"), QStringLiteral("-scale")});
@@ -271,6 +271,8 @@ TherionSourceValidationCatalog basicCatalog()
                                                  QStringLiteral("EXACTLY_ONE"));
     catalog.commandOptionFixedArityByKey.insert(TherionStudio::commandOptionValueKey(QStringLiteral("point"), QStringLiteral("-text")),
                                                 0);
+    catalog.commandOptionValueArityTokens.insert(TherionStudio::commandOptionValueKey(QStringLiteral("point"), QStringLiteral("-name")),
+                                                 QStringLiteral("EXACTLY_ONE"));
     return catalog;
 }
 
@@ -356,6 +358,33 @@ void reportsMissingRequiredArgument()
             "Missing required positional argument should produce a diagnostic.");
     require(severityForDiagnostic(result, QStringLiteral("missing-argument")) == TherionSourceDiagnosticSeverity::Error,
             "Missing required positional argument should be reported as an error.");
+}
+
+void allowsStationPointWithoutName()
+{
+    const TherionSourceValidationResult unnamed =
+        TherionSourceValidator::validate(QStringLiteral("scrap test\n"
+                                                        "point 10 20 station\n"
+                                                        "endscrap\n"),
+                                         basicCatalog());
+    require(!containsDiagnostic(unnamed, QStringLiteral("missing-station-reference")),
+            "Station points without -name are valid Therion map objects.");
+
+    const TherionSourceValidationResult named =
+        TherionSourceValidator::validate(QStringLiteral("scrap test\n"
+                                                        "point 10 20 station -name 1@survey\n"
+                                                        "endscrap\n"),
+                                         basicCatalog());
+    require(!containsDiagnostic(named, QStringLiteral("missing-station-reference")),
+            "Station points with -name should not produce missing station reference diagnostics.");
+
+    const TherionSourceValidationResult label =
+        TherionSourceValidator::validate(QStringLiteral("scrap test\n"
+                                                        "point 10 20 label -text label\n"
+                                                        "endscrap\n"),
+                                         basicCatalog());
+    require(!containsDiagnostic(label, QStringLiteral("missing-station-reference")),
+            "Non-station points should not require -name.");
 }
 
 void acceptsBracketedOptionValueAsSingleLogicalValue()
@@ -729,6 +758,7 @@ int main(int argc, char **argv)
     reportsUnknownCommandWithoutSafeFix();
     reportsUnknownOptionAndMissingOptionValue();
     reportsMissingRequiredArgument();
+    allowsStationPointWithoutName();
     acceptsBracketedOptionValueAsSingleLogicalValue();
     acceptsLineContinuationAfterOptionValue();
     validatesContinuedCommandAsOneCatalogCommand();

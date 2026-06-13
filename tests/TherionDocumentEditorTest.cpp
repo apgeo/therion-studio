@@ -649,7 +649,7 @@ int runAppendDraftGeometryTest()
     if (!expect(draftPointEdits.size() == 1
                     && draftPointEdits.at(0).startOffset == contents.indexOf(QStringLiteral("endscrap\n"))
                     && draftPointEdits.at(0).length == 0
-                    && draftPointEdits.at(0).replacementText == QStringLiteral("  point 123.4 567.8 station -name draft-point\n"),
+                    && draftPointEdits.at(0).replacementText == QStringLiteral("  point 123.4 567.8 station\n"),
                 "appendDraftGeometryEdits should expose the point insertion source edit.")) {
         return 1;
     }
@@ -664,7 +664,7 @@ int runAppendDraftGeometryTest()
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
-    if (!expect(contents == QStringLiteral("scrap main\n  point 123.4 567.8 station -name draft-point\nendscrap\n"),
+    if (!expect(contents == QStringLiteral("scrap main\n  point 123.4 567.8 station\nendscrap\n"),
                 "appendDraftGeometry should insert point geometry before endscrap.")) {
         return 1;
     }
@@ -943,7 +943,7 @@ int runAppendDraftGeometryTest()
         return 1;
     }
     if (!expect(contents == QStringLiteral("scrap first\n"
-                                           "  point 9.0 10.0 station -name draft-point\n"
+                                           "  point 9.0 10.0 station\n"
                                            "endscrap\n"
                                            "scrap second\n"
                                            "endscrap\n"),

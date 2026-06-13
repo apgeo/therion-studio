@@ -189,9 +189,101 @@ bool containsEquivalentFinding(const QVector<ProjectValidationScanner::Finding> 
     return false;
 }
 
+QString normalizedOptionName(QString optionName)
+{
+    optionName = optionName.trimmed().toLower();
+    while (optionName.startsWith(QLatin1Char('-'))) {
+        optionName.remove(0, 1);
+    }
+    return optionName;
+}
+
+const TherionSourceLogicalArgumentRange *pointStationNameRange(const TherionSourceLogicalCommand &command)
+{
+    if (command.metadata.commandName != QStringLiteral("point")
+        || command.positionalArgumentRanges.size() < 3) {
+        return nullptr;
+    }
+
+    const QString pointType = command.positionalArgumentRanges.at(2).text.trimmed().section(QLatin1Char(':'), 0, 0);
+    if (pointType.compare(QStringLiteral("station"), Qt::CaseInsensitive) != 0) {
+        return nullptr;
+    }
+
+    for (const TherionSourceLogicalOptionEntryRange &optionEntry : command.optionEntryRanges) {
+        if (normalizedOptionName(optionEntry.key) != QStringLiteral("name")) {
+            continue;
+        }
+        for (const TherionSourceLogicalArgumentRange &valueRange : optionEntry.valueRanges) {
+            if (!valueRange.text.trimmed().isEmpty()) {
+                return &valueRange;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+QSet<QString> indexedProjectSourceFiles(const ProjectIndexSnapshot &snapshot)
+{
+    QSet<QString> sourceFiles;
+    for (const ProjectStructureEntry &entry : snapshot.entries) {
+        const QString normalizedPath = canonicalOrAbsoluteFilePath(entry.sourceFile);
+        if (!normalizedPath.isEmpty()) {
+            sourceFiles.insert(normalizedPath);
+        }
+    }
+    return sourceFiles;
+}
+
+void appendUnindexedTh2StationNameFindings(ProjectValidationScanner::Result *result,
+                                           const QString &filePath,
+                                           const QString &text)
+{
+    if (result == nullptr
+        || result->limitReached
+        || therionSourceDocumentTypeForFilePath(filePath) != TherionSourceDocumentType::TherionMap) {
+        return;
+    }
+
+    TherionSourceDocumentMetadata metadata;
+    metadata.sourceType = TherionSourceDocumentType::TherionMap;
+    const TherionSourceLogicalDocument logicalDocument = TherionSourceLogicalDocument::fromText(text, metadata);
+    for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
+        const TherionSourceLogicalArgumentRange *nameRange = pointStationNameRange(command);
+        if (nameRange == nullptr) {
+            continue;
+        }
+        const QString referenceName = nameRange->text.trimmed();
+        if (referenceName.contains(QLatin1Char('@'))) {
+            continue;
+        }
+
+        TherionSourceDiagnostic diagnostic;
+        diagnostic.code = QStringLiteral("unknown-station-reference");
+        diagnostic.severity = TherionSourceDiagnosticSeverity::Error;
+        diagnostic.lineNumber = nameRange->physicalRange.lineNumber;
+        diagnostic.columnNumber = qMax(1, nameRange->physicalRange.columnNumber);
+        diagnostic.columnLength = qMax(1, nameRange->physicalRange.columnLength);
+        diagnostic.title = QObject::tr("Unknown station reference");
+        diagnostic.message = QObject::tr("Station reference `%1` cannot be resolved because this map file is not included in the project source graph.")
+                                 .arg(referenceName);
+        diagnostic.currentText = referenceName;
+
+        if (!containsEquivalentFinding(result->findings, filePath, diagnostic)) {
+            result->findings.append({filePath, diagnostic});
+        }
+        if (result->findings.size() >= kMaximumProjectValidationFindings) {
+            result->limitReached = true;
+            return;
+        }
+    }
+}
+
 void appendProjectIndexFindings(ProjectValidationScanner::Result *result,
                                 const QString &projectRootPath,
-                                const QHash<QString, QString> &inMemoryProjectContentsByPath)
+                                const QHash<QString, QString> &inMemoryProjectContentsByPath,
+                                const QHash<QString, QString> &searchedTextByPath)
 {
     if (result == nullptr || result->limitReached) {
         return;
@@ -230,6 +322,17 @@ void appendProjectIndexFindings(ProjectValidationScanner::Result *result,
         result->findings.append({indexDiagnostic.sourceFile, diagnostic});
         if (result->findings.size() >= kMaximumProjectValidationFindings) {
             result->limitReached = true;
+            return;
+        }
+    }
+
+    const QSet<QString> indexedSourceFiles = indexedProjectSourceFiles(snapshot);
+    for (auto it = searchedTextByPath.constBegin(); it != searchedTextByPath.constEnd(); ++it) {
+        if (indexedSourceFiles.contains(it.key())) {
+            continue;
+        }
+        appendUnindexedTh2StationNameFindings(result, it.key(), it.value());
+        if (result->limitReached) {
             return;
         }
     }
@@ -331,6 +434,7 @@ ProjectValidationScanner::Result performProjectValidation(const QString &project
     }
 
     QSet<QString> searchedPaths;
+    QHash<QString, QString> searchedTextByPath;
     QVector<QString> filePaths;
     collectValidatableFiles(result.projectRootPath, &filePaths);
     QSet<QString> knownProjectFilePaths;
@@ -352,6 +456,7 @@ ProjectValidationScanner::Result performProjectValidation(const QString &project
         const QString text = memoryIt != normalizedInMemoryProjectContentsByPath.constEnd()
             ? *memoryIt
             : readValidatableFileText(filePath);
+        searchedTextByPath.insert(filePath, text);
         appendFindingsForText(&result, filePath, text, validationCatalog, knownProjectFilePaths);
         if (result.limitReached) {
             return result;
@@ -367,13 +472,17 @@ ProjectValidationScanner::Result performProjectValidation(const QString &project
         }
         searchedPaths.insert(filePath);
         ++result.searchedFileCount;
+        searchedTextByPath.insert(filePath, *it);
         appendFindingsForText(&result, filePath, *it, validationCatalog, knownProjectFilePaths);
         if (result.limitReached) {
             return result;
         }
     }
 
-    appendProjectIndexFindings(&result, result.projectRootPath, normalizedInMemoryProjectContentsByPath);
+    appendProjectIndexFindings(&result,
+                               result.projectRootPath,
+                               normalizedInMemoryProjectContentsByPath,
+                               searchedTextByPath);
 
     return result;
 }

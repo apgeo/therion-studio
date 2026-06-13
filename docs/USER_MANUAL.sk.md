@@ -269,6 +269,7 @@ Pravým kliknutím bez ťahania na mapový objekt alebo vrchol čiary otvoríte 
 Pre čiary a hranice plôch:
 
 - vyberte vrchol na editáciu detailov line pointu,
+- pri ťahaní vertexu čiary alebo plochy poblíž iného objektu sa zvýraznia jeho vertexy ako kandidáti snapu; aktívny snap cieľ sa zvýrazní výraznejšie a Bezier kontrolné body zostávajú bez snapu,
 - pravým kliknutím na segment čiary a voľbou `Insert Point Here` rozdelíte najbližší segment v mieste kliknutia,
 - `Vložiť pred` / `Vložiť za` pridá vrchol poblíž vybraného vrcholu,
 - `Predĺžiť pred` / `Predĺžiť za` na koncoch čiary pokračuje v existujúcej čiare,

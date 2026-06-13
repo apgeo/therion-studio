@@ -200,6 +200,7 @@ Map editor editing workflows should include, at minimum:
 - background layer insertion and adjustment
 - finishing an in-progress line or area draft from the toolbar or equivalent command surface
 - selection of individual vertices or control points when editing geometry
+- dragging an existing line or area vertex shall offer viewport-scale snapping to nearby vertices or point anchors from other map objects, shall highlight candidate vertices on the nearby object for orientation, and shall highlight the active snap target while snapping is offered; Bezier control handles remain free-form
 - context-menu access to common selected-object and selected-line actions, mirroring the available `Selection` inspector groups for type/subtype edits, editable object fields, `Geometry`, the complete available `Line Point` panel, `Line Point Actions`, and `Object Actions`; unavailable groups and actions shall be omitted from the menu rather than shown disabled, and free text or numeric editors shall be opened/focused in the inspector rather than embedded in the native menu
 
 ### 3.4 Object Settings / Inspector Panels

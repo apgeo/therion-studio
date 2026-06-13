@@ -10,8 +10,10 @@
 #include <QGraphicsView>
 #include <QGraphicsSceneHoverEvent>
 #include <QGraphicsSceneMouseEvent>
+#include <QGraphicsPathItem>
 #include <QPainter>
 #include <QPainterPathStroker>
+#include <QLineF>
 #include <QPointF>
 #include <QRectF>
 #include <QObject>
@@ -25,6 +27,7 @@
 #include <QVector>
 #include <functional>
 #include <cmath>
+#include <limits>
 #include <optional>
 
 #include "MapEditorSceneSupport.h"
@@ -186,6 +189,11 @@ public:
     QPointF sourcePoint() const
     {
         return mapDisplayToSource(previewToSource(pos()));
+    }
+
+    int lineNumber() const
+    {
+        return lineNumber_;
     }
 
 protected:
@@ -457,6 +465,12 @@ public:
         setPos(sceneCoordsSourceToPreview(sourcePoint, sourceBounds, previewBounds));
     }
 
+    ~MapEditableGeometryVertexItem() override
+    {
+        clearSnapTargetMarker();
+        clearSnapGuideMarkers();
+    }
+
     int lineNumber() const
     {
         return lineNumber_;
@@ -575,6 +589,8 @@ protected:
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override
     {
         dragActive_ = false;
+        clearSnapTargetMarker();
+        clearSnapGuideMarkers();
         setCursor(Qt::OpenHandCursor);
         QGraphicsEllipseItem::mouseReleaseEvent(event);
 
@@ -607,6 +623,16 @@ protected:
             QPointF candidate = value.toPointF();
             candidate.setX(qBound(fittedBounds_.left(), candidate.x(), fittedBounds_.right()));
             candidate.setY(qBound(fittedBounds_.top(), candidate.y(), fittedBounds_.bottom()));
+            if (dragActive_) {
+                updateSnapGuideMarkers(candidate);
+                const SnapTargetResult snapTarget = snapDragCandidateToNeighborGeometry(candidate);
+                if (snapTarget.snapped) {
+                    ensureSnapTargetMarker(snapTarget.point);
+                    candidate = snapTarget.point;
+                } else {
+                    clearSnapTargetMarker();
+                }
+            }
             return candidate;
         }
         if (change == QGraphicsItem::ItemPositionHasChanged && movePreviewCallback_ != nullptr) {
@@ -655,6 +681,313 @@ private:
         return sceneCoordsPreviewToSource(previewPoint, sourceBounds_, previewBounds_);
     }
 
+    struct SnapTargetResult
+    {
+        bool snapped = false;
+        QPointF point;
+    };
+
+    qreal sceneRadiusForViewportPixels(const QPointF &scenePoint, int pixelRadius) const
+    {
+        if (scene() == nullptr || pixelRadius <= 0) {
+            return 0.0;
+        }
+        const QList<QGraphicsView *> views = scene()->views();
+        for (const QGraphicsView *view : views) {
+            if (view == nullptr) {
+                continue;
+            }
+            const QPoint viewportPoint = view->mapFromScene(scenePoint);
+            return QLineF(scenePoint, view->mapToScene(viewportPoint + QPoint(pixelRadius, 0))).length();
+        }
+        return static_cast<qreal>(pixelRadius);
+    }
+
+    SnapTargetResult snapDragCandidateToNeighborGeometry(const QPointF &candidate) const
+    {
+        if (scene() == nullptr
+            || (geometryKind_ != QStringLiteral("line") && geometryKind_ != QStringLiteral("area"))) {
+            return {};
+        }
+
+        const qreal snapRadius = sceneRadiusForViewportPixels(candidate, 10);
+        if (snapRadius <= 0.0) {
+            return {};
+        }
+
+        const qreal maxDistanceSquared = snapRadius * snapRadius;
+        qreal bestDistanceSquared = std::numeric_limits<qreal>::max();
+        QPointF bestPoint;
+        bool hasBestPoint = false;
+        const QList<QGraphicsItem *> items = scene()->items();
+        for (QGraphicsItem *item : items) {
+            if (item == nullptr || item == this) {
+                continue;
+            }
+
+            QPointF candidatePoint;
+            int candidateLineNumber = 0;
+            if (auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(item)) {
+                if (vertexItem->geometryKind() != QStringLiteral("line")
+                    && vertexItem->geometryKind() != QStringLiteral("area")) {
+                    continue;
+                }
+                candidateLineNumber = vertexItem->lineNumber();
+                candidatePoint = vertexItem->pos();
+            } else if (auto *pointItem = dynamic_cast<MapEditablePointItem *>(item)) {
+                candidateLineNumber = pointItem->lineNumber();
+                candidatePoint = pointItem->pos();
+            } else {
+                continue;
+            }
+
+            if (candidateLineNumber <= 0 || candidateLineNumber == lineNumber_) {
+                continue;
+            }
+
+            const qreal deltaX = candidatePoint.x() - candidate.x();
+            const qreal deltaY = candidatePoint.y() - candidate.y();
+            const qreal distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
+            if (distanceSquared > maxDistanceSquared || distanceSquared >= bestDistanceSquared) {
+                continue;
+            }
+
+            bestDistanceSquared = distanceSquared;
+            bestPoint = candidatePoint;
+            hasBestPoint = true;
+        }
+
+        if (!hasBestPoint) {
+            return {};
+        }
+        return {true, bestPoint};
+    }
+
+    int nearestNeighborGeometryLineNumberForSnapGuides(const QPointF &candidate) const
+    {
+        if (scene() == nullptr
+            || (geometryKind_ != QStringLiteral("line") && geometryKind_ != QStringLiteral("area"))) {
+            return 0;
+        }
+
+        const qreal guideRadius = sceneRadiusForViewportPixels(candidate, 28);
+        if (guideRadius <= 0.0) {
+            return 0;
+        }
+
+        qreal bestDistanceSquared = std::numeric_limits<qreal>::max();
+        int bestLineNumber = 0;
+        const QList<QGraphicsItem *> items = scene()->items();
+        for (QGraphicsItem *item : items) {
+            auto *pathItem = dynamic_cast<QGraphicsPathItem *>(item);
+            if (pathItem == nullptr) {
+                continue;
+            }
+
+            const int candidateLineNumber = item->data(kMapSceneLineNumberRole).toInt();
+            if (candidateLineNumber <= 0 || candidateLineNumber == lineNumber_) {
+                continue;
+            }
+
+            const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
+            if (subtype != kMapSceneSelectionSubtypeGeneric
+                && subtype != kMapSceneSelectionSubtypeLineDetail
+                && subtype != kMapSceneSelectionSubtypeAreaFill) {
+                continue;
+            }
+
+            const QPointF localCandidate = pathItem->mapFromScene(candidate);
+            QPainterPathStroker stroker;
+            stroker.setWidth(guideRadius * 2.0);
+            stroker.setCapStyle(Qt::RoundCap);
+            stroker.setJoinStyle(Qt::RoundJoin);
+            const QPainterPath guideHitPath = stroker.createStroke(pathItem->path()).united(pathItem->path());
+            if (!guideHitPath.contains(localCandidate)) {
+                continue;
+            }
+
+            const QPointF center = pathItem->sceneBoundingRect().center();
+            const qreal deltaX = center.x() - candidate.x();
+            const qreal deltaY = center.y() - candidate.y();
+            const qreal distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
+            if (distanceSquared >= bestDistanceSquared) {
+                continue;
+            }
+
+            bestDistanceSquared = distanceSquared;
+            bestLineNumber = candidateLineNumber;
+        }
+
+        return bestLineNumber;
+    }
+
+    void updateSnapGuideMarkers(const QPointF &candidate)
+    {
+        const int guideLineNumber = nearestNeighborGeometryLineNumberForSnapGuides(candidate);
+        if (guideLineNumber <= 0) {
+            clearSnapGuideMarkers();
+            return;
+        }
+
+        QVector<QPointF> guidePoints;
+        const QList<QGraphicsItem *> items = scene()->items();
+        for (QGraphicsItem *item : items) {
+            if (item == nullptr || item == this) {
+                continue;
+            }
+            if (item->data(kMapSceneLineNumberRole).toInt() != guideLineNumber) {
+                continue;
+            }
+            if (auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(item)) {
+                if (vertexItem->geometryKind() == QStringLiteral("line")
+                    || vertexItem->geometryKind() == QStringLiteral("area")) {
+                    guidePoints.append(vertexItem->pos());
+                }
+            }
+        }
+
+        if (guidePoints.isEmpty()) {
+            clearSnapGuideMarkers();
+            return;
+        }
+
+        while (snapGuideMarkers_.size() < guidePoints.size()) {
+            auto *marker = new QGraphicsEllipseItem(QRectF(-6.5, -6.5, 13.0, 13.0));
+            marker->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+            marker->setAcceptedMouseButtons(Qt::NoButton);
+            QColor guideFill(QStringLiteral("#00e5ff"));
+            guideFill.setAlpha(45);
+            marker->setBrush(QBrush(guideFill));
+            marker->setZValue(28.8);
+            QColor guideColor(QStringLiteral("#00e5ff"));
+            guideColor.setAlpha(235);
+            QPen guidePen(guideColor, 2.0);
+            guidePen.setCosmetic(true);
+            marker->setPen(guidePen);
+            snapGuideMarkers_.append(marker);
+        }
+
+        QGraphicsScene *currentScene = scene();
+        for (int index = 0; index < snapGuideMarkers_.size(); ++index) {
+            QGraphicsEllipseItem *marker = snapGuideMarkers_.at(index);
+            if (marker == nullptr) {
+                continue;
+            }
+            if (index >= guidePoints.size()) {
+                marker->hide();
+                continue;
+            }
+            if (marker->scene() != currentScene) {
+                if (marker->scene() != nullptr) {
+                    marker->scene()->removeItem(marker);
+                }
+                if (currentScene != nullptr) {
+                    currentScene->addItem(marker);
+                }
+            }
+            marker->setPos(guidePoints.at(index));
+            marker->show();
+        }
+    }
+
+    void ensureSnapTargetMarker(const QPointF &targetPoint)
+    {
+        QGraphicsScene *currentScene = scene();
+        if (currentScene == nullptr) {
+            clearSnapTargetMarker();
+            return;
+        }
+
+        ensureSnapTargetMarkerItem(&snapTargetShadow_,
+                                   currentScene,
+                                   QRectF(-10.0, -10.0, 20.0, 20.0),
+                                   QColor(QStringLiteral("#1f2937")),
+                                   3.4,
+                                   200,
+                                   30.0);
+        ensureSnapTargetMarkerItem(&snapTargetRing_,
+                                   currentScene,
+                                   QRectF(-10.0, -10.0, 20.0, 20.0),
+                                   QColor(QStringLiteral("#ffe16a")),
+                                   2.0,
+                                   250,
+                                   30.1);
+
+        if (snapTargetShadow_ != nullptr) {
+            snapTargetShadow_->setPos(targetPoint);
+            snapTargetShadow_->show();
+        }
+        if (snapTargetRing_ != nullptr) {
+            snapTargetRing_->setPos(targetPoint);
+            snapTargetRing_->show();
+        }
+    }
+
+    void ensureSnapTargetMarkerItem(QGraphicsEllipseItem **marker,
+                                    QGraphicsScene *targetScene,
+                                    const QRectF &rect,
+                                    const QColor &baseColor,
+                                    qreal width,
+                                    int alpha,
+                                    qreal zValue)
+    {
+        if (marker == nullptr || targetScene == nullptr) {
+            return;
+        }
+
+        if (*marker == nullptr) {
+            *marker = new QGraphicsEllipseItem(rect);
+            (*marker)->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+            (*marker)->setAcceptedMouseButtons(Qt::NoButton);
+            (*marker)->setBrush(Qt::NoBrush);
+        }
+        if ((*marker)->scene() != targetScene) {
+            if ((*marker)->scene() != nullptr) {
+                (*marker)->scene()->removeItem(*marker);
+            }
+            targetScene->addItem(*marker);
+        }
+
+        QColor markerColor = baseColor;
+        markerColor.setAlpha(alpha);
+        QPen markerPen(markerColor, width);
+        markerPen.setCosmetic(true);
+        (*marker)->setPen(markerPen);
+        (*marker)->setZValue(zValue);
+    }
+
+    void clearSnapTargetMarker()
+    {
+        clearSnapTargetMarkerItem(&snapTargetShadow_);
+        clearSnapTargetMarkerItem(&snapTargetRing_);
+    }
+
+    void clearSnapGuideMarkers()
+    {
+        for (QGraphicsEllipseItem *marker : std::as_const(snapGuideMarkers_)) {
+            if (marker == nullptr) {
+                continue;
+            }
+            if (marker->scene() != nullptr) {
+                marker->scene()->removeItem(marker);
+            }
+            delete marker;
+        }
+        snapGuideMarkers_.clear();
+    }
+
+    void clearSnapTargetMarkerItem(QGraphicsEllipseItem **marker)
+    {
+        if (marker == nullptr || *marker == nullptr) {
+            return;
+        }
+        if ((*marker)->scene() != nullptr) {
+            (*marker)->scene()->removeItem(*marker);
+        }
+        delete *marker;
+        *marker = nullptr;
+    }
+
     int lineNumber_ = 0;
     QString geometryKind_;
     int vertexIndex_ = -1;
@@ -668,6 +1001,9 @@ private:
     bool hasStandaloneOptionRows_ = false;
     bool highlightLinePointMetadata_ = false;
     QStringList standaloneOptionRows_;
+    QGraphicsEllipseItem *snapTargetShadow_ = nullptr;
+    QGraphicsEllipseItem *snapTargetRing_ = nullptr;
+    QVector<QGraphicsEllipseItem *> snapGuideMarkers_;
     std::function<QPointF(const QPointF &)> displayToSourceMapper_;
     std::function<void(MapEditableGeometryVertexItem *, const QPointF &, const QPointF &, bool)> movePreviewCallback_;
     std::function<void(int, const QString &, int, const QPointF &, const QPointF &)> moveCommittedCallback_;

@@ -269,6 +269,7 @@ Pravým kliknutím bez tažení na mapový objekt nebo vrchol čáry otevřete k
 Pro čáry a hranice ploch:
 
 - vyberte vrchol pro editaci detailů line pointu,
+- při tažení vertexu čáry nebo plochy poblíž jiného objektu se zvýrazní jeho vertexy jako kandidáti snapu; aktivní snap cíl se zvýrazní výrazněji a Bezier kontrolní body zůstávají bez snapu,
 - pravým kliknutím na segment čáry a volbou `Insert Point Here` rozdělíte nejbližší segment v místě kliknutí,
 - `Vložit před` / `Vložit za` přidá vrchol poblíž vybraného vrcholu,
 - `Prodloužit před` / `Prodloužit za` na koncích čáry pokračuje v existující čáře,

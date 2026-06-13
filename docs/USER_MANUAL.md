@@ -283,6 +283,7 @@ Right-click a map object or line vertex without dragging to open a context menu 
 For lines and area borders:
 
 - select a vertex to edit its line-point details
+- drag a line or area vertex near another object to reveal that object's vertices as snap candidates; the active snap target is highlighted more strongly, and Bezier handles remain unsnapped
 - right-click a line segment and use `Insert Point Here` to split the nearest segment at the click position
 - use `Insert Before` / `Insert After` to add vertices near the selected vertex
 - use `Extend Before` / `Extend After` at line endpoints to continue an existing line

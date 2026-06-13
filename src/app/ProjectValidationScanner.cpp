@@ -137,6 +137,12 @@ TherionSourceDiagnostic diagnosticForProjectIndexDiagnostic(const ProjectIndexDi
         diagnostic.message = QObject::tr("Join references `%1`, but no matching scrap, line, or point was found in the project index.")
                                  .arg(indexDiagnostic.referencedName);
         break;
+    case ProjectIndexDiagnosticKind::UnknownJoinLinePointMark:
+        diagnostic.code = QStringLiteral("unknown-join-line-point-mark");
+        diagnostic.title = QObject::tr("Unknown join line-point mark");
+        diagnostic.message = QObject::tr("Join references `%1`, but the resolved line does not define that line-point mark.")
+                                 .arg(indexDiagnostic.referencedName);
+        break;
     case ProjectIndexDiagnosticKind::AmbiguousJoinReference:
         diagnostic.code = QStringLiteral("ambiguous-join-reference");
         diagnostic.title = QObject::tr("Ambiguous join reference");

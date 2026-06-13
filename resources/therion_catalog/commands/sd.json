@@ -21,7 +21,7 @@
       "name": "<quantity list>",
       "signature": "<quantity list>",
       "option_key": "",
-      "value_arity": "1",
+      "value_arity": "N",
       "value_domain": "keyword",
       "description": "",
       "allowed_values": [],

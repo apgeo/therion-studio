@@ -46,6 +46,7 @@ TherionSourceValidationCatalog validationCatalogFromCommandMetadata(const TextEd
         }
     }
     catalog.commandRequiredPositionalCount = metadata.commandRequiredPositionalCount;
+    catalog.commandMaxPositionalCount = metadata.commandMaxPositionalCount;
     catalog.commandArgumentAllowedValuesByKey = metadata.commandArgumentValueTokens;
     catalog.commandTypeValues = metadata.commandTypeValueTokens;
     catalog.commandOptionAllowedValuesByKey = metadata.commandOptionValueTokens;

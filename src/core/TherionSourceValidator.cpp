@@ -679,17 +679,36 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
                                                      TherionSourceDiagnosticSeverity::Error));
     }
 
-    const QStringList allowedFirstValues =
-        command.metadata.catalogArgumentAllowedValuesByIndex.value(0);
-    if (!allowedFirstValues.isEmpty() && providedPositionalCount > 0 && command.parsed.tokens.size() > 1) {
-        const QString value = command.parsed.tokens.at(1).trimmed();
-        if (!value.isEmpty() && !allowedFirstValues.contains(value, Qt::CaseInsensitive)) {
+    const int maxPositionalCount = command.metadata.catalogMaxPositionalCount;
+    if (maxPositionalCount >= 0 && providedPositionalCount > maxPositionalCount) {
+        const TherionSourceLogicalArgumentRange extraArgument =
+            command.positionalArgumentRanges.at(maxPositionalCount);
+        result->diagnostics.append(diagnosticForToken(command,
+                                                     extraArgument.tokenIndex,
+                                                     QStringLiteral("extra-argument"),
+                                                     QStringLiteral("Extra argument"),
+                                                     QStringLiteral("Command `%1` declares %2 positional argument(s), but %3 provided.")
+                                                         .arg(commandName)
+                                                         .arg(maxPositionalCount)
+                                                         .arg(providedPositionalCount)));
+    }
+
+    for (int argumentIndex = 0; argumentIndex < providedPositionalCount; ++argumentIndex) {
+        const QStringList allowedValues =
+            command.metadata.catalogArgumentAllowedValuesByIndex.value(argumentIndex);
+        const int tokenIndex = argumentIndex + 1;
+        if (allowedValues.isEmpty() || tokenIndex >= command.parsed.tokens.size()) {
+            continue;
+        }
+
+        const QString value = command.parsed.tokens.at(tokenIndex).trimmed();
+        if (!value.isEmpty() && !allowedValues.contains(value, Qt::CaseInsensitive)) {
             result->diagnostics.append(diagnosticForToken(command,
-                                                          1,
+                                                          tokenIndex,
                                                           QStringLiteral("unknown-argument-value"),
                                                           QStringLiteral("Unknown argument value"),
                                                           QStringLiteral("Command `%1` does not list `%2` as a known value. Known values: %3.")
-                                                              .arg(commandName, value, allowedFirstValues.join(QStringLiteral(", ")))));
+                                                              .arg(commandName, value, allowedValues.join(QStringLiteral(", ")))));
         }
     }
 

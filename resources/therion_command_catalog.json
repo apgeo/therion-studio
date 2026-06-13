@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generated_at_utc": "2026-06-13T12:12:29.897936+00:00",
+    "generated_at_utc": "2026-06-13T14:32:18.012378+00:00",
     "generator_version": "4",
     "source_repository": "snapshot-copy",
     "source_reference": "snapshot-copy",
@@ -301,7 +301,7 @@
           "name": "<quantity list>",
           "signature": "<quantity list>",
           "option_key": "",
-          "value_arity": "1",
+          "value_arity": "N",
           "value_domain": "keyword",
           "description": "",
           "allowed_values": [],
@@ -323,7 +323,7 @@
           "name": "[<scale>]",
           "signature": "[<scale>]",
           "option_key": "",
-          "value_arity": "N",
+          "value_arity": "1",
           "value_domain": "keyword",
           "description": "",
           "allowed_values": [],
@@ -469,9 +469,13 @@
           "signature": "<metapost/tex-map/tex-atlas>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "metapost",
+            "tex-map",
+            "tex-atlas"
+          ],
           "dependencies": []
         }
       ],
@@ -564,9 +568,14 @@
           "signature": "<smooth/discrete/off/on>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off",
+            "smooth",
+            "discrete"
+          ],
           "dependencies": []
         }
       ],
@@ -606,9 +615,13 @@
           "signature": "<cmyk/rgb/grayscale>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "cmyk",
+            "rgb",
+            "grayscale"
+          ],
           "dependencies": []
         }
       ],
@@ -648,9 +661,13 @@
           "signature": "<cmyk/rgb/grayscale>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "cmyk",
+            "rgb",
+            "grayscale"
+          ],
           "dependencies": []
         },
         {
@@ -953,9 +970,17 @@
           "signature": "<on/all/first/second/scrap-names/station-names/off>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off",
+            "all",
+            "first",
+            "second",
+            "scrap-names",
+            "station-names"
+          ],
           "dependencies": []
         }
       ],
@@ -1297,7 +1322,7 @@
           "name": "<station list>",
           "signature": "<station list>",
           "option_key": "",
-          "value_arity": "1",
+          "value_arity": "N",
           "value_domain": "keyword",
           "description": "",
           "allowed_values": [],
@@ -1339,9 +1364,12 @@
           "signature": "<on/off>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off"
+          ],
           "dependencies": []
         },
         {
@@ -1349,7 +1377,7 @@
           "name": "<list>",
           "signature": "<list>",
           "option_key": "",
-          "value_arity": "1",
+          "value_arity": "N",
           "value_domain": "keyword",
           "description": "",
           "allowed_values": [],
@@ -1884,7 +1912,7 @@
           "name": "[<station> [<station> [<station>]",
           "signature": "[<station> [<station> [<station>]",
           "option_key": "",
-          "value_arity": "N",
+          "value_arity": "1",
           "value_domain": "keyword",
           "description": "",
           "allowed_values": [],
@@ -1934,7 +1962,7 @@
           "name": "[<x> <y> <z> [<std x> <std y> <std z>]",
           "signature": "[<x> <y> <z> [<std x> <std y> <std z>]",
           "option_key": "",
-          "value_arity": "N",
+          "value_arity": "1",
           "value_domain": "keyword",
           "description": "",
           "allowed_values": [],
@@ -2102,9 +2130,12 @@
           "signature": "<on/off>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off"
+          ],
           "dependencies": []
         }
       ],
@@ -2141,7 +2172,7 @@
           "name": "<grade list>",
           "signature": "<grade list>",
           "option_key": "",
-          "value_arity": "1",
+          "value_arity": "N",
           "value_domain": "keyword",
           "description": "",
           "allowed_values": [],
@@ -2183,9 +2214,13 @@
           "signature": "<off/bottom/top>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "off",
+            "bottom",
+            "top"
+          ],
           "dependencies": []
         }
       ],
@@ -2273,9 +2308,13 @@
           "signature": "<off/border/all>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "off",
+            "border",
+            "all"
+          ],
           "dependencies": []
         }
       ],
@@ -2573,9 +2612,12 @@
           "signature": "<on/off>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off"
+          ],
           "dependencies": []
         }
       ],
@@ -2654,7 +2696,7 @@
           "name": "<quantity list>",
           "signature": "<quantity list>",
           "option_key": "",
-          "value_arity": "1",
+          "value_arity": "N",
           "value_domain": "keyword",
           "description": "",
           "allowed_values": [],
@@ -2707,7 +2749,7 @@
           "name": "<pointX>",
           "signature": "<pointX>",
           "option_key": "",
-          "value_arity": "1",
+          "value_arity": "N",
           "value_domain": "unknown",
           "description": "can be an ID of a point or line symbol, optionally followed by a line point mark <id>:<mark> (e.g. podangl_l31@podangl:mark1). <mark> can be also \"end\" (end of the line) or line point index (where 0 is the first point). A special case is when <point1> and <point2> are scrap IDs - than the closest scrap ends are joined together.",
           "allowed_values": [],
@@ -2815,9 +2857,12 @@
           "signature": "<on/off>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off"
+          ],
           "dependencies": []
         }
       ],
@@ -2847,7 +2892,19 @@
       "document_types": [
         "thconfig"
       ],
-      "arguments": [],
+      "arguments": [
+        {
+          "raw": "<id>",
+          "name": "<id>",
+          "signature": "<id>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
       "options": [
         {
           "raw": "copy <source layout id> = set properties here that are not modified based on the given source layout. map presentation-related:",
@@ -3705,9 +3762,13 @@
           "signature": "<on/off/all>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off",
+            "all"
+          ],
           "dependencies": []
         }
       ],
@@ -4599,9 +4660,20 @@
           "signature": "<off/n/s/e/w/ne/nw/se/sw/center>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "off",
+            "n",
+            "s",
+            "e",
+            "w",
+            "ne",
+            "nw",
+            "se",
+            "sw",
+            "center"
+          ],
           "dependencies": []
         }
       ],
@@ -4639,9 +4711,12 @@
           "signature": "<on/off>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off"
+          ],
           "dependencies": []
         }
       ],
@@ -4701,9 +4776,19 @@
           "signature": "<n/s/e/w/ne/nw/se/sw/center>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "n",
+            "s",
+            "e",
+            "w",
+            "ne",
+            "nw",
+            "se",
+            "sw",
+            "center"
+          ],
           "dependencies": []
         },
         {
@@ -4991,9 +5076,12 @@
           "signature": "<true/grid>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "true",
+            "grid"
+          ],
           "dependencies": []
         }
       ],
@@ -5286,9 +5374,12 @@
           "signature": "<on/off>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off"
+          ],
           "dependencies": []
         }
       ],
@@ -5326,9 +5417,12 @@
           "signature": "<on/off>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off"
+          ],
           "dependencies": []
         }
       ],
@@ -8101,7 +8195,7 @@
           "name": "<quantity list>",
           "signature": "<quantity list>",
           "option_key": "",
-          "value_arity": "1",
+          "value_arity": "N",
           "value_domain": "keyword",
           "description": "",
           "allowed_values": [],
@@ -8392,9 +8486,12 @@
           "signature": "<on/off>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off"
+          ],
           "dependencies": []
         }
       ],
@@ -8432,9 +8529,12 @@
           "signature": "<off/quick>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "off",
+            "quick"
+          ],
           "dependencies": []
         }
       ],
@@ -8532,7 +8632,7 @@
           "name": "[<flags>]",
           "signature": "[<flags>]",
           "option_key": "",
-          "value_arity": "N",
+          "value_arity": "1",
           "value_domain": "keyword",
           "description": "",
           "allowed_values": [],
@@ -8632,9 +8732,15 @@
           "signature": "<explo/topo/carto/copyright all/off/number>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "explo",
+            "topo",
+            "carto",
+            "off",
+            "number"
+          ],
           "dependencies": []
         }
       ],
@@ -8674,9 +8780,13 @@
           "signature": "<top/bottom/off>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "top",
+            "bottom",
+            "off"
+          ],
           "dependencies": []
         }
       ],
@@ -8927,9 +9037,12 @@
           "signature": "<N/all>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "N",
+            "all"
+          ],
           "dependencies": []
         }
       ],
@@ -8967,9 +9080,15 @@
           "signature": "<point/line/area/group/special>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "point",
+            "line",
+            "area",
+            "group",
+            "special"
+          ],
           "dependencies": []
         },
         {
@@ -9031,9 +9150,15 @@
           "signature": "<point/line/area/group/special>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "point",
+            "line",
+            "area",
+            "group",
+            "special"
+          ],
           "dependencies": []
         },
         {
@@ -9093,9 +9218,15 @@
           "signature": "<point/line/area/group/special>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "point",
+            "line",
+            "area",
+            "group",
+            "special"
+          ],
           "dependencies": []
         },
         {
@@ -9184,9 +9315,15 @@
           "signature": "<point/line/area/group/special>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "point",
+            "line",
+            "area",
+            "group",
+            "special"
+          ],
           "dependencies": []
         },
         {
@@ -9269,7 +9406,7 @@
           "name": "[<roles>]",
           "signature": "[<roles>]",
           "option_key": "",
-          "value_arity": "N",
+          "value_arity": "1",
           "value_domain": "keyword",
           "description": "",
           "allowed_values": [],
@@ -9360,9 +9497,12 @@
           "signature": "<on/off>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off"
+          ],
           "dependencies": []
         }
       ],
@@ -9400,9 +9540,12 @@
           "signature": "<on/off>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off"
+          ],
           "dependencies": []
         }
       ],
@@ -9440,7 +9583,7 @@
           "name": "<quantity list>",
           "signature": "<quantity list>",
           "option_key": "",
-          "value_arity": "1",
+          "value_arity": "N",
           "value_domain": "keyword",
           "description": "",
           "allowed_values": [],
@@ -9451,7 +9594,7 @@
           "name": "[<factor>]",
           "signature": "[<factor>]",
           "option_key": "",
-          "value_arity": "N",
+          "value_arity": "1",
           "value_domain": "keyword",
           "description": "",
           "allowed_values": [],
@@ -9580,9 +9723,13 @@
           "signature": "<auto/on/off>",
           "option_key": "",
           "value_arity": "1",
-          "value_domain": "keyword",
+          "value_domain": "enum",
           "description": "",
-          "allowed_values": [],
+          "allowed_values": [
+            "on",
+            "off",
+            "auto"
+          ],
           "dependencies": []
         }
       ],

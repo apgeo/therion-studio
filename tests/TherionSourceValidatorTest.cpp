@@ -216,6 +216,9 @@ TherionSourceValidationCatalog basicCatalog()
         QStringLiteral("line"),
         QStringLiteral("point"),
         QStringLiteral("area"),
+        QStringLiteral("map-header"),
+        QStringLiteral("join"),
+        QStringLiteral("layout"),
     };
     catalog.commandRequiredPositionalCount.insert(QStringLiteral("survey"), 1);
     catalog.commandRequiredPositionalCount.insert(QStringLiteral("input"), 1);
@@ -226,6 +229,12 @@ TherionSourceValidationCatalog basicCatalog()
     catalog.commandRequiredPositionalCount.insert(QStringLiteral("line"), 1);
     catalog.commandRequiredPositionalCount.insert(QStringLiteral("point"), 3);
     catalog.commandRequiredPositionalCount.insert(QStringLiteral("area"), 1);
+    catalog.commandRequiredPositionalCount.insert(QStringLiteral("map-header"), 3);
+    catalog.commandRequiredPositionalCount.insert(QStringLiteral("join"), 1);
+    catalog.commandRequiredPositionalCount.insert(QStringLiteral("layout"), 1);
+    catalog.commandMaxPositionalCount.insert(QStringLiteral("export"), 1);
+    catalog.commandMaxPositionalCount.insert(QStringLiteral("map-header"), 3);
+    catalog.commandMaxPositionalCount.insert(QStringLiteral("layout"), 1);
     catalog.commandOptionNames.insert(QStringLiteral("survey"), {QStringLiteral("-title")});
     catalog.commandOptionNames.insert(QStringLiteral("map"), {QStringLiteral("-title")});
     catalog.commandOptionNames.insert(QStringLiteral("export"), {QStringLiteral("-output"), QStringLiteral("-o"), QStringLiteral("-layout")});
@@ -238,6 +247,8 @@ TherionSourceValidationCatalog basicCatalog()
     catalog.commandTypeValues.insert(QStringLiteral("area"), {QStringLiteral("water"), QStringLiteral("sand")});
     catalog.commandArgumentAllowedValuesByKey.insert(TherionStudio::commandArgumentValueKey(QStringLiteral("line"), 0),
                                                      {QStringLiteral("wall"), QStringLiteral("border")});
+    catalog.commandArgumentAllowedValuesByKey.insert(TherionStudio::commandArgumentValueKey(QStringLiteral("map-header"), 2),
+                                                     {QStringLiteral("off"), QStringLiteral("n"), QStringLiteral("center")});
     catalog.commandOptionValueArityTokens.insert(TherionStudio::commandOptionValueKey(QStringLiteral("line"), QStringLiteral("-close")),
                                                  QStringLiteral("EXACTLY_ONE"));
     catalog.commandOptionValueArityTokens.insert(TherionStudio::commandOptionValueKey(QStringLiteral("line"), QStringLiteral("-clip")),
@@ -461,6 +472,62 @@ void reportsUnknownArgumentValue()
             "Unknown argument value diagnostics should point at the argument token.");
 }
 
+void reportsUnknownLaterArgumentValue()
+{
+    const QString contents = QStringLiteral("map-header 70 100 sideways\n");
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, basicCatalog());
+
+    require(containsDiagnostic(result, QStringLiteral("unknown-argument-value")),
+            "Unknown later positional argument values should produce a diagnostic when allowed values are known.");
+    const TherionSourceDiagnostic *unknownArgumentValue =
+        diagnosticForCode(result, QStringLiteral("unknown-argument-value"));
+    require(unknownArgumentValue != nullptr && diagnosticSourceRange(*unknownArgumentValue) == QStringLiteral("sideways"),
+            "Unknown later argument value diagnostics should point at the invalid argument token.");
+}
+
+void reportsExtraPositionalArgument()
+{
+    const QString contents = QStringLiteral("map-header 70 100 nw bbb\n");
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, basicCatalog());
+
+    require(containsDiagnostic(result, QStringLiteral("extra-argument")),
+            "Extra positional arguments should produce a diagnostic when a catalog max is known.");
+    const TherionSourceDiagnostic *extraArgument =
+        diagnosticForCode(result, QStringLiteral("extra-argument"));
+    require(extraArgument != nullptr && diagnosticSourceRange(*extraArgument) == QStringLiteral("bbb"),
+            "Extra positional argument diagnostics should point at the first extra argument token.");
+    require(extraArgument != nullptr && extraArgument->severity == TherionSourceDiagnosticSeverity::Warning,
+            "Extra positional argument diagnostics should be warnings.");
+}
+
+void doesNotCountOptionsAsExtraPositionalArguments()
+{
+    const QString contents = QStringLiteral("export map -o map.pdf -layout moj\n");
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, basicCatalog());
+
+    require(!containsDiagnostic(result, QStringLiteral("extra-argument")),
+            "Option tokens and option values should not count as extra positional arguments.");
+}
+
+void acceptsVariadicJoinArguments()
+{
+    const QString contents = QStringLiteral("join mnp_01.s mnp_02.s zeleza_zvon_01.s -count 2\n");
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, basicCatalog());
+
+    require(!containsDiagnostic(result, QStringLiteral("extra-argument")),
+            "Variadic join arguments should not be reported as extra positional arguments.");
+}
+
+void acceptsLayoutIdArgument()
+{
+    const QString contents = QStringLiteral("layout l_plan\n"
+                                            "endlayout\n");
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, basicCatalog());
+
+    require(!containsDiagnostic(result, QStringLiteral("extra-argument")),
+            "Layout id should count as the declared positional argument.");
+}
+
 void reportsUnknownOptionValue()
 {
     const QString contents = QStringLiteral("line wall -close maybe\n"
@@ -670,6 +737,11 @@ int main(int argc, char **argv)
     keepsDashPrefixedPointTextAsTextValue();
     acceptsOptionAliasesExtractedFromCatalogSignature();
     reportsUnknownArgumentValue();
+    reportsUnknownLaterArgumentValue();
+    reportsExtraPositionalArgument();
+    doesNotCountOptionsAsExtraPositionalArguments();
+    acceptsVariadicJoinArguments();
+    acceptsLayoutIdArgument();
     reportsUnknownOptionValue();
     reportsUnknownSubtypeValueForCurrentSymbolType();
     reportsInvalidCommandContextWhenCatalogListsContexts();

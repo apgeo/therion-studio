@@ -35,6 +35,7 @@ private:
                                       const QJsonObject &commandObject,
                                       TherionHelpEntry *entry,
                                       int *requiredPositionalCount,
+                                      int *maxPositionalCount,
                                       bool *primaryValueIsPerson,
                                       QStringList *commandArgumentSignatures) const;
     void applyCommandContextMetadata(const QString &commandName,
@@ -48,6 +49,7 @@ private:
     void applyCommandRegistrationMetadata(const QString &commandName,
                                           const TherionHelpEntry &entry,
                                           int requiredPositionalCount,
+                                          int maxPositionalCount,
                                           bool primaryValueIsPerson,
                                           const QStringList &commandArgumentSignatures,
                                           const QString &sourceFile) const;

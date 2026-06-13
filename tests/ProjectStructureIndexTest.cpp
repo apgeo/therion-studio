@@ -728,7 +728,7 @@ int runProjectIndexJoinReferenceDiagnosticsTest()
                                   "survey cave\n"
                                   "  input maps/a/map.th2\n"
                                   "  input maps/b/map.th2\n"
-                                  "  join wall1 wall2:end missing.s ambiguous.s plainUnknown\n"
+                                  "  join wall1 wall2:end wall2:0 wall2:k1 wall2:k-missing missingLine:k1 missing.s ambiguous.s plainUnknown\n"
                                   "endsurvey cave\n")),
                 "The join-reference root Therion file could not be written.")) {
         return 1;
@@ -739,6 +739,7 @@ int runProjectIndexJoinReferenceDiagnosticsTest()
                                   "line wall -id wall1\n"
                                   "endline\n"
                                   "line wall -id wall2\n"
+                                  "  mark k1\n"
                                   "endline\n"
                                   "scrap ambiguous.s\n"
                                   "endscrap\n"
@@ -761,12 +762,24 @@ int runProjectIndexJoinReferenceDiagnosticsTest()
     }
 
     bool foundMissingJoin = false;
+    bool foundMissingJoinWithMark = false;
+    bool foundMissingJoinMark = false;
     bool foundAmbiguousJoin = false;
     for (const ProjectIndexDiagnostic &diagnostic : snapshot.diagnostics) {
         if (diagnostic.kind == ProjectIndexDiagnosticKind::UnknownJoinReference
             && diagnostic.referencedName == QStringLiteral("missing.s")
             && diagnostic.lineNumber == 4) {
             foundMissingJoin = true;
+        }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::UnknownJoinReference
+            && diagnostic.referencedName == QStringLiteral("missingLine:k1")
+            && diagnostic.lineNumber == 4) {
+            foundMissingJoinWithMark = true;
+        }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::UnknownJoinLinePointMark
+            && diagnostic.referencedName == QStringLiteral("wall2:k-missing")
+            && diagnostic.lineNumber == 4) {
+            foundMissingJoinMark = true;
         }
         if (diagnostic.kind == ProjectIndexDiagnosticKind::AmbiguousJoinReference
             && diagnostic.referencedName == QStringLiteral("ambiguous.s")
@@ -782,6 +795,14 @@ int runProjectIndexJoinReferenceDiagnosticsTest()
                     "Resolved join endpoint references should not produce diagnostics.")) {
             return 1;
         }
+        if (!expect(diagnostic.referencedName != QStringLiteral("wall2:0"),
+                    "Resolved join start-point references should not produce diagnostics.")) {
+            return 1;
+        }
+        if (!expect(diagnostic.referencedName != QStringLiteral("wall2:k1"),
+                    "Resolved join marked line-point references should not produce diagnostics.")) {
+            return 1;
+        }
         if (!expect(diagnostic.referencedName != QStringLiteral("plainUnknown"),
                     "Plain unresolved join tokens should not produce conservative diagnostics.")) {
             return 1;
@@ -790,6 +811,14 @@ int runProjectIndexJoinReferenceDiagnosticsTest()
 
     if (!expect(foundMissingJoin,
                 "The project index did not report the missing join reference diagnostic.")) {
+        return 1;
+    }
+    if (!expect(foundMissingJoinWithMark,
+                "The project index did not report the missing join reference diagnostic with a line-point mark.")) {
+        return 1;
+    }
+    if (!expect(foundMissingJoinMark,
+                "The project index did not report the missing join line-point mark diagnostic.")) {
         return 1;
     }
     if (!expect(foundAmbiguousJoin,

@@ -23,9 +23,12 @@
       "signature": "<on/off>",
       "option_key": "",
       "value_arity": "1",
-      "value_domain": "keyword",
+      "value_domain": "enum",
       "description": "",
-      "allowed_values": [],
+      "allowed_values": [
+        "on",
+        "off"
+      ],
       "dependencies": []
     },
     {
@@ -33,7 +36,7 @@
       "name": "<list>",
       "signature": "<list>",
       "option_key": "",
-      "value_arity": "1",
+      "value_arity": "N",
       "value_domain": "keyword",
       "description": "",
       "allowed_values": [],

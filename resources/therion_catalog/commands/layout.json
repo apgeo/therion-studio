@@ -15,7 +15,19 @@
   "document_types": [
     "thconfig"
   ],
-  "arguments": [],
+  "arguments": [
+    {
+      "raw": "<id>",
+      "name": "<id>",
+      "signature": "<id>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
   "options": [
     {
       "raw": "copy <source layout id> = set properties here that are not modified based on the given source layout. map presentation-related:",

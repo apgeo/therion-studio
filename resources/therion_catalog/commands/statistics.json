@@ -23,9 +23,15 @@
       "signature": "<explo/topo/carto/copyright all/off/number>",
       "option_key": "",
       "value_arity": "1",
-      "value_domain": "keyword",
+      "value_domain": "enum",
       "description": "",
-      "allowed_values": [],
+      "allowed_values": [
+        "explo",
+        "topo",
+        "carto",
+        "off",
+        "number"
+      ],
       "dependencies": []
     }
   ],

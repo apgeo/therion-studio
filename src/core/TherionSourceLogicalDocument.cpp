@@ -221,6 +221,8 @@ void populateCommandMetadata(TherionSourceLogicalCommand *command,
         || command->metadata.catalogDocumentTypes.contains(command->metadata.catalogCurrentDocumentType);
     command->metadata.catalogRequiredPositionalCount =
         qMax(0, catalog->commandRequiredPositionalCount.value(command->metadata.commandName, 0));
+    command->metadata.catalogMaxPositionalCount =
+        catalog->commandMaxPositionalCount.value(command->metadata.commandName, -1);
     command->metadata.catalogArgumentAllowedValuesByIndex.clear();
     for (int argumentIndex = 0;
          argumentIndex < command->metadata.positionalArgumentCount;

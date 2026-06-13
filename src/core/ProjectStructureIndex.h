@@ -30,6 +30,7 @@ enum class ProjectIndexDiagnosticKind
     AmbiguousMapReference,
     MixedMapAndScrapReferences,
     UnknownJoinReference,
+    UnknownJoinLinePointMark,
     AmbiguousJoinReference,
     UnknownStationReference,
     AmbiguousStationReference,
@@ -48,6 +49,7 @@ struct ProjectStructureEntry
     int lineNumber = 0;
     int depth = 0;
     bool createsNamespace = true;
+    QSet<QString> linePointMarks;
 };
 
 struct ProjectIndexDiagnostic

@@ -625,8 +625,8 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/therion_command_catalog.json
     resources/therion_syntax_palette.json
     resources/project_templates/default/template.json
-    resources/project_templates/default/thconfig
-    resources/project_templates/default/index.th
+    resources/project_templates/default/main.thconfig
+    resources/project_templates/default/main.th
     resources/project_templates/default/surveys/survey1.th
     resources/project_templates/default/scraps/scrap1.th2
     resources/icons/lucide/LICENSE

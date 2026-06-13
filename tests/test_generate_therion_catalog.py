@@ -199,6 +199,7 @@ class TherionCatalogGenerationTest(unittest.TestCase):
         argument = join["arguments"][0]
         self.assertEqual(argument["signature"], "<pointX>")
         self.assertEqual(argument["name"], "<pointX>")
+        self.assertEqual(argument["value_arity"], "N")
         self.assertIn("can be an ID of a point or line symbol", argument["description"])
         self.assertNotIn("can be an ID", argument["signature"])
 
@@ -214,6 +215,11 @@ class TherionCatalogGenerationTest(unittest.TestCase):
         self.assertIsNotNone(preview_option)
         self.assertEqual(preview_option["signature"], "preview <above/below> <other map id>")
         self.assertIn("will put the outline of the other map", preview_option["description"])
+
+    def test_list_positional_arguments_are_variadic(self) -> None:
+        equate = self.commands_by_name["equate"]
+        self.assertEqual(equate["arguments"][0]["signature"], "<station list>")
+        self.assertEqual(equate["arguments"][0]["value_arity"], "N")
 
     def test_centreline_inline_commands_are_structured(self) -> None:
         centreline = self.commands_by_name["centreline"]
@@ -311,6 +317,10 @@ class TherionCatalogGenerationTest(unittest.TestCase):
         self.assertIn("map", break_command.get("contexts", []))
 
     def test_layout_settings_have_layout_command_entries(self) -> None:
+        layout = self.commands_by_name["layout"]
+        self.assertEqual(layout["arguments"][0]["signature"], "<id>")
+        self.assertEqual(layout["arguments"][0]["value_arity"], "1")
+
         expected_settings = {
             "copy",
             "cs",
@@ -335,6 +345,15 @@ class TherionCatalogGenerationTest(unittest.TestCase):
 
         map_header = self.commands_by_name["map-header"]
         self.assertEqual(map_header.get("allowed_values", []), [])
+        self.assertEqual(map_header["arguments"][0].get("allowed_values", []), [])
+        self.assertEqual(map_header["arguments"][1].get("allowed_values", []), [])
+        self.assertEqual(
+            map_header["arguments"][2].get("allowed_values", []),
+            ["off", "n", "s", "e", "w", "ne", "nw", "se", "sw", "center"],
+        )
+
+        debug_values = self.commands_by_name["debug"]["arguments"][0].get("allowed_values", [])
+        self.assertEqual(debug_values, ["on", "off", "all", "first", "second", "scrap-names", "station-names"])
 
         colour_model = self.commands_by_name["colour-model"]
         self.assertIn("color-model", colour_model.get("aliases", []))

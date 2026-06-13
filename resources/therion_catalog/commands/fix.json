@@ -32,7 +32,7 @@
       "name": "[<x> <y> <z> [<std x> <std y> <std z>]",
       "signature": "[<x> <y> <z> [<std x> <std y> <std z>]",
       "option_key": "",
-      "value_arity": "N",
+      "value_arity": "1",
       "value_domain": "keyword",
       "description": "",
       "allowed_values": [],

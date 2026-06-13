@@ -470,6 +470,42 @@ int main(int argc, char *argv[])
                     "Layout setting commands and free-form layout arguments should not receive inline validation underlines.")) {
             return 1;
         }
+
+        configEditor->setPlainText(QStringLiteral("layout l_plan\n"
+                                                  "  map-header 70 100 sideways\n"
+                                                  "endlayout\n"));
+        pumpEvents();
+
+        const TherionSourceValidationResult invalidLayoutValidation = configTab.validateDocument();
+        if (!expect(validationContainsDiagnosticCode(invalidLayoutValidation, QStringLiteral("unknown-argument-value")),
+                    "Invalid positional layout enum values should be reported by validation.")) {
+            return 1;
+        }
+
+        const QTextBlock invalidMapHeaderLine = configEditor->document()->findBlockByLineNumber(1);
+        if (!expect(!tokenHasWaveUnderline(invalidMapHeaderLine, QStringLiteral("70"))
+                        && tokenHasWaveUnderline(invalidMapHeaderLine, QStringLiteral("sideways")),
+                    "Layout setting positional enums should underline the invalid enum token, not earlier numeric arguments.")) {
+            return 1;
+        }
+
+        configEditor->setPlainText(QStringLiteral("layout l_plan\n"
+                                                  "  map-header 70 100 nw bbb\n"
+                                                  "endlayout\n"));
+        pumpEvents();
+
+        const TherionSourceValidationResult extraLayoutValidation = configTab.validateDocument();
+        if (!expect(validationContainsDiagnosticCode(extraLayoutValidation, QStringLiteral("extra-argument")),
+                    "Extra positional layout arguments should be reported by validation.")) {
+            return 1;
+        }
+
+        const QTextBlock extraMapHeaderLine = configEditor->document()->findBlockByLineNumber(1);
+        if (!expect(!tokenHasWaveUnderline(extraMapHeaderLine, QStringLiteral("nw"))
+                        && tokenHasWaveUnderline(extraMapHeaderLine, QStringLiteral("bbb")),
+                    "Extra positional layout arguments should underline only the extra token.")) {
+            return 1;
+        }
     }
 
     {

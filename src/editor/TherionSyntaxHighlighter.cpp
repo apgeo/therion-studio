@@ -465,8 +465,11 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
         }
 
         QSet<int> positionalIdIndexes;
+        QHash<int, QSet<QString>> argumentEnumValues;
         int positionalIndex = 1;
+        int argumentValueIndex = 0;
         const QJsonArray argumentsArray = commandObject.value(QStringLiteral("arguments")).toArray();
+        bool hasVariadicPositionalArgument = false;
         for (const QJsonValue &argumentValue : argumentsArray) {
             const QJsonObject argumentObject = argumentValue.toObject();
             if (textContainsIdPlaceholder(argumentObject.value(QStringLiteral("signature")).toString())
@@ -474,7 +477,18 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
                 || textContainsIdPlaceholder(argumentObject.value(QStringLiteral("raw")).toString())) {
                 positionalIdIndexes.insert(positionalIndex);
             }
+            if (argumentObject.value(QStringLiteral("value_arity")).toString().trimmed().toUpper() == QStringLiteral("N")) {
+                hasVariadicPositionalArgument = true;
+            }
+            const QSet<QString> argumentAllowedValues = lowerSetFromArray(argumentObject.value(QStringLiteral("allowed_values")).toArray());
+            if (!argumentAllowedValues.isEmpty() && !commandName.isEmpty()) {
+                argumentEnumValues.insert(argumentValueIndex, argumentAllowedValues);
+                validationCatalog_.commandArgumentAllowedValuesByKey.insert(
+                    commandArgumentValueKey(commandName, argumentValueIndex),
+                    sortedStringListFromSet(argumentAllowedValues));
+            }
             ++positionalIndex;
+            ++argumentValueIndex;
         }
 
         const QJsonObject subtypeByTypeObject = commandObject.value(QStringLiteral("subtype_by_type")).toObject();
@@ -500,6 +514,9 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
             for (auto enumIt = optionEnumValues.cbegin(); enumIt != optionEnumValues.cend(); ++enumIt) {
                 validationCatalog_.commandOptionAllowedValuesByKey.insert(commandOptionValueKey(commandName, enumIt.key()),
                                                                           sortedStringListFromSet(enumIt.value()));
+            }
+            if (!hasVariadicPositionalArgument) {
+                validationCatalog_.commandMaxPositionalCount.insert(commandName, argumentsArray.size());
             }
         }
 
@@ -533,6 +550,14 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
                     commandAllowedValues_.insert(alias, commandAllowedValues);
                     validationCatalog_.commandArgumentAllowedValuesByKey.insert(commandArgumentValueKey(alias, 0),
                                                                                 sortedStringListFromSet(commandAllowedValues));
+                }
+                for (auto argumentEnumIt = argumentEnumValues.cbegin(); argumentEnumIt != argumentEnumValues.cend(); ++argumentEnumIt) {
+                    validationCatalog_.commandArgumentAllowedValuesByKey.insert(
+                        commandArgumentValueKey(alias, argumentEnumIt.key()),
+                        sortedStringListFromSet(argumentEnumIt.value()));
+                }
+                if (!hasVariadicPositionalArgument) {
+                    validationCatalog_.commandMaxPositionalCount.insert(alias, argumentsArray.size());
                 }
                 commandOptionTokens_.insert(alias, optionTokens);
                 commandOptionValueArity_.insert(alias, optionArities);
@@ -602,6 +627,7 @@ void TherionSyntaxHighlighter::applyValidatorInvalidTokenFormats(const QString &
             && code != QStringLiteral("wrong-option-value-count")
             && code != QStringLiteral("unknown-option-value")
             && code != QStringLiteral("unknown-argument-value")
+            && code != QStringLiteral("extra-argument")
             && code != QStringLiteral("invalid-command-context")
             && code != QStringLiteral("invalid-document-type")
             && code != QStringLiteral("duplicate-object-id")

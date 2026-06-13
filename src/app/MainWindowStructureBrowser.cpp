@@ -223,6 +223,7 @@ bool isStructureRelationshipDiagnostic(const TherionStudio::ProjectIndexDiagnost
     case TherionStudio::ProjectIndexDiagnosticKind::MixedMapAndScrapReferences:
         return true;
     case TherionStudio::ProjectIndexDiagnosticKind::UnknownJoinReference:
+    case TherionStudio::ProjectIndexDiagnosticKind::UnknownJoinLinePointMark:
     case TherionStudio::ProjectIndexDiagnosticKind::AmbiguousJoinReference:
     case TherionStudio::ProjectIndexDiagnosticKind::UnknownStationReference:
     case TherionStudio::ProjectIndexDiagnosticKind::AmbiguousStationReference:
@@ -246,6 +247,7 @@ QString diagnosticStructureItemText(const TherionStudio::ProjectIndexDiagnostic 
     case TherionStudio::ProjectIndexDiagnosticKind::MixedMapAndScrapReferences:
         return QObject::tr("Mixed map/scrap content near: %1").arg(diagnostic.referencedName);
     case TherionStudio::ProjectIndexDiagnosticKind::UnknownJoinReference:
+    case TherionStudio::ProjectIndexDiagnosticKind::UnknownJoinLinePointMark:
     case TherionStudio::ProjectIndexDiagnosticKind::AmbiguousJoinReference:
     case TherionStudio::ProjectIndexDiagnosticKind::UnknownStationReference:
     case TherionStudio::ProjectIndexDiagnosticKind::AmbiguousStationReference:

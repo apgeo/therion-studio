@@ -43,7 +43,7 @@
       "name": "[<flags>]",
       "signature": "[<flags>]",
       "option_key": "",
-      "value_arity": "N",
+      "value_arity": "1",
       "value_domain": "keyword",
       "description": "",
       "allowed_values": [],

@@ -275,6 +275,13 @@ struct ReferenceResolution
     int candidateCount = 0;
 };
 
+struct JoinReferenceParts
+{
+    QString lookupName;
+    QString linePointMark;
+    bool requiresLinePointMark = false;
+};
+
 ReferenceKeyIndex entryKeysByReferenceName(const QVector<ProjectStructureEntry> &entries,
                                            ProjectStructureEntryKind kind)
 {
@@ -304,6 +311,15 @@ ReferenceKeyIndex mergedReferenceKeysByReferenceName(const QVector<ProjectStruct
         }
     }
     return mergedKeys;
+}
+
+QHash<QString, ProjectStructureEntry> entriesByStructureKey(const QVector<ProjectStructureEntry> &entries)
+{
+    QHash<QString, ProjectStructureEntry> entriesByKey;
+    for (const ProjectStructureEntry &entry : entries) {
+        entriesByKey.insert(ProjectStructureIndex::structureEntryNodeKey(entry), entry);
+    }
+    return entriesByKey;
 }
 
 ReferenceResolution resolveCandidates(const QVector<QString> &entryKeys)
@@ -345,25 +361,59 @@ ReferenceResolution resolveReferenceKey(const ReferenceKeyIndex &entryKeys,
         entryKeys.keysByNameAndNamespace.value(namespacedReferenceLookupKey(reference.name, targetNamespacePath)));
 }
 
+bool isBuiltInJoinLinePointMark(const QString &markName)
+{
+    const QString normalizedMark = markName.trimmed().toLower();
+    if (normalizedMark == QStringLiteral("end")) {
+        return true;
+    }
+
+    static const QRegularExpression numericMarker(QStringLiteral(R"(^\d+$)"));
+    return numericMarker.match(normalizedMark).hasMatch();
+}
+
+JoinReferenceParts parseJoinReference(QString referenceName)
+{
+    JoinReferenceParts parts;
+    referenceName = referenceName.trimmed();
+
+    const int namespaceIndex = referenceName.indexOf(QLatin1Char('@'));
+    const int markerIndex = referenceName.indexOf(QLatin1Char(':'));
+    if (markerIndex < 0) {
+        parts.lookupName = referenceName;
+        return parts;
+    }
+
+    if (namespaceIndex >= 0 && markerIndex > namespaceIndex) {
+        parts.lookupName = referenceName.left(markerIndex).trimmed();
+        parts.linePointMark = referenceName.mid(markerIndex + 1).trimmed();
+    } else {
+        const int markerLength = namespaceIndex < 0
+            ? referenceName.size() - markerIndex
+            : namespaceIndex - markerIndex;
+        parts.lookupName = referenceName;
+        parts.linePointMark = referenceName.mid(markerIndex + 1, markerLength - 1).trimmed();
+        parts.lookupName.remove(markerIndex, markerLength);
+        parts.lookupName = parts.lookupName.trimmed();
+    }
+
+    parts.requiresLinePointMark = !parts.linePointMark.isEmpty()
+        && !isBuiltInJoinLinePointMark(parts.linePointMark);
+    return parts;
+}
+
 QString joinReferenceLookupToken(QString referenceName)
 {
-    referenceName = referenceName.trimmed();
-    const int namespaceIndex = referenceName.indexOf(QLatin1Char('@'));
-    const int endpointIndex = referenceName.indexOf(QLatin1Char(':'));
-    if (endpointIndex >= 0 && (namespaceIndex < 0 || endpointIndex < namespaceIndex)) {
-        const int removeLength = namespaceIndex < 0
-            ? referenceName.size() - endpointIndex
-            : namespaceIndex - endpointIndex;
-        referenceName.remove(endpointIndex, removeLength);
-    }
-    return referenceName.trimmed();
+    return parseJoinReference(referenceName).lookupName;
 }
 
 bool joinReferenceShouldReportMissing(const QString &referenceName)
 {
-    const QString lookupName = joinReferenceLookupToken(referenceName);
+    const JoinReferenceParts referenceParts = parseJoinReference(referenceName);
+    const QString lookupName = referenceParts.lookupName;
     const QString nameOnly = mapReferenceLookupKey(lookupName);
-    return lookupName.contains(QLatin1Char('@'))
+    return !referenceParts.linePointMark.isEmpty()
+        || lookupName.contains(QLatin1Char('@'))
         || lookupName.contains(QLatin1Char(':'))
         || nameOnly.endsWith(QStringLiteral(".s"))
         || nameOnly.endsWith(QStringLiteral(".m"));
@@ -823,7 +873,8 @@ ProjectStructureEntry appendStructureEntry(QVector<ProjectStructureEntry> *entri
                                            int lineNumber,
                                            const QVector<ProjectBlock> &blockStack,
                                            ProjectObjectIdentityGenerator *identityGenerator,
-                                           bool createsNamespace = true)
+                                           bool createsNamespace = true,
+                                           const QSet<QString> &linePointMarks = {})
 {
     ProjectStructureEntry entry;
     const QString category = projectCategoryFromKind(kind);
@@ -840,8 +891,36 @@ ProjectStructureEntry appendStructureEntry(QVector<ProjectStructureEntry> *entri
     entry.lineNumber = lineNumber;
     entry.depth = blockStack.size();
     entry.createsNamespace = createsNamespace;
+    entry.linePointMarks = linePointMarks;
     entries->append(entry);
     return entry;
+}
+
+QHash<int, QSet<QString>> linePointMarksByLineStart(const QVector<TherionSourceLogicalCommand> &commands)
+{
+    QHash<int, QSet<QString>> marksByLineStart;
+    int currentLineStart = 0;
+    for (const TherionSourceLogicalCommand &command : commands) {
+        if (command.metadata.commandName == QStringLiteral("line")) {
+            currentLineStart = command.startLineNumber;
+            continue;
+        }
+        if (command.metadata.commandName == QStringLiteral("endline")) {
+            currentLineStart = 0;
+            continue;
+        }
+        if (currentLineStart <= 0
+            || command.metadata.commandName != QStringLiteral("mark")
+            || command.parsed.tokens.size() < 2) {
+            continue;
+        }
+        const QString markName = command.parsed.tokens.value(1).trimmed().toLower();
+        if (!markName.isEmpty()) {
+            marksByLineStart[currentLineStart].insert(markName);
+        }
+    }
+
+    return marksByLineStart;
 }
 
 void appendProjectStructureFromFile(const QString &filePath,
@@ -860,6 +939,8 @@ void appendProjectStructureFromFile(const QString &filePath,
     activeFiles->insert(normalizedPath);
     const TherionSourceLogicalDocument &logicalDocument =
         logicalDocumentForFile(normalizedPath, cache, inMemoryFileContentsByPath);
+    const QHash<int, QSet<QString>> lineMarksByLineStart =
+        linePointMarksByLineStart(logicalDocument.commands());
 
     for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
         const TherionParsedLine &parsedLine = command.parsed;
@@ -916,7 +997,11 @@ void appendProjectStructureFromFile(const QString &filePath,
                              normalizedPath,
                              command.startLineNumber,
                              *blockStack,
-                             identityGenerator);
+                             identityGenerator,
+                             true,
+                             objectKind == ProjectStructureEntryKind::Line
+                                 ? lineMarksByLineStart.value(command.startLineNumber)
+                                 : QSet<QString>());
     }
 
     activeFiles->remove(normalizedPath);
@@ -1398,6 +1483,7 @@ QVector<ProjectIndexDiagnostic> scanJoinReferences(const QVector<ProjectStructur
          ProjectStructureEntryKind::Line,
          ProjectStructureEntryKind::Point,
          ProjectStructureEntryKind::Station});
+    const QHash<QString, ProjectStructureEntry> entriesByKey = entriesByStructureKey(entries);
 
     QSet<QString> sourceFiles;
     for (const ProjectStructureEntry &entry : entries) {
@@ -1422,19 +1508,33 @@ QVector<ProjectIndexDiagnostic> scanJoinReferences(const QVector<ProjectStructur
                     break;
                 }
 
-                const QString lookupName = joinReferenceLookupToken(referenceName);
-                if (lookupName.isEmpty()) {
+                const JoinReferenceParts referenceParts = parseJoinReference(referenceName);
+                if (referenceParts.lookupName.isEmpty()) {
                     continue;
                 }
 
                 const ReferenceResolution resolution =
-                    resolveReferenceKey(joinObjectKeysByName, lookupName, ownerEntry.namespacePath);
+                    resolveReferenceKey(joinObjectKeysByName, referenceParts.lookupName, ownerEntry.namespacePath);
+                const TherionSourcePhysicalRange referenceRange =
+                    parsedLineTokenPhysicalRange(command.parsed, tokenIndex);
                 if (resolution.state == ReferenceResolutionState::Unique) {
+                    if (referenceParts.requiresLinePointMark) {
+                        const ProjectStructureEntry resolvedEntry = entriesByKey.value(resolution.key);
+                        if (resolvedEntry.kind == ProjectStructureEntryKind::Line
+                            && !resolvedEntry.linePointMarks.contains(referenceParts.linePointMark.toLower())) {
+                            appendProjectIndexDiagnostic(&diagnostics,
+                                                         ProjectIndexDiagnosticKind::UnknownJoinLinePointMark,
+                                                         ownerEntry.objectId,
+                                                         sourceFile,
+                                                         referenceRange.lineNumber,
+                                                         referenceRange.columnNumber,
+                                                         referenceRange.columnLength,
+                                                         referenceName);
+                        }
+                    }
                     continue;
                 }
 
-                const TherionSourcePhysicalRange referenceRange =
-                    parsedLineTokenPhysicalRange(command.parsed, tokenIndex);
                 if (resolution.state == ReferenceResolutionState::Ambiguous) {
                     appendProjectIndexDiagnostic(&diagnostics,
                                                  ProjectIndexDiagnosticKind::AmbiguousJoinReference,
@@ -1697,6 +1797,7 @@ QVector<ProjectStructureEntry> scanTh2ObjectsFromLogicalCommands(
     int currentScrapLine = 0;
     QString currentScrapObjectId;
     ProjectObjectIdentityGenerator identityGenerator;
+    const QHash<int, QSet<QString>> lineMarksByLineStart = linePointMarksByLineStart(commands);
 
     auto ensureScrap = [&](const QString &scrapName, int lineNumber) {
         if (!currentScrapObjectId.isEmpty()) {
@@ -1754,6 +1855,9 @@ QVector<ProjectStructureEntry> scanTh2ObjectsFromLogicalCommands(
         entry.sourceFile = sourceFile;
         entry.lineNumber = command.startLineNumber;
         entry.depth = 1;
+        if (kind == ProjectStructureEntryKind::Line) {
+            entry.linePointMarks = lineMarksByLineStart.value(command.startLineNumber);
+        }
 
         if (entry.name.isEmpty()) {
             entry.name = objectDisplayText(entry, parsedLine);

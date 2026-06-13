@@ -25,9 +25,15 @@
       "signature": "<point/line/area/group/special>",
       "option_key": "",
       "value_arity": "1",
-      "value_domain": "keyword",
+      "value_domain": "enum",
       "description": "",
-      "allowed_values": [],
+      "allowed_values": [
+        "point",
+        "line",
+        "area",
+        "group",
+        "special"
+      ],
       "dependencies": []
     },
     {

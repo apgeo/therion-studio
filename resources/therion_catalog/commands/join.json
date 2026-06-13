@@ -24,7 +24,7 @@
       "name": "<pointX>",
       "signature": "<pointX>",
       "option_key": "",
-      "value_arity": "1",
+      "value_arity": "N",
       "value_domain": "unknown",
       "description": "can be an ID of a point or line symbol, optionally followed by a line point mark <id>:<mark> (e.g. podangl_l31@podangl:mark1). <mark> can be also \"end\" (end of the line) or line point index (where 0 is the first point). A special case is when <point1> and <point2> are scrap IDs - than the closest scrap ends are joined together.",
       "allowed_values": [],

@@ -230,6 +230,8 @@ def infer_positional_value_arity(signature_core: str, raw_signature: str) -> str
         return "0"
     if "..." in signature_core or "..." in raw_signature:
         return "N"
+    if re.search(r"<[^>]*\blist\b[^>]*>", signature_core, re.IGNORECASE):
+        return "N"
 
     marker_count = len(SIGNATURE_MARKER_RE.findall(signature_core))
     if marker_count > 1:
@@ -790,16 +792,18 @@ def build_argument_entries_from_signature(signature_core: str) -> list[dict[str,
         signature = normalize_whitespace(match.group(0))
         if not signature:
             continue
+        allowed_values = infer_allowed_values(signature, signature)
+        value_arity = infer_positional_value_arity(signature, signature)
         arguments.append(
             {
                 "raw": signature,
                 "name": signature,
                 "signature": signature,
                 "option_key": "",
-                "value_arity": "1" if signature.startswith("<") else "N",
-                "value_domain": "keyword",
+                "value_arity": value_arity,
+                "value_domain": "enum" if allowed_values else "keyword",
                 "description": "",
-                "allowed_values": [],
+                "allowed_values": allowed_values,
                 "dependencies": [],
             }
         )
@@ -954,6 +958,11 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
         # be merged into the parent command, otherwise identifier arguments (e.g.
         # survey <id>) get polluted with unrelated option enums like on/off.
         allowed_values: list[str] = []
+        if normalized_command_name == "join":
+            for argument in arguments:
+                argument["value_arity"] = "N"
+        if normalized_command_name == "layout" and not arguments:
+            arguments = build_argument_entries_from_signature("layout <id>")
 
         result_entry = {
             "name": command_name,

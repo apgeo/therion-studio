@@ -146,15 +146,17 @@ void RawEditorCommandMetadataLoader::applyCommandArgumentMetadata(const QString 
                                                                   const QJsonObject &commandObject,
                                                                   TherionHelpEntry *entry,
                                                                   int *requiredPositionalCount,
+                                                                  int *maxPositionalCount,
                                                                   bool *primaryValueIsPerson,
                                                                   QStringList *commandArgumentSignatures) const
 {
-    if (context_.metadata == nullptr || entry == nullptr || requiredPositionalCount == nullptr || primaryValueIsPerson == nullptr
-        || commandArgumentSignatures == nullptr) {
+    if (context_.metadata == nullptr || entry == nullptr || requiredPositionalCount == nullptr || maxPositionalCount == nullptr
+        || primaryValueIsPerson == nullptr || commandArgumentSignatures == nullptr) {
         return;
     }
 
     const QJsonArray argumentsArray = commandObject.value(QStringLiteral("arguments")).toArray();
+    bool hasVariadicPositionalArgument = false;
     for (int argumentIndex = 0; argumentIndex < argumentsArray.size(); ++argumentIndex) {
         const QJsonValue value = argumentsArray.at(argumentIndex);
         const QJsonObject argumentObject = value.toObject();
@@ -167,6 +169,9 @@ void RawEditorCommandMetadataLoader::applyCommandArgumentMetadata(const QString 
         appendUnique(entry->arguments, argumentLine);
         if (isRequiredArgumentSignature(signature)) {
             ++(*requiredPositionalCount);
+        }
+        if (argumentObject.value(QStringLiteral("value_arity")).toString().trimmed().toUpper() == QStringLiteral("N")) {
+            hasVariadicPositionalArgument = true;
         }
         if (!(*primaryValueIsPerson)) {
             const QString normalizedSignature = signature.trimmed().toLower();
@@ -184,6 +189,9 @@ void RawEditorCommandMetadataLoader::applyCommandArgumentMetadata(const QString 
             appendUniqueList(metadata().commandArgumentValueTokens[commandArgumentValueKey(commandName, argumentIndex)],
                              argumentAllowedValues);
         }
+    }
+    if (!hasVariadicPositionalArgument) {
+        *maxPositionalCount = argumentsArray.size();
     }
 }
 
@@ -364,6 +372,7 @@ void RawEditorCommandMetadataLoader::applyCommandOptionCatalogMetadata(const QSt
 void RawEditorCommandMetadataLoader::applyCommandRegistrationMetadata(const QString &commandName,
                                                                       const TherionHelpEntry &entry,
                                                                       int requiredPositionalCount,
+                                                                      int maxPositionalCount,
                                                                       bool primaryValueIsPerson,
                                                                       const QStringList &commandArgumentSignatures,
                                                                       const QString &sourceFile) const
@@ -374,6 +383,9 @@ void RawEditorCommandMetadataLoader::applyCommandRegistrationMetadata(const QStr
 
     appendUnique(metadata().commandCompletionTokens, commandName);
     metadata().commandRequiredPositionalCount.insert(commandName, requiredPositionalCount);
+    if (maxPositionalCount >= 0) {
+        metadata().commandMaxPositionalCount.insert(commandName, maxPositionalCount);
+    }
     if (!commandArgumentSignatures.isEmpty()) {
         metadata().commandArgumentSignaturesByToken.insert(commandName, commandArgumentSignatures);
     }
@@ -410,6 +422,9 @@ void RawEditorCommandMetadataLoader::applyCommandAliasMetadata(const QString &co
         }
         appendUnique(metadata().commandCompletionTokens, alias);
         metadata().commandRequiredPositionalCount.insert(alias, metadata().commandRequiredPositionalCount.value(commandName));
+        if (metadata().commandMaxPositionalCount.contains(commandName)) {
+            metadata().commandMaxPositionalCount.insert(alias, metadata().commandMaxPositionalCount.value(commandName));
+        }
         appendUniqueList(metadata().commandArgumentSignaturesByToken[alias],
                          metadata().commandArgumentSignaturesByToken.value(commandName));
         metadata().commandPrimaryValueIsPerson.insert(alias, metadata().commandPrimaryValueIsPerson.value(commandName));
@@ -495,6 +510,7 @@ void RawEditorCommandMetadataLoader::applyCatalogCommandsMetadata(const QJsonObj
         TherionHelpEntry entry;
         entry.summary = commandObject.value(QStringLiteral("summary")).toString().trimmed();
         int requiredPositionalCount = 0;
+        int maxPositionalCount = -1;
         QStringList commandArgumentSignatures;
         bool primaryValueIsPerson = false;
         const QString sourceFile = commandObject.value(QStringLiteral("source"))
@@ -514,6 +530,7 @@ void RawEditorCommandMetadataLoader::applyCatalogCommandsMetadata(const QJsonObj
                                      commandObject,
                                      &entry,
                                      &requiredPositionalCount,
+                                     &maxPositionalCount,
                                      &primaryValueIsPerson,
                                      &commandArgumentSignatures);
 
@@ -526,6 +543,7 @@ void RawEditorCommandMetadataLoader::applyCatalogCommandsMetadata(const QJsonObj
         applyCommandRegistrationMetadata(commandName,
                                          entry,
                                          requiredPositionalCount,
+                                         maxPositionalCount,
                                          primaryValueIsPerson,
                                          commandArgumentSignatures,
                                          sourceFile);

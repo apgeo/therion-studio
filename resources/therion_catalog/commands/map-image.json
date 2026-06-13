@@ -45,9 +45,19 @@
       "signature": "<n/s/e/w/ne/nw/se/sw/center>",
       "option_key": "",
       "value_arity": "1",
-      "value_domain": "keyword",
+      "value_domain": "enum",
       "description": "",
-      "allowed_values": [],
+      "allowed_values": [
+        "n",
+        "s",
+        "e",
+        "w",
+        "ne",
+        "nw",
+        "se",
+        "sw",
+        "center"
+      ],
       "dependencies": []
     },
     {

@@ -32,7 +32,7 @@
       "name": "[<station> [<station> [<station>]",
       "signature": "[<station> [<station> [<station>]",
       "option_key": "",
-      "value_arity": "N",
+      "value_arity": "1",
       "value_domain": "keyword",
       "description": "",
       "allowed_values": [],

@@ -9,32 +9,212 @@
 #include <QColor>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QLayout>
+#include <QLayoutItem>
 #include <QList>
 #include <QMenu>
 #include <QPalette>
 #include <QSignalBlocker>
 #include <QSize>
 #include <QSizePolicy>
+#include <QSpacerItem>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QToolButton>
 #include <QWidget>
 
+#include <algorithm>
+
 namespace
 {
+constexpr int kWorkspaceCommandButtonSize = 22;
+constexpr int kWorkspaceCommandIconSize = 14;
+
+class WorkspaceCommandFlowLayout final : public QLayout
+{
+public:
+    explicit WorkspaceCommandFlowLayout(QWidget *parent)
+        : QLayout(parent)
+    {
+        setContentsMargins(4, 4, 8, 4);
+        setSpacing(4);
+    }
+
+    ~WorkspaceCommandFlowLayout() override
+    {
+        while (QLayoutItem *item = takeAt(0)) {
+            delete item;
+        }
+    }
+
+    void addItem(QLayoutItem *item) override
+    {
+        items_.append(item);
+    }
+
+    void addStretch()
+    {
+        addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Minimum));
+    }
+
+    int count() const override
+    {
+        return items_.size();
+    }
+
+    QLayoutItem *itemAt(int index) const override
+    {
+        return index >= 0 && index < items_.size() ? items_.at(index) : nullptr;
+    }
+
+    QLayoutItem *takeAt(int index) override
+    {
+        if (index < 0 || index >= items_.size()) {
+            return nullptr;
+        }
+        return items_.takeAt(index);
+    }
+
+    Qt::Orientations expandingDirections() const override
+    {
+        return Qt::Horizontal;
+    }
+
+    bool hasHeightForWidth() const override
+    {
+        return true;
+    }
+
+    int heightForWidth(int width) const override
+    {
+        return doLayout(QRect(0, 0, width, 0), true);
+    }
+
+    QSize minimumSize() const override
+    {
+        QSize size;
+        for (const QLayoutItem *item : items_) {
+            if (item == nullptr || item->isEmpty()) {
+                continue;
+            }
+            size = size.expandedTo(item->minimumSize());
+        }
+        const QMargins margins = contentsMargins();
+        size += QSize(margins.left() + margins.right(), margins.top() + margins.bottom());
+        return size;
+    }
+
+    void setGeometry(const QRect &rect) override
+    {
+        QLayout::setGeometry(rect);
+        doLayout(rect, false);
+    }
+
+    QSize sizeHint() const override
+    {
+        const QMargins margins = contentsMargins();
+        int width = margins.left() + margins.right();
+        int height = 0;
+        for (const QLayoutItem *item : items_) {
+            if (item == nullptr || item->isEmpty()) {
+                continue;
+            }
+            const QSize itemSize = item->sizeHint();
+            width += itemSize.width() + spacing();
+            height = std::max(height, itemSize.height());
+        }
+        if (!items_.isEmpty()) {
+            width -= spacing();
+        }
+        return QSize(width, height + margins.top() + margins.bottom());
+    }
+
+private:
+    int doLayout(const QRect &rect, bool testOnly) const
+    {
+        const QMargins margins = contentsMargins();
+        const QRect effectiveRect = rect.adjusted(margins.left(), margins.top(), -margins.right(), -margins.bottom());
+        int x = effectiveRect.x();
+        int y = effectiveRect.y();
+        int lineHeight = 0;
+        const int hSpace = spacing();
+        const int vSpace = spacing();
+
+        for (QLayoutItem *item : items_) {
+            if (item != nullptr && item->spacerItem() != nullptr) {
+                const int trailingWidth = visibleItemsWidth(items_.mid(items_.indexOf(item) + 1));
+                if (trailingWidth <= 0) {
+                    continue;
+                }
+                if (trailingWidth > effectiveRect.width()) {
+                    x = effectiveRect.x();
+                    y += lineHeight + vSpace;
+                    lineHeight = 0;
+                    continue;
+                }
+                if (x + trailingWidth > effectiveRect.right() + 1 && lineHeight > 0) {
+                    y += lineHeight + vSpace;
+                    lineHeight = 0;
+                }
+                x = effectiveRect.right() - trailingWidth + 1;
+                continue;
+            }
+            if (item == nullptr || item->isEmpty()) {
+                continue;
+            }
+            const QSize itemSize = item->sizeHint();
+            const int nextX = x + itemSize.width();
+            if (nextX > effectiveRect.right() + 1 && lineHeight > 0) {
+                x = effectiveRect.x();
+                y += lineHeight + vSpace;
+                lineHeight = 0;
+            }
+
+            if (!testOnly) {
+                item->setGeometry(QRect(QPoint(x, y), itemSize));
+            }
+            x += itemSize.width() + hSpace;
+            lineHeight = std::max(lineHeight, itemSize.height());
+        }
+        return y + lineHeight - rect.y() + margins.bottom();
+    }
+
+    int visibleItemsWidth(const QList<QLayoutItem *> &items) const
+    {
+        int width = 0;
+        int visibleCount = 0;
+        for (QLayoutItem *item : items) {
+            if (item == nullptr || item->isEmpty() || item->spacerItem() != nullptr) {
+                continue;
+            }
+            width += item->sizeHint().width();
+            ++visibleCount;
+        }
+        if (visibleCount > 1) {
+            width += (visibleCount - 1) * spacing();
+        }
+        return width;
+    }
+
+    QList<QLayoutItem *> items_;
+};
+
 QToolButton *createWorkspaceIconButton(QWidget *parent,
                                        const QString &toolTip,
                                        const QString &iconName)
 {
     auto *button = new QToolButton(parent);
     button->setAutoRaise(false);
-    button->setIconSize(QSize(14, 14));
-    button->setIcon(TherionStudio::themedLucideIcon(iconName, button->palette(), 14, button->devicePixelRatioF()));
+    button->setIconSize(QSize(kWorkspaceCommandIconSize, kWorkspaceCommandIconSize));
+    button->setIcon(TherionStudio::themedLucideIcon(iconName,
+                                                    button->palette(),
+                                                    kWorkspaceCommandIconSize,
+                                                    button->devicePixelRatioF()));
     button->setProperty("lucideIconName", iconName);
     button->setToolButtonStyle(Qt::ToolButtonIconOnly);
     button->setToolTip(toolTip);
     button->setAccessibleName(toolTip);
-    button->setFixedSize(QSize(26, 26));
+    button->setFixedSize(QSize(kWorkspaceCommandButtonSize, kWorkspaceCommandButtonSize));
     button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     return button;
 }
@@ -45,6 +225,7 @@ QFrame *createWorkspaceToolbarSeparator(QWidget *parent)
     separator->setFrameShape(QFrame::VLine);
     separator->setFrameShadow(QFrame::Sunken);
     separator->setObjectName(QStringLiteral("workspaceToolbarSeparator"));
+    separator->setFixedSize(QSize(1, kWorkspaceCommandButtonSize));
     return separator;
 }
 }
@@ -71,14 +252,11 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceModeSwitcher_->setStyleSheet(TherionStudio::workspaceCommandBarStyleSheet(palette().color(QPalette::Base),
                                                                                         false,
                                                                                         false));
-    auto *hostLayout = new QHBoxLayout(workspaceModeSwitcher_);
-    hostLayout->setContentsMargins(4, 4, 8, 4);
-    hostLayout->setSpacing(4);
+    auto *hostLayout = new WorkspaceCommandFlowLayout(workspaceModeSwitcher_);
+    workspaceModeSwitcher_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
 
-    workspaceOpenProjectButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Open Project"), QStringLiteral("folder-open"));
     workspaceNewDocumentButton_ =
         createWorkspaceIconButton(workspaceModeSwitcher_, tr("New Document"), QStringLiteral("file-plus"));
-    workspaceCloseProjectButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Close Project"), QStringLiteral("folder-x"));
     auto *newDocumentMenu = new QMenu(workspaceNewDocumentButton_);
     if (newTherionSourceAction_ != nullptr) {
         newDocumentMenu->addAction(newTherionSourceAction_);
@@ -95,24 +273,14 @@ void MainWindow::initializeWorkspaceModeSwitcher()
         }
         newDocumentMenu->popup(button->mapToGlobal(QPoint(0, button->height())));
     });
-    workspaceProjectSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
-    workspaceValidateDocumentButton_ =
-        createWorkspaceIconButton(workspaceModeSwitcher_, tr("Validate Document"), QStringLiteral("spell-check"));
-    workspaceValidateDocumentButton_->setObjectName(QStringLiteral("workspaceValidateDocumentButton"));
     workspaceSaveButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Save"), QStringLiteral("save"));
-    workspaceValidationSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
     workspaceEditSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
     workspaceUndoButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Undo"), QStringLiteral("undo-2"));
     workspaceRedoButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Redo"), QStringLiteral("redo-2"));
     workspaceCompileCurrentConfigButton_ =
         createWorkspaceIconButton(workspaceModeSwitcher_, tr("Compile Current Config"), QStringLiteral("play"));
-    hostLayout->addWidget(workspaceOpenProjectButton_);
-    hostLayout->addWidget(workspaceCloseProjectButton_);
-    hostLayout->addWidget(workspaceProjectSeparator_);
     hostLayout->addWidget(workspaceNewDocumentButton_);
     hostLayout->addWidget(workspaceSaveButton_);
-    hostLayout->addWidget(workspaceValidationSeparator_);
-    hostLayout->addWidget(workspaceValidateDocumentButton_);
     hostLayout->addWidget(workspaceEditSeparator_);
     hostLayout->addWidget(workspaceUndoButton_);
     hostLayout->addWidget(workspaceRedoButton_);
@@ -164,7 +332,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     mapToolsLayout->addWidget(workspaceAreaButton_);
     mapToolsLayout->addWidget(workspaceSmartAreaButton_);
     hostLayout->addWidget(workspaceMapToolsGroup_);
-    hostLayout->addStretch(1);
+    hostLayout->addStretch();
 
     workspaceMapModeSwitcher_ = new QWidget(workspaceModeSwitcher_);
     auto *mapLayout = new QHBoxLayout(workspaceMapModeSwitcher_);
@@ -196,22 +364,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     hostLayout->addWidget(workspaceMapModeSwitcher_);
     hostLayout->addWidget(workspaceTextModeSwitcher_);
 
-    connect(workspaceOpenProjectButton_, &QToolButton::clicked, this, [this]() {
-        if (openProjectAction_ != nullptr) {
-            openProjectAction_->trigger();
-        } else {
-            openProject();
-        }
-    });
-    connect(workspaceCloseProjectButton_, &QToolButton::clicked, this, [this]() {
-        if (closeProjectAction_ != nullptr) {
-            closeProjectAction_->trigger();
-        } else {
-            closeProject();
-        }
-    });
     connect(workspaceSaveButton_, &QToolButton::clicked, this, &MainWindow::saveActiveDocument);
-    connect(workspaceValidateDocumentButton_, &QToolButton::clicked, this, &MainWindow::triggerValidateDocumentForActiveDocument);
     connect(workspaceUndoButton_, &QToolButton::clicked, this, &MainWindow::triggerUndoForActiveDocument);
     connect(workspaceRedoButton_, &QToolButton::clicked, this, &MainWindow::triggerRedoForActiveDocument);
     connect(workspaceCompileCurrentConfigButton_, &QToolButton::clicked, this, &MainWindow::triggerCompileCurrentConfigForActiveDocument);
@@ -273,7 +426,6 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceTextModeSwitcher_->setVisible(false);
     workspaceZoomGroup_->setVisible(false);
     workspaceMapToolsGroup_->setVisible(false);
-    workspaceValidationSeparator_->setVisible(false);
     workspaceEditSeparator_->setVisible(false);
     workspaceHistorySeparator_->setVisible(false);
     workspaceCompileSeparator_->setVisible(false);
@@ -290,16 +442,11 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     if (workspaceModeSwitcher_ == nullptr
         || workspaceMapModeSwitcher_ == nullptr
         || workspaceTextModeSwitcher_ == nullptr
-        || workspaceOpenProjectButton_ == nullptr
         || workspaceNewDocumentButton_ == nullptr
-        || workspaceCloseProjectButton_ == nullptr
-        || workspaceProjectSeparator_ == nullptr
-        || workspaceValidationSeparator_ == nullptr
         || workspaceEditSeparator_ == nullptr
         || workspaceVisualModeButton_ == nullptr
         || workspaceRawModeButton_ == nullptr
         || workspaceMapPaneWindowButton_ == nullptr
-        || workspaceValidateDocumentButton_ == nullptr
         || workspaceSaveButton_ == nullptr
         || workspaceUndoButton_ == nullptr
         || workspaceRedoButton_ == nullptr
@@ -332,9 +479,11 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget);
     const bool showMapModes = mapTab != nullptr;
     const bool showTextModes = textTab != nullptr;
-    const bool showDocumentValidation = textTab != nullptr || mapTab != nullptr;
     const bool showCompileCurrentConfig = showTextModes && !currentDocumentTherionConfigPath().isEmpty();
     const bool mapPaneDetached = mapTab != nullptr && mapTab->isMapPaneDetached();
+    const bool embeddedMapSurfaceActive = mapTab != nullptr
+        && !mapPaneDetached
+        && mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Visual;
     const bool showZoomTools = showMapModes && !mapPaneDetached;
     const bool showMapTools = showMapModes && !mapPaneDetached;
     QColor commandBarBackground = palette().color(QPalette::Base);
@@ -351,18 +500,12 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceModeSwitcher_->setVisible(true);
     workspaceMapModeSwitcher_->setVisible(showMapModes);
     workspaceTextModeSwitcher_->setVisible(showTextModes);
-    workspaceOpenProjectButton_->setVisible(true);
     workspaceNewDocumentButton_->setVisible(true);
-    workspaceCloseProjectButton_->setVisible(true);
-    workspaceProjectSeparator_->setVisible(true);
-    workspaceValidationSeparator_->setVisible(showDocumentValidation);
-    workspaceEditSeparator_->setVisible(tabWidget != nullptr || showDocumentValidation);
+    workspaceEditSeparator_->setVisible(tabWidget != nullptr);
     workspaceHistorySeparator_->setVisible(showZoomTools);
     workspaceZoomGroup_->setVisible(showZoomTools);
     workspaceZoomSeparator_->setVisible(showZoomTools);
     workspaceMapToolsGroup_->setVisible(showMapTools);
-    workspaceValidateDocumentButton_->setVisible(showDocumentValidation);
-    workspaceValidateDocumentButton_->setEnabled(showDocumentValidation);
     workspaceSaveButton_->setEnabled(tabWidget != nullptr);
     const bool canUndo = documentCanUndoForWidget(tabWidget);
     const bool canRedo = documentCanRedoForWidget(tabWidget);
@@ -377,18 +520,24 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceCompileSeparator_->setVisible(showCompileCurrentConfig);
     workspaceCompileCurrentConfigButton_->setVisible(showCompileCurrentConfig);
     workspaceCompileCurrentConfigButton_->setEnabled(showCompileCurrentConfig);
-    workspaceZoomInButton_->setEnabled(showZoomTools);
-    workspaceZoomOutButton_->setEnabled(showZoomTools);
-    workspaceFitButton_->setEnabled(showZoomTools);
-    workspaceFitBackgroundButton_->setEnabled(showZoomTools && mapTab != nullptr && mapTab->backgroundLayerCount() > 0);
-    workspaceSelectButton_->setEnabled(showMapTools);
-    workspaceCompleteDraftButton_->setEnabled(showMapTools && mapTab != nullptr && mapTab->canCompleteDraftAction());
-    workspaceInsertScrapButton_->setEnabled(showMapTools);
-    workspacePointButton_->setEnabled(showMapTools);
-    workspaceLineButton_->setEnabled(showMapTools);
-    workspaceFreehandLineButton_->setEnabled(showMapTools);
-    workspaceAreaButton_->setEnabled(showMapTools);
-    workspaceSmartAreaButton_->setEnabled(showMapTools);
+    workspaceZoomInButton_->setEnabled(showZoomTools && embeddedMapSurfaceActive);
+    workspaceZoomOutButton_->setEnabled(showZoomTools && embeddedMapSurfaceActive);
+    workspaceFitButton_->setEnabled(showZoomTools && embeddedMapSurfaceActive);
+    workspaceFitBackgroundButton_->setEnabled(showZoomTools
+                                              && embeddedMapSurfaceActive
+                                              && mapTab != nullptr
+                                              && mapTab->backgroundLayerCount() > 0);
+    workspaceSelectButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
+    workspaceCompleteDraftButton_->setEnabled(showMapTools
+                                              && embeddedMapSurfaceActive
+                                              && mapTab != nullptr
+                                              && mapTab->canCompleteDraftAction());
+    workspaceInsertScrapButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
+    workspacePointButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
+    workspaceLineButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
+    workspaceFreehandLineButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
+    workspaceAreaButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
+    workspaceSmartAreaButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
 
     workspaceModeSwitcherSyncInProgress_ = true;
     if (showMapModes) {

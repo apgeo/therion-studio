@@ -25,6 +25,7 @@ inline QString workspaceCommandBarStyleSheet(const QColor &backgroundColor,
                                              bool topBorderEnabled,
                                              bool bottomBorderEnabled)
 {
+    constexpr int commandButtonSize = 22;
     const QString topBorder = topBorderEnabled
         ? QStringLiteral("1px solid palette(midlight)")
         : QStringLiteral("none");
@@ -46,10 +47,10 @@ inline QString workspaceCommandBarStyleSheet(const QColor &backgroundColor,
                " margin-right: 4px;"
                "}"
                "QWidget#workspaceCommandBar QToolButton {"
-               " min-width: 26px;"
-               " max-width: 26px;"
-               " min-height: 26px;"
-               " max-height: 26px;"
+               " min-width: %4px;"
+               " max-width: %4px;"
+               " min-height: %4px;"
+               " max-height: %4px;"
                " border: 1px solid palette(mid);"
                " border-radius: 6px;"
                " padding: 0px;"
@@ -77,7 +78,10 @@ inline QString workspaceCommandBarStyleSheet(const QColor &backgroundColor,
                " color: palette(mid);"
                " border-color: palette(mid);"
                "}")
-        .arg(topBorder, bottomBorder, backgroundColor.name(QColor::HexRgb));
+        .arg(topBorder,
+             bottomBorder,
+             backgroundColor.name(QColor::HexRgb),
+             QString::number(commandButtonSize));
 }
 
 inline QString mainEditorSurfaceStyleSheet()

@@ -414,10 +414,7 @@ private:
     QWidget *workspaceTextModeSwitcher_ = nullptr;
     QWidget *workspaceZoomGroup_ = nullptr;
     QWidget *workspaceMapToolsGroup_ = nullptr;
-    QToolButton *workspaceOpenProjectButton_ = nullptr;
     QToolButton *workspaceNewDocumentButton_ = nullptr;
-    QToolButton *workspaceCloseProjectButton_ = nullptr;
-    QToolButton *workspaceValidateDocumentButton_ = nullptr;
     QToolButton *workspaceSaveButton_ = nullptr;
     QToolButton *workspaceUndoButton_ = nullptr;
     QToolButton *workspaceRedoButton_ = nullptr;
@@ -434,8 +431,6 @@ private:
     QToolButton *workspaceFreehandLineButton_ = nullptr;
     QToolButton *workspaceAreaButton_ = nullptr;
     QToolButton *workspaceSmartAreaButton_ = nullptr;
-    QFrame *workspaceProjectSeparator_ = nullptr;
-    QFrame *workspaceValidationSeparator_ = nullptr;
     QFrame *workspaceEditSeparator_ = nullptr;
     QFrame *workspaceHistorySeparator_ = nullptr;
     QFrame *workspaceCompileSeparator_ = nullptr;

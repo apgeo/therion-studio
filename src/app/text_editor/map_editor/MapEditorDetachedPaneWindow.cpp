@@ -22,17 +22,23 @@ namespace TherionStudio
 {
 namespace
 {
+constexpr int kDetachedCommandButtonSize = 22;
+constexpr int kDetachedCommandIconSize = 14;
+
 QToolButton *createDetachedIconButton(QWidget *parent, const QString &toolTip, const QString &iconName)
 {
     auto *button = new QToolButton(parent);
     button->setAutoRaise(false);
-    button->setIconSize(QSize(14, 14));
-    button->setIcon(TherionStudio::themedLucideIcon(iconName, button->palette(), 14, button->devicePixelRatioF()));
+    button->setIconSize(QSize(kDetachedCommandIconSize, kDetachedCommandIconSize));
+    button->setIcon(TherionStudio::themedLucideIcon(iconName,
+                                                    button->palette(),
+                                                    kDetachedCommandIconSize,
+                                                    button->devicePixelRatioF()));
     button->setProperty("lucideIconName", iconName);
     button->setToolButtonStyle(Qt::ToolButtonIconOnly);
     button->setToolTip(toolTip);
     button->setAccessibleName(toolTip);
-    button->setFixedSize(QSize(26, 26));
+    button->setFixedSize(QSize(kDetachedCommandButtonSize, kDetachedCommandButtonSize));
     button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     return button;
 }

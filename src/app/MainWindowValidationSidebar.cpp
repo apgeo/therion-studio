@@ -250,7 +250,7 @@ void MainWindow::buildValidationSidebar()
     validationHeader->setWordWrap(true);
     validationLayout->addWidget(validationHeader);
 
-    validationStatusLabel_ = new QLabel(tr("Use Validate Document for the active file or Validate Project for the open project."), validationPage);
+    validationStatusLabel_ = new QLabel(tr("Project validation runs automatically for project files. Use Validate Project to refresh the open project."), validationPage);
     validationStatusLabel_->setWordWrap(true);
     validationLayout->addWidget(validationStatusLabel_);
 

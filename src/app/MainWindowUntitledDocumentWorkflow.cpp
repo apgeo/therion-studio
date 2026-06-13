@@ -80,7 +80,10 @@ void MainWindow::handleDocumentTextChanged(QWidget *documentWidget)
     if (!projectRootPath_.isEmpty()) {
         requestStructureSidebarRebuild();
     }
-    if (isDocumentPathInsideOpenProject(documentPathForWidget(documentWidget))) {
+    const bool canRequestLiveProjectValidation =
+        qobject_cast<TherionStudio::MapEditorTab *>(documentWidget) == nullptr;
+    if (canRequestLiveProjectValidation
+        && isDocumentPathInsideOpenProject(documentPathForWidget(documentWidget))) {
         requestProjectValidation(TherionStudio::ProjectValidationController::Trigger::DocumentChanged,
                                  false);
     }

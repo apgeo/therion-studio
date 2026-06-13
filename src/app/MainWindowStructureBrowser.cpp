@@ -664,10 +664,7 @@ void MainWindow::handleStructureSidebarScanFinished(const TherionStudio::Project
 
 void MainWindow::rebuildStructureSidebar()
 {
-    if (hasAppliedStructureSidebarIndex_ && structureTree_ != nullptr) {
-        structureExpandedNodeKeys_ = expandedStructureNodeKeys(structureTree_);
-        hasStructureExpansionState_ = true;
-    }
+    storeCurrentStructureExpansionState();
 
     structureModel_->clear();
     structureModel_->setHorizontalHeaderLabels({tr("Name")});
@@ -675,9 +672,9 @@ void MainWindow::rebuildStructureSidebar()
     lastAppliedStructureSidebarSignature_.clear();
 
     if (projectRootPath_.isEmpty() || !QDir(projectRootPath_).exists()) {
-        structureExpandedNodeKeys_.clear();
+        structureExpandedNodeKeysByMode_.clear();
         structureExpansionProjectRootPath_.clear();
-        hasStructureExpansionState_ = false;
+        hasStructureExpansionStateByMode_.clear();
 
         auto *rootItem = new QStandardItem(tr("Open a project to populate the survey hierarchy"));
         rootItem->setEditable(false);
@@ -690,6 +687,17 @@ void MainWindow::rebuildStructureSidebar()
     requestStructureSidebarRebuild();
 }
 
+void MainWindow::storeCurrentStructureExpansionState()
+{
+    if (!hasAppliedStructureSidebarIndex_ || structureTree_ == nullptr) {
+        return;
+    }
+
+    const int modeKey = static_cast<int>(structureViewMode_);
+    structureExpandedNodeKeysByMode_.insert(modeKey, expandedStructureNodeKeys(structureTree_));
+    hasStructureExpansionStateByMode_.insert(modeKey, true);
+}
+
 void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSnapshot &projectIndex)
 {
     lastStructureSidebarProjectIndex_ = projectIndex;
@@ -697,8 +705,8 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
     const QString currentExpansionProjectRootPath = normalizedStructurePathKey(projectRootPath_);
     if (structureExpansionProjectRootPath_ != currentExpansionProjectRootPath) {
         structureExpansionProjectRootPath_ = currentExpansionProjectRootPath;
-        structureExpandedNodeKeys_.clear();
-        hasStructureExpansionState_ = false;
+        structureExpandedNodeKeysByMode_.clear();
+        hasStructureExpansionStateByMode_.clear();
     }
 
     const QString nextSignature = QStringLiteral("%1|%2")
@@ -709,8 +717,9 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
         return;
     }
 
-    QSet<QString> expandedNodeKeys = structureExpandedNodeKeys_;
-    bool hasExpansionState = hasStructureExpansionState_;
+    const int modeKey = static_cast<int>(structureViewMode_);
+    QSet<QString> expandedNodeKeys = structureExpandedNodeKeysByMode_.value(modeKey);
+    bool hasExpansionState = hasStructureExpansionStateByMode_.value(modeKey, false);
     if (hasAppliedStructureSidebarIndex_ && structureTree_ != nullptr) {
         expandedNodeKeys = expandedStructureNodeKeys(structureTree_);
         hasExpansionState = true;
@@ -959,8 +968,8 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
             } else {
                 structureTree_->expandAll();
             }
-            structureExpandedNodeKeys_ = expandedStructureNodeKeys(structureTree_);
-            hasStructureExpansionState_ = true;
+            structureExpandedNodeKeysByMode_.insert(modeKey, expandedStructureNodeKeys(structureTree_));
+            hasStructureExpansionStateByMode_.insert(modeKey, true);
             return;
         }
 
@@ -1023,8 +1032,8 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
     } else {
         structureTree_->expandAll();
     }
-    structureExpandedNodeKeys_ = expandedStructureNodeKeys(structureTree_);
-    hasStructureExpansionState_ = true;
+    structureExpandedNodeKeysByMode_.insert(modeKey, expandedStructureNodeKeys(structureTree_));
+    hasStructureExpansionStateByMode_.insert(modeKey, true);
 }
 
 void MainWindow::showStructureSidebarMessage(const QString &message)

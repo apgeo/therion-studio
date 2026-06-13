@@ -175,6 +175,8 @@ The `Structure` activity opens the project navigation pane with `Files`, `Survey
 
 `Files` shows the project folder tree and supports file navigation and file/folder context-menu actions. `Survey` shows the survey namespace and definition hierarchy for `survey`, `map`, and `scrap` objects and recognizes both Therion centerline spellings: `centreline` and `centerline`. `Map` shows map composition: top-level maps, child maps, and referenced scraps.
 
+`Survey` and `Map` remember their expanded and collapsed tree state separately while the same project remains open.
+
 Select a row to inspect it in the tree. Double-click a source row, or select it and press `Enter`, to open its source document and navigate to the matching line.
 
 Within each parent, rows are grouped as surveys, maps, then scraps, and each group is sorted alphabetically by the displayed name. Warning rows appear after the project objects they relate to.

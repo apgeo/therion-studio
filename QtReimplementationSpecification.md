@@ -235,6 +235,7 @@ Required capabilities:
 - allow navigation through the project hierarchy
 - show selection state and the active document context
 - provide a readable overview of the current project structure
+- preserve user-expanded/collapsed tree state independently for the `Survey` and `Map` structure tabs across project-structure refreshes and tab switches while the same project remains open
 
 ### 3.6 Therion Runner and Console Output
 

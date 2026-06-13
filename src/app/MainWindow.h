@@ -181,6 +181,7 @@ private:
                                                  const QVector<TherionStudio::TherionSourceDiagnosticFix> &fixes);
     bool activateStructureSidebarAction(const QString &action);
     void updateStructureSidebarSourceLocations(const TherionStudio::ProjectIndexSnapshot &projectIndex);
+    void storeCurrentStructureExpansionState();
     void rebuildMapObjectsTree();
     void showSidebarPane(SidebarPane pane);
     void setSidebarPane(SidebarPane pane);
@@ -459,7 +460,7 @@ private:
     QString lastAppliedStructureSidebarSignature_;
     TherionStudio::ProjectIndexSnapshot lastStructureSidebarProjectIndex_;
     QString structureExpansionProjectRootPath_;
-    QSet<QString> structureExpandedNodeKeys_;
+    QHash<int, QSet<QString>> structureExpandedNodeKeysByMode_;
     QHash<QString, QString> structureNameOverrides_;
     SidebarPane activeSidebarPane_ = SidebarPane::FileBrowser;
     StructureViewMode structureViewMode_ = StructureViewMode::Survey;
@@ -472,7 +473,7 @@ private:
     bool sidebarCollapseSyncPending_ = false;
     bool updatingMapBackgroundPanel_ = false;
     bool hasAppliedStructureSidebarIndex_ = false;
-    bool hasStructureExpansionState_ = false;
+    QHash<int, bool> hasStructureExpansionStateByMode_;
     bool clearingDocumentTabs_ = false;
     bool shuttingDown_ = false;
 

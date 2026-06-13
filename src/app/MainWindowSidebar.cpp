@@ -1142,6 +1142,7 @@ void MainWindow::buildStructureSidebar()
         if (structureViewMode_ == nextMode) {
             return;
         }
+        storeCurrentStructureExpansionState();
         structureViewMode_ = nextMode;
         hasAppliedStructureSidebarIndex_ = false;
         lastAppliedStructureSidebarSignature_.clear();

@@ -131,6 +131,19 @@ TherionSourceDiagnostic diagnosticForProjectIndexDiagnostic(const ProjectIndexDi
         diagnostic.message = QObject::tr("Map composition mixes child map and scrap references; `%1` changes the content kind.")
                                  .arg(indexDiagnostic.referencedName);
         break;
+    case ProjectIndexDiagnosticKind::UnknownJoinReference:
+        diagnostic.code = QStringLiteral("unknown-join-reference");
+        diagnostic.title = QObject::tr("Unknown join reference");
+        diagnostic.message = QObject::tr("Join references `%1`, but no matching scrap, line, or point was found in the project index.")
+                                 .arg(indexDiagnostic.referencedName);
+        break;
+    case ProjectIndexDiagnosticKind::AmbiguousJoinReference:
+        diagnostic.code = QStringLiteral("ambiguous-join-reference");
+        diagnostic.title = QObject::tr("Ambiguous join reference");
+        diagnostic.message = QObject::tr("Join reference `%1` matches %2 objects in the project index.")
+                                 .arg(indexDiagnostic.referencedName)
+                                 .arg(indexDiagnostic.candidateCount);
+        break;
     }
 
     return diagnostic;

@@ -23,6 +23,8 @@
 #include <QSet>
 #include <QTabWidget>
 #include <QTemporaryDir>
+#include <QTextBlock>
+#include <QTextLayout>
 #include <QTimer>
 #include <QTreeView>
 #include <QVBoxLayout>
@@ -50,6 +52,8 @@ bool expect(bool condition, const char *message)
     return condition;
 }
 
+void pumpEvents();
+
 bool tokenIsNumber(const QString &token)
 {
     if (token.isEmpty()) {
@@ -59,6 +63,28 @@ bool tokenIsNumber(const QString &token)
     bool ok = false;
     token.toDouble(&ok);
     return ok;
+}
+
+bool tokenHasWaveUnderline(const QTextBlock &block, const QString &token)
+{
+    if (!block.isValid() || block.layout() == nullptr) {
+        return false;
+    }
+
+    const QString lineText = block.text();
+    const int tokenStart = lineText.indexOf(token);
+    if (tokenStart < 0) {
+        return false;
+    }
+
+    const QVector<QTextLayout::FormatRange> formats = block.layout()->formats();
+    for (const QTextLayout::FormatRange &range : formats) {
+        if (range.start <= tokenStart && (range.start + range.length) >= (tokenStart + token.length())
+            && range.format.underlineStyle() == QTextCharFormat::WaveUnderline) {
+            return true;
+        }
+    }
+    return false;
 }
 
 int countGraphicsEllipseItems(const QGraphicsScene *scene)
@@ -207,6 +233,92 @@ bool runFreehandBezierRowLogicSmoke()
     const QStringList tokens = rows.at(1).split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
     return expect(tokens.size() >= 6,
                   "Freehand bezier row conversion should produce cubic coordinate rows.");
+}
+
+int runProjectValidationDiagnosticsStayOutOfMapEditorSmoke()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory for map validation boundary smoke test.")) {
+        return 1;
+    }
+
+    const QString filePath = tempDir.path() + QStringLiteral("/validation-boundary.th2");
+    QFile file(filePath);
+    if (!expect(file.open(QIODevice::WriteOnly | QIODevice::Text),
+                "Failed to create temporary TH2 file for map validation boundary smoke test.")) {
+        return 1;
+    }
+
+    file.write("scrap s1\n"
+               "line wall\n"
+               "  0 0\n"
+               "  10 10\n"
+               "endline\n"
+               "endscrap\n");
+    file.close();
+
+    QtFileSystem fileSystem;
+    FakeSessionStore sessionStore;
+    QMainWindow hostWindow;
+    auto *central = new QWidget(&hostWindow);
+    auto *layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), central);
+    layout->addWidget(mapTab);
+    hostWindow.setCentralWidget(central);
+    hostWindow.resize(800, 600);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                "MapEditorTab failed to load TH2 file for map validation boundary smoke test.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+    pumpEvents();
+
+    auto *textEditor = mapTab->findChild<TextEditorTab *>();
+    if (!expect(textEditor != nullptr,
+                "Embedded TextEditorTab was not found for map validation boundary smoke test.")) {
+        return 1;
+    }
+    auto *sourceEditor = textEditor->findChild<QPlainTextEdit *>();
+    if (!expect(sourceEditor != nullptr,
+                "Embedded source editor was not found for map validation boundary smoke test.")) {
+        return 1;
+    }
+
+    const QString originalText = mapTab->text();
+    TherionSourceDiagnostic diagnostic;
+    diagnostic.severity = TherionSourceDiagnosticSeverity::Error;
+    diagnostic.code = QStringLiteral("project-validation-boundary-test");
+    diagnostic.title = QStringLiteral("Project diagnostic");
+    diagnostic.message = QStringLiteral("Project diagnostics must stay out of map-editor inline projection.");
+    diagnostic.lineNumber = 3;
+    diagnostic.columnNumber = 3;
+    diagnostic.columnLength = 3;
+    diagnostic.currentText = QStringLiteral("  0 0");
+
+    mapTab->setProjectValidationDiagnostics({diagnostic});
+    pumpEvents();
+
+    const QTextBlock coordinateLine = sourceEditor->document()->findBlockByLineNumber(2);
+    if (!expect(!tokenHasWaveUnderline(coordinateLine, QStringLiteral("0 0")),
+                "Project diagnostics should not be injected into the map editor embedded source highlighter.")) {
+        return 1;
+    }
+    if (!expect(mapTab->text() == originalText,
+                "Project diagnostics should not mutate map editor source text.")) {
+        return 1;
+    }
+
+    hostWindow.close();
+    pumpEvents();
+    return 0;
 }
 
 int countDirectiveLines(const QString &text, const QString &directive)
@@ -2379,6 +2491,9 @@ int main(int argc, char **argv)
         return rc;
     }
     if (const int rc = runAreaBorderHitSelectionSmoke(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runProjectValidationDiagnosticsStayOutOfMapEditorSmoke(); rc != 0) {
         return rc;
     }
     return runDragUndoRedoSmoke();

@@ -689,6 +689,97 @@ int runProjectIndexAmbiguousMapReferenceDiagnosticsTest()
     return 0;
 }
 
+int runProjectIndexJoinReferenceDiagnosticsTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "The temporary project directory could not be created.")) {
+        return 1;
+    }
+
+    QDir projectDir(tempDir.path());
+    if (!expect(projectDir.mkpath(QStringLiteral("maps/a"))
+                    && projectDir.mkpath(QStringLiteral("maps/b")),
+                "The temporary join-reference map directories could not be created.")) {
+        return 1;
+    }
+
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("root.th")),
+                              QStringLiteral(
+                                  "survey cave\n"
+                                  "  input maps/a/map.th2\n"
+                                  "  input maps/b/map.th2\n"
+                                  "  join wall1 wall2:end missing.s ambiguous.s plainUnknown\n"
+                                  "endsurvey cave\n")),
+                "The join-reference root Therion file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("maps/a/map.th2")),
+                              QStringLiteral(
+                                  "scrap a\n"
+                                  "line wall -id wall1\n"
+                                  "endline\n"
+                                  "line wall -id wall2\n"
+                                  "endline\n"
+                                  "scrap ambiguous.s\n"
+                                  "endscrap\n"
+                                  "endscrap\n")),
+                "The join-reference first map file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("maps/b/map.th2")),
+                              QStringLiteral(
+                                  "scrap ambiguous.s\n"
+                                  "endscrap\n")),
+                "The join-reference second map file could not be written.")) {
+        return 1;
+    }
+
+    QString errorMessage;
+    const ProjectIndexSnapshot snapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(), &errorMessage);
+    if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
+    bool foundMissingJoin = false;
+    bool foundAmbiguousJoin = false;
+    for (const ProjectIndexDiagnostic &diagnostic : snapshot.diagnostics) {
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::UnknownJoinReference
+            && diagnostic.referencedName == QStringLiteral("missing.s")
+            && diagnostic.lineNumber == 4) {
+            foundMissingJoin = true;
+        }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::AmbiguousJoinReference
+            && diagnostic.referencedName == QStringLiteral("ambiguous.s")
+            && diagnostic.candidateCount == 2
+            && diagnostic.lineNumber == 4) {
+            foundAmbiguousJoin = true;
+        }
+        if (!expect(diagnostic.referencedName != QStringLiteral("wall1"),
+                    "Resolved join line references should not produce diagnostics.")) {
+            return 1;
+        }
+        if (!expect(diagnostic.referencedName != QStringLiteral("wall2:end"),
+                    "Resolved join endpoint references should not produce diagnostics.")) {
+            return 1;
+        }
+        if (!expect(diagnostic.referencedName != QStringLiteral("plainUnknown"),
+                    "Plain unresolved join tokens should not produce conservative diagnostics.")) {
+            return 1;
+        }
+    }
+
+    if (!expect(foundMissingJoin,
+                "The project index did not report the missing join reference diagnostic.")) {
+        return 1;
+    }
+    if (!expect(foundAmbiguousJoin,
+                "The project index did not report the ambiguous join reference diagnostic.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runProjectIndexThconfigSourceGraphTest()
 {
     QTemporaryDir tempDir;
@@ -1007,6 +1098,9 @@ int main()
         return 1;
     }
     if (runProjectIndexAmbiguousMapReferenceDiagnosticsTest() != 0) {
+        return 1;
+    }
+    if (runProjectIndexJoinReferenceDiagnosticsTest() != 0) {
         return 1;
     }
     if (runProjectIndexThconfigSourceGraphTest() != 0) {

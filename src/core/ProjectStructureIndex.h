@@ -29,6 +29,8 @@ enum class ProjectIndexDiagnosticKind
     AmbiguousMapScrapReference,
     AmbiguousMapReference,
     MixedMapAndScrapReferences,
+    UnknownJoinReference,
+    AmbiguousJoinReference,
 };
 
 struct ProjectStructureEntry

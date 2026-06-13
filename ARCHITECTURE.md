@@ -95,6 +95,7 @@ Validation should be conservative and catalog-backed.
 - Safe fixes must be explicit source edits with known ranges and must not silently skip undo snapshots or dirty-state handling.
 - `thconfig`, `.th`, and `.th2` document-type applicability should come from command metadata and source-type detection, not UI heuristics.
 - False-positive prevention should be backed by focused tests using real Therion patterns where possible.
+- Project validation diagnostics are owned by the Validation panel and raw-editor diagnostic projection. They shall not drive map-editor scene refresh, selection restoration, hit testing, drag state, source snapshots, or embedded map-editor highlighters unless a future behavior is explicitly scoped and covered by map interaction regression tests.
 
 ## Project Index and Structure
 

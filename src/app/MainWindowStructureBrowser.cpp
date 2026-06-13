@@ -213,6 +213,22 @@ QString diagnosticStructureKey(const TherionStudio::ProjectIndexDiagnostic &diag
              QString::number(diagnostic.candidateCount));
 }
 
+bool isStructureRelationshipDiagnostic(const TherionStudio::ProjectIndexDiagnostic &diagnostic)
+{
+    switch (diagnostic.kind) {
+    case TherionStudio::ProjectIndexDiagnosticKind::AmbiguousMapReference:
+    case TherionStudio::ProjectIndexDiagnosticKind::AmbiguousMapScrapReference:
+    case TherionStudio::ProjectIndexDiagnosticKind::UnknownMapReference:
+    case TherionStudio::ProjectIndexDiagnosticKind::UnknownMapScrapReference:
+    case TherionStudio::ProjectIndexDiagnosticKind::MixedMapAndScrapReferences:
+        return true;
+    case TherionStudio::ProjectIndexDiagnosticKind::UnknownJoinReference:
+    case TherionStudio::ProjectIndexDiagnosticKind::AmbiguousJoinReference:
+        return false;
+    }
+    return false;
+}
+
 QString diagnosticStructureItemText(const TherionStudio::ProjectIndexDiagnostic &diagnostic)
 {
     switch (diagnostic.kind) {
@@ -226,6 +242,9 @@ QString diagnosticStructureItemText(const TherionStudio::ProjectIndexDiagnostic 
         return QObject::tr("Unresolved scrap: %1").arg(diagnostic.referencedName);
     case TherionStudio::ProjectIndexDiagnosticKind::MixedMapAndScrapReferences:
         return QObject::tr("Mixed map/scrap content near: %1").arg(diagnostic.referencedName);
+    case TherionStudio::ProjectIndexDiagnosticKind::UnknownJoinReference:
+    case TherionStudio::ProjectIndexDiagnosticKind::AmbiguousJoinReference:
+        break;
     }
 
     return QObject::tr("Unresolved reference: %1").arg(diagnostic.referencedName);
@@ -428,9 +447,16 @@ QString projectIndexStructuralSignature(const TherionStudio::ProjectIndexSnapsho
         parts.append(childMapKeys.join(QLatin1Char(',')));
     }
 
-    parts.append(QStringLiteral("diagnostics"));
-    parts.append(QString::number(projectIndex.diagnostics.size()));
+    QVector<TherionStudio::ProjectIndexDiagnostic> structureDiagnostics;
     for (const TherionStudio::ProjectIndexDiagnostic &diagnostic : projectIndex.diagnostics) {
+        if (isStructureRelationshipDiagnostic(diagnostic)) {
+            structureDiagnostics.append(diagnostic);
+        }
+    }
+
+    parts.append(QStringLiteral("diagnostics"));
+    parts.append(QString::number(structureDiagnostics.size()));
+    for (const TherionStudio::ProjectIndexDiagnostic &diagnostic : structureDiagnostics) {
         parts.append(QString::number(static_cast<int>(diagnostic.kind)));
         parts.append(diagnostic.sourceObjectId);
         parts.append(normalizedStructurePathKey(diagnostic.sourceFile));
@@ -586,6 +612,9 @@ void updateStructureSourceLocationRoles(QStandardItemModel *model,
     }
     QHash<QString, TherionStudio::ProjectIndexDiagnostic> diagnosticsByKey;
     for (const TherionStudio::ProjectIndexDiagnostic &diagnostic : projectIndex.diagnostics) {
+        if (!isStructureRelationshipDiagnostic(diagnostic)) {
+            continue;
+        }
         diagnosticsByKey.insert(diagnosticStructureKey(diagnostic), diagnostic);
     }
 
@@ -913,6 +942,9 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
         }
 
         for (const TherionStudio::ProjectIndexDiagnostic &diagnostic : projectIndex.diagnostics) {
+            if (!isStructureRelationshipDiagnostic(diagnostic)) {
+                continue;
+            }
             QStandardItem *parentItem = mapItemByKey.value(diagnostic.sourceObjectId, nullptr);
             if (parentItem == nullptr) {
                 parentItem = structureModel_->invisibleRootItem();

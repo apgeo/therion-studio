@@ -495,6 +495,7 @@ int runProjectIndexDiagnosticProjectionTest()
                               QStringLiteral("survey cave\n"
                                              "  input maps/a/map.th2\n"
                                              "  input maps/b/map.th2\n"
+                                             "  join missing-line.s\n"
                                              "  map branch-map.m\n"
                                              "  endmap\n"
                                              "  map branch-map.m\n"
@@ -551,6 +552,13 @@ int runProjectIndexDiagnosticProjectionTest()
                                    QStringLiteral("unknown-map-reference"),
                                    TherionSourceDiagnosticSeverity::Error),
                 "Project validation should expose unresolved map references from the project index.")) {
+        return 1;
+    }
+    if (!expect(findingHasSeverity(waitResult.result,
+                                   rootFile,
+                                   QStringLiteral("unknown-join-reference"),
+                                   TherionSourceDiagnosticSeverity::Error),
+                "Project validation should expose unresolved join references from the project index.")) {
         return 1;
     }
     const TherionSourceDiagnostic *unknownMapDiagnostic =

@@ -177,7 +177,6 @@ private:
     void handleValidationSelectionChanged(const QModelIndex &current, const QModelIndex &previous);
     void openValidationResult(const QModelIndex &index);
     void applySelectedValidationFix();
-    void applyAllValidationFixes();
     bool applyValidationFixesToValidatedDocument(const QString &filePath,
                                                  const QVector<TherionStudio::TherionSourceDiagnosticFix> &fixes);
     bool activateStructureSidebarAction(const QString &action);
@@ -384,7 +383,6 @@ private:
     QPlainTextEdit *validationSuggestedSourceEdit_ = nullptr;
     QPushButton *validationScanProjectButton_ = nullptr;
     QPushButton *validationApplyFixButton_ = nullptr;
-    QPushButton *validationApplyAllFixesButton_ = nullptr;
     QPushButton *therionBrowseWorkingDirectoryButton_ = nullptr;
     QLineEdit *therionArgumentsEdit_ = nullptr;
     QComboBox *therionRunTargetCombo_ = nullptr;

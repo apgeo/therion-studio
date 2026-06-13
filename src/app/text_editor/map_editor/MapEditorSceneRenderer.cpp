@@ -8,6 +8,7 @@
 
 #include <QFont>
 #include <QFontMetricsF>
+#include <QGraphicsEllipseItem>
 #include <QGraphicsLineItem>
 #include <QGraphicsPathItem>
 #include <QGraphicsItem>
@@ -2055,6 +2056,38 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                 for (int vertexIndex = 0; vertexIndex < feature.lineVertices.size(); ++vertexIndex) {
                     const MapGeometryFeature::TH2LineVertex &vertex = feature.lineVertices.at(vertexIndex);
+                    if (linePointRowsShouldHighlightVertexMetadata(vertex.standaloneOptionRows)) {
+                        const QPointF markerCenter = mapGeometryPointToPreview(vertex.anchor, sourceBounds, previewBounds);
+                        const QRectF markerRect(-6.0, -6.0, 12.0, 12.0);
+                        auto *metadataShadow = new QGraphicsEllipseItem(markerRect);
+                        QColor shadowColor(QStringLiteral("#1f2937"));
+                        shadowColor.setAlpha(75);
+                        metadataShadow->setPen(cosmeticPen(shadowColor, 1.4));
+                        metadataShadow->setBrush(Qt::NoBrush);
+                        metadataShadow->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+                        metadataShadow->setAcceptedMouseButtons(Qt::NoButton);
+                        metadataShadow->setPos(markerCenter);
+                        metadataShadow->setZValue(3.86);
+                        markGeometryItem(metadataShadow);
+                        makeMouseTransparent(metadataShadow);
+                        metadataShadow->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                        scene->addItem(metadataShadow);
+
+                        auto *metadataRing = new QGraphicsEllipseItem(markerRect);
+                        QColor ringColor(QStringLiteral("#f59e0b"));
+                        ringColor.setAlpha(115);
+                        metadataRing->setPen(cosmeticPen(ringColor, 0.8));
+                        metadataRing->setBrush(Qt::NoBrush);
+                        metadataRing->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+                        metadataRing->setAcceptedMouseButtons(Qt::NoButton);
+                        metadataRing->setPos(markerCenter);
+                        metadataRing->setZValue(3.87);
+                        markGeometryItem(metadataRing);
+                        makeMouseTransparent(metadataRing);
+                        metadataRing->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                        scene->addItem(metadataRing);
+                    }
+
                     auto *vertexItem = new MapEditableGeometryVertexItem(feature.lineNumber,
                                                                          QStringLiteral("line"),
                                                                          vertex.anchorSourceVertexIndex >= 0 ? vertex.anchorSourceVertexIndex : vertexIndex,

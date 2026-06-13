@@ -38,6 +38,7 @@ std::optional<qreal> linePointLeftSizeForSourceVertex(const QString &documentTex
                                                       int sourceVertexIndex);
 QString linePointSegmentSubtypeFromStandaloneRows(const QStringList &rows);
 bool linePointAltitudeAutoFromStandaloneRows(const QStringList &rows);
+bool linePointRowsShouldHighlightVertexMetadata(const QStringList &rows);
 QStringList linePointRowsWithoutStructuredStandaloneOptions(const QStringList &rows,
                                                             bool manageSegmentSubtype = true,
                                                             bool manageAltitudeAuto = true);

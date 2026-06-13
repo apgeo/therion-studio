@@ -144,7 +144,7 @@ Pre `.th2` súbory:
 - dopĺňanie príkazov, volieb, hodnôt a ciest pri písaní,
 - `Ctrl+Space` na ručné otvorenie dopĺňania,
 - kontextová nápoveda pre aktuálny príkaz alebo voľbu; režimy Zdroj aj Bloky zobrazujú rovnakú úplnú nápovedu príkazov a panel nápovedy je pomenovaný podľa aktuálneho príkazu, validačného kontextu alebo vybraného cieľa nápovedy,
-- diagnostika v raw editore a paneli `Validation` zobrazuje problémy ako chybne zapísané option tokeny, neznáme príkazy alebo voľby, chýbajúce argumenty a neuzavreté bloky; `Validate Project` v paneli `Validation` ručne obnoví kontrolu všetkých `.th`, `.th2` a `thconfig` súborov v otvorenom projekte; projektová validácia pri `thconfig` súboroch nehlási neisté varovania `unknown command`, kým nebude k dispozícii samostatný thconfig katalóg; aktiváciou nálezu prejdete na dotknutý riadok raw zdroja a pri nálezoch s explicitným bezpečným prepisom môžete použiť `Apply Fix` alebo `Apply All Safe Fixes`,
+- diagnostika v raw editore a paneli `Validation` zobrazuje problémy ako chybne zapísané option tokeny, neznáme príkazy alebo voľby, chýbajúce argumenty a neuzavreté bloky; `Validate Project` v paneli `Validation` ručne obnoví kontrolu všetkých `.th`, `.th2` a `thconfig` súborov v otvorenom projekte; projektová validácia pri `thconfig` súboroch nehlási neisté varovania `unknown command`, kým nebude k dispozícii samostatný thconfig katalóg; aktiváciou nálezu prejdete na dotknutý riadok raw zdroja a pri nálezoch s explicitným bezpečným prepisom môžete použiť `Apply Fix`,
 - záložku `Výber` v inšpektore režimu Bloky na editáciu hlavičky vybraného bloku a podporovaných inline volieb; prvý panel je pomenovaný podľa vybraného príkazu Therionu a ukazuje zdrojový riadok,
 - keď nie je vybraný žiadny blok, záložka `Výber` v režime Bloky ukazuje `Nie je vybraný žiadny blok.`; pri výbere pevnej koreňovej karty `encoding` ukazuje príkaz a hodnotu kódovania ako text iba na čítanie,
 - hľadanie a nahradenie z menu `Úpravy`,
@@ -291,6 +291,7 @@ V `Inšpektor -> Výber` možno upravovať vlastnosti vybraných objektov `Scrap
 - Vybrané vertexy čiary zobrazujú v `Line Point` podporované voľby pre daný bod čiary. `Subtype` sa zobrazí pri typoch čiar so segmentovými podtypmi a `Altitude (auto)` sa zobrazí pri bodoch `line wall` a zapisuje `altitude .`.
 - Vybrané vertexy čiary majú aj editor `Additional line-point options` pre zostávajúce samostatné voľby bodu čiary, napríklad `altitude`, `subtype`, `direction` alebo `adjust`, bez prepnutia do Raw režimu. Riadky spravované viditeľnými samostatnými ovládacími prvkami sú v tomto editore skryté.
 - Úpravy v `Additional line-point options` sa použijú automaticky pri opustení poľa, bez samostatných tlačidiel Apply/Clear.
+- Vertexy čiary s line-point riadkami `altitude` alebo `subtype` zobrazujú jemný metadátový krúžok aj na nevybranej čiare a výraznejší krúžok okolo aktívneho úchopu. Tooltip vertexu ďalej ukazuje náhľad všetkých ďalších line-point riadkov.
 
 Riadok `Preview` ukazuje vzhľad vybraného alebo pripravovaného objektu. Náhľad používa svetlý mapový podklad aj v tmavom režime.
 

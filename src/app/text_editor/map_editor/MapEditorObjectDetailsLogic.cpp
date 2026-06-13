@@ -576,6 +576,18 @@ bool linePointAltitudeAutoFromStandaloneRows(const QStringList &rows)
     return false;
 }
 
+bool linePointRowsShouldHighlightVertexMetadata(const QStringList &rows)
+{
+    for (const QString &row : rows) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(row);
+        if (linePointRowDirectiveMatches(parsedLine, QStringLiteral("altitude"))
+            || linePointRowDirectiveMatches(parsedLine, QStringLiteral("subtype"))) {
+            return true;
+        }
+    }
+    return false;
+}
+
 QStringList linePointRowsWithoutStructuredStandaloneOptions(const QStringList &rows,
                                                             bool manageSegmentSubtype,
                                                             bool manageAltitudeAuto)

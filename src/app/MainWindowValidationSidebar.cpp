@@ -310,11 +310,6 @@ void MainWindow::buildValidationSidebar()
     validationApplyFixButton_->setEnabled(false);
     connect(validationApplyFixButton_, &QPushButton::clicked, this, &MainWindow::applySelectedValidationFix);
     validationActionRow->addWidget(validationApplyFixButton_);
-
-    validationApplyAllFixesButton_ = new QPushButton(tr("Apply All Safe Fixes"), validationPage);
-    validationApplyAllFixesButton_->setEnabled(false);
-    connect(validationApplyAllFixesButton_, &QPushButton::clicked, this, &MainWindow::applyAllValidationFixes);
-    validationActionRow->addWidget(validationApplyAllFixesButton_);
     validationLayout->addLayout(validationActionRow);
 
     sidebarPages_->addWidget(validationPage);
@@ -361,9 +356,6 @@ void MainWindow::triggerValidateDocumentForActiveDocument()
             validationStatusLabel_->setText(tr("No validation problems found in %1.").arg(documentLabel));
         }
         handleValidationSelectionChanged({}, {});
-        if (validationApplyAllFixesButton_ != nullptr) {
-            validationApplyAllFixesButton_->setEnabled(false);
-        }
         showSidebarPane(SidebarPane::Validation);
         return;
     }
@@ -390,10 +382,8 @@ void MainWindow::triggerValidateDocumentForActiveDocument()
                                                          validation.diagnostics.at(rightIndex));
                      });
 
-    bool hasAnySafeFix = false;
     for (const int diagnosticIndex : std::as_const(sortedDiagnosticIndexes)) {
         const TherionStudio::TherionSourceDiagnostic &diagnostic = validation.diagnostics.at(diagnosticIndex);
-        hasAnySafeFix = hasAnySafeFix || diagnostic.hasFix;
         const QString fixSuffix = diagnostic.hasFix ? tr(" (safe fix available)") : QString();
         const QString label = tr("Line %1: %2: %3%4")
                                   .arg(diagnostic.lineNumber)
@@ -428,9 +418,6 @@ void MainWindow::triggerValidateDocumentForActiveDocument()
             handleValidationSelectionChanged(firstFinding, {});
         }
         restoreValidationScrollValue(validationResultsTree_, previousScrollValue);
-    }
-    if (validationApplyAllFixesButton_ != nullptr) {
-        validationApplyAllFixesButton_->setEnabled(hasAnySafeFix);
     }
     showSidebarPane(SidebarPane::Validation);
 }
@@ -547,9 +534,6 @@ void MainWindow::handleProjectValidationStarted(TherionStudio::ProjectValidation
     if (replaceVisibleResults && validationScanProjectButton_ != nullptr) {
         validationScanProjectButton_->setEnabled(false);
     }
-    if (replaceVisibleResults && validationApplyAllFixesButton_ != nullptr) {
-        validationApplyAllFixesButton_->setEnabled(false);
-    }
     if (revealPanel) {
         showSidebarPane(SidebarPane::Validation);
     }
@@ -652,9 +636,6 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
                                                 .arg(result.searchedFileCount));
         }
         handleValidationSelectionChanged({}, {});
-        if (validationApplyAllFixesButton_ != nullptr) {
-            validationApplyAllFixesButton_->setEnabled(false);
-        }
         return;
     }
 
@@ -675,7 +656,6 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
         findingsByPath[finding.filePath].append(finding);
     }
 
-    bool hasAnySafeFix = false;
     QModelIndex restoredFinding;
     for (const QString &filePath : std::as_const(orderedFilePaths)) {
         QVector<TherionStudio::ProjectValidationScanner::Finding> fileFindings =
@@ -701,7 +681,6 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
             const int diagnosticIndex = validationDiagnostics_.size();
             validationDiagnostics_.append(finding.diagnostic);
             validationDiagnosticFilePaths_.append(finding.filePath);
-            hasAnySafeFix = hasAnySafeFix || finding.diagnostic.hasFix;
 
             const QString fixSuffix = finding.diagnostic.hasFix ? tr(" (safe fix available)") : QString();
             const QString label = tr("Line %1: %2: %3%4")
@@ -757,9 +736,6 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
             handleValidationSelectionChanged({}, {});
         }
         restoreValidationScrollValue(validationResultsTree_, previousScrollValue);
-    }
-    if (validationApplyAllFixesButton_ != nullptr) {
-        validationApplyAllFixesButton_->setEnabled(hasAnySafeFix);
     }
     if (revealPanel) {
         showSidebarPane(SidebarPane::Validation);
@@ -920,36 +896,6 @@ void MainWindow::applySelectedValidationFix()
         } else {
             triggerValidateDocumentForActiveDocument();
         }
-    }
-}
-
-void MainWindow::applyAllValidationFixes()
-{
-    QHash<QString, QVector<TherionStudio::TherionSourceDiagnosticFix>> fixesByFilePath;
-    for (int index = 0; index < validationDiagnostics_.size(); ++index) {
-        const TherionStudio::TherionSourceDiagnostic &diagnostic = validationDiagnostics_.at(index);
-        if (diagnostic.hasFix) {
-            const QString filePath = index < validationDiagnosticFilePaths_.size()
-                ? validationDiagnosticFilePaths_.at(index)
-                : QString();
-            fixesByFilePath[filePath].append(diagnostic.fix);
-        }
-    }
-    if (fixesByFilePath.isEmpty()) {
-        return;
-    }
-
-    bool changed = false;
-    for (auto iterator = fixesByFilePath.cbegin(); iterator != fixesByFilePath.cend(); ++iterator) {
-        changed = applyValidationFixesToValidatedDocument(iterator.key(), iterator.value()) || changed;
-    }
-
-    if (changed) {
-        if (validationProjectMode_) {
-            requestProjectValidation();
-            return;
-        }
-        triggerValidateDocumentForActiveDocument();
     }
 }
 

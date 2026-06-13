@@ -137,6 +137,24 @@ int runLinePointStructuredStandaloneRowsTest()
                 "Line-point altitude auto should be detected from altitude dot rows.")) {
         return 1;
     }
+    if (!expect(linePointRowsShouldHighlightVertexMetadata(
+                    QStringList{QStringLiteral("altitude [fix 1510 m]")}),
+                "Line-point altitude rows should highlight the map vertex.")) {
+        return 1;
+    }
+    if (!expect(linePointRowsShouldHighlightVertexMetadata(QStringList{QStringLiteral("-subtype temporary")}),
+                "Line-point subtype rows should highlight the map vertex.")) {
+        return 1;
+    }
+    if (!expect(!linePointRowsShouldHighlightVertexMetadata(
+                    QStringList{QStringLiteral("smooth on"),
+                                QStringLiteral("-orientation 45"),
+                                QStringLiteral("l-size 40"),
+                                QStringLiteral("direction begin"),
+                                QStringLiteral("adjust horizontal")}),
+                "Line-point smooth/orientation/l-size/direction/adjust rows should not highlight the map vertex.")) {
+        return 1;
+    }
     if (!expectListEquals(linePointRowsWithoutStructuredStandaloneOptions(rows, true, true),
                           QStringList{QStringLiteral("adjust horizontal"),
                                       QStringLiteral("altitude [fix 1510 m]")},

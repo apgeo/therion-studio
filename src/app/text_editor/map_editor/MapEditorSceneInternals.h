@@ -29,6 +29,7 @@
 
 #include "MapEditorSceneSupport.h"
 #include "MapEditorPointSymbolGeometry.h"
+#include "MapEditorObjectDetailsLogic.h"
 
 namespace TherionStudio {
 
@@ -493,6 +494,7 @@ public:
     {
         standaloneOptionRows_ = rows;
         hasStandaloneOptionRows_ = !standaloneOptionRows_.isEmpty();
+        highlightLinePointMetadata_ = linePointRowsShouldHighlightVertexMetadata(standaloneOptionRows_);
         updateToolTip();
         update();
     }
@@ -501,7 +503,7 @@ protected:
     QRectF boundingRect() const override
     {
         // Paint includes scaled marker plus halo; keep update region larger to avoid drag trails.
-        return QGraphicsEllipseItem::boundingRect().adjusted(-6.0, -6.0, 6.0, 6.0);
+        return QGraphicsEllipseItem::boundingRect().adjusted(-10.0, -10.0, 10.0, 10.0);
     }
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
@@ -542,23 +544,22 @@ protected:
         painter->setBrush(fill);
         painter->drawEllipse(drawRect);
 
-        if (hasStandaloneOptionRows_) {
-            const qreal markerRadius = qMax<qreal>(1.1, 1.6 * zoomOutScale);
-            const QPointF markerCenter(drawRect.right() - markerRadius, drawRect.top() + markerRadius);
-            QPolygonF marker;
-            marker << QPointF(markerCenter.x(), markerCenter.y() - markerRadius)
-                   << QPointF(markerCenter.x() + markerRadius, markerCenter.y())
-                   << QPointF(markerCenter.x(), markerCenter.y() + markerRadius)
-                   << QPointF(markerCenter.x() - markerRadius, markerCenter.y());
-            QColor markerFill = selected ? QColor(QStringLiteral("#ffd166")) : QColor(QStringLiteral("#f59e0b"));
-            markerFill.setAlpha(235);
-            QColor markerOutline = QColor(QStringLiteral("#1f2937"));
-            markerOutline.setAlpha(210);
-            QPen markerPen(markerOutline, qMax<qreal>(0.45, 0.75 * zoomOutScale));
-            markerPen.setJoinStyle(Qt::MiterJoin);
-            painter->setPen(markerPen);
-            painter->setBrush(markerFill);
-            painter->drawPolygon(marker);
+        if (highlightLinePointMetadata_) {
+            QColor metadataRing = selected ? QColor(QStringLiteral("#ffd166")) : QColor(QStringLiteral("#f59e0b"));
+            metadataRing.setAlpha(245);
+            QColor metadataShadow = QColor(QStringLiteral("#1f2937"));
+            metadataShadow.setAlpha(210);
+            painter->setBrush(Qt::NoBrush);
+            const qreal ringPadding = qMax<qreal>(3.4, 4.2 * zoomOutScale);
+            const QRectF metadataRect = drawRect.adjusted(-ringPadding, -ringPadding, ringPadding, ringPadding);
+            QPen shadowPen(metadataShadow, qMax<qreal>(2.3, 3.2 * zoomOutScale));
+            shadowPen.setCosmetic(true);
+            painter->setPen(shadowPen);
+            painter->drawEllipse(metadataRect);
+            QPen metadataPen(metadataRing, qMax<qreal>(1.3, 2.0 * zoomOutScale));
+            metadataPen.setCosmetic(true);
+            painter->setPen(metadataPen);
+            painter->drawEllipse(metadataRect);
         }
     }
 
@@ -665,6 +666,7 @@ private:
     bool hoverActive_ = false;
     bool dragActive_ = false;
     bool hasStandaloneOptionRows_ = false;
+    bool highlightLinePointMetadata_ = false;
     QStringList standaloneOptionRows_;
     std::function<QPointF(const QPointF &)> displayToSourceMapper_;
     std::function<void(MapEditableGeometryVertexItem *, const QPointF &, const QPointF &, bool)> movePreviewCallback_;

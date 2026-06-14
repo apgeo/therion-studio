@@ -18,12 +18,21 @@
 void MainWindow::initializeDocumentStatusWidgets()
 {
     if (statusBar() == nullptr
+        || statusHintLabel_ != nullptr
         || statusMapZoomLabel_ != nullptr
         || statusMapModeLabel_ != nullptr
         || statusCompilerButton_ != nullptr
         || statusDocumentEncodingLabel_ != nullptr) {
         return;
     }
+
+    statusHintLabel_ = new QLabel(statusBar());
+    statusHintLabel_->setTextInteractionFlags(Qt::NoTextInteraction);
+    statusHintLabel_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    statusHintLabel_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    statusHintLabel_->setMinimumWidth(0);
+    statusHintLabel_->setContentsMargins(12, 0, 0, 0);
+    statusHintLabel_->setToolTip(tr("Map editor instructions"));
 
     statusDocumentEncodingLabel_ = new QLabel(statusBar());
     statusDocumentEncodingLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -63,6 +72,7 @@ void MainWindow::initializeDocumentStatusWidgets()
         showSidebarPane(SidebarPane::Console);
     });
 
+    statusBar()->addWidget(statusHintLabel_, 1);
     statusBar()->addPermanentWidget(statusMapZoomLabel_, 0);
     statusBar()->addPermanentWidget(statusMapModeLabel_, 0);
     statusBar()->addPermanentWidget(statusCompilerButton_, 0);
@@ -82,6 +92,7 @@ void MainWindow::refreshDocumentStatusWidgets()
 
     QWidget *tabWidget = currentDocumentWidget();
     QString encodingText;
+    QString statusHintText;
     QString mapModeText;
     QString mapZoomText;
     bool mapModeVisible = false;
@@ -92,6 +103,7 @@ void MainWindow::refreshDocumentStatusWidgets()
     } else if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(tabWidget)) {
         encodingText = mapTab->statusEncodingText();
         if (!mapTab->isMapPaneDetached()) {
+            statusHintText = mapTab->statusHintText();
             mapModeText = mapTab->statusModeText();
             mapZoomText = tr("%1%").arg(mapTab->zoomPercent());
             mapModeVisible = true;
@@ -106,6 +118,8 @@ void MainWindow::refreshDocumentStatusWidgets()
         statusDocumentEncodingLabel_->setText(encodingText);
         statusDocumentEncodingLabel_->setToolTip(tr("Document encoding"));
     }
+
+    updateStatusHintLabel(statusHintText);
 
     if (!mapModeVisible) {
         statusMapZoomLabel_->clear();
@@ -129,6 +143,18 @@ void MainWindow::refreshDocumentStatusWidgets()
     }
 
     updateDocumentMenuActionState();
+}
+
+void MainWindow::updateStatusHintLabel(const QString &text)
+{
+    if (statusHintLabel_ == nullptr) {
+        return;
+    }
+
+    const QString trimmedText = text.trimmed();
+    statusHintLabel_->setText(trimmedText);
+    statusHintLabel_->setToolTip(trimmedText.isEmpty() ? QString() : tr("Map editor instructions"));
+    statusHintLabel_->setVisible(!trimmedText.isEmpty());
 }
 
 void MainWindow::updateDocumentMenuActionState()

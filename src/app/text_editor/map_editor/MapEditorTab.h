@@ -134,6 +134,7 @@ public:
     QString statusPathText() const;
     QString statusEncodingText() const;
     QString statusModeText() const;
+    QString statusHintText() const;
     int zoomPercent() const;
     MapEditorUndoOwner nextUndoOwner() const;
     MapEditorUndoOwner nextRedoOwner() const;
@@ -208,6 +209,7 @@ signals:
     void backgroundLayersChanged();
     void backgroundLayerPropertiesChanged();
     void modeStatusChanged();
+    void statusHintChanged();
     void workspaceModeChanged(TherionStudio::MapEditorTab::WorkspaceMode mode);
     void mapPaneDetachStateChanged(bool detached);
     void zoomStatusChanged(int zoomPercent);

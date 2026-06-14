@@ -152,6 +152,9 @@ MapEditorDetachedPaneWindow::MapEditorDetachedPaneWindow(MapEditorTab *mapTab, Q
         connect(mapTab_, &MapEditorTab::modeStatusChanged, this, [this]() {
             refreshCommandBarState();
         });
+        connect(mapTab_, &MapEditorTab::statusHintChanged, this, [this]() {
+            refreshStatusHint();
+        });
         connect(mapTab_, &MapEditorTab::backgroundLayersChanged, this, [this]() {
             refreshCommandBarState();
         });
@@ -161,14 +164,22 @@ MapEditorDetachedPaneWindow::MapEditorDetachedPaneWindow(MapEditorTab *mapTab, Q
         refreshCommandBarState();
     }
 
+    statusHintLabel_ = new QLabel(statusBar());
+    statusHintLabel_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    statusHintLabel_->setTextInteractionFlags(Qt::NoTextInteraction);
+    statusHintLabel_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    statusHintLabel_->setMinimumWidth(0);
+    statusHintLabel_->setContentsMargins(12, 0, 0, 0);
     zoomLabel_ = new QLabel(statusBar());
     zoomLabel_->setAlignment(Qt::AlignCenter);
     zoomLabel_->setMinimumWidth(56);
     modeLabel_ = new QLabel(statusBar());
     modeLabel_->setAlignment(Qt::AlignCenter);
     modeLabel_->setMinimumWidth(78);
+    statusBar()->addWidget(statusHintLabel_, 1);
     statusBar()->addPermanentWidget(zoomLabel_, 0);
     statusBar()->addPermanentWidget(modeLabel_, 0);
+    refreshStatusHint();
 }
 
 void MapEditorDetachedPaneWindow::setMapPaneWidget(QWidget *mapPaneWidget)
@@ -266,5 +277,17 @@ void MapEditorDetachedPaneWindow::refreshCommandBarIconTheme()
 
         button->setIcon(TherionStudio::themedLucideIcon(iconName, palette, button->iconSize().width(), devicePixelRatio));
     }
+}
+
+void MapEditorDetachedPaneWindow::refreshStatusHint()
+{
+    if (statusHintLabel_ == nullptr || mapTab_ == nullptr) {
+        return;
+    }
+
+    const QString text = mapTab_->statusHintText().trimmed();
+    statusHintLabel_->setText(text);
+    statusHintLabel_->setToolTip(text.isEmpty() ? QString() : QObject::tr("Map editor instructions"));
+    statusHintLabel_->setVisible(!text.isEmpty());
 }
 }

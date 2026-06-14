@@ -116,10 +116,7 @@ void MainWindow::buildConsole()
 
 void MainWindow::appendConsoleLine(const QString &line)
 {
-    if (line.trimmed().isEmpty() || statusBar() == nullptr) {
-        return;
-    }
-    statusBar()->showMessage(line, 3000);
+    Q_UNUSED(line);
 }
 
 void MainWindow::copyTherionConsoleOutput()

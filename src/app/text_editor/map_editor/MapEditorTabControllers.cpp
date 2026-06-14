@@ -93,7 +93,7 @@ void MapEditorTab::applyZoomAtViewportPosition(qreal factor, const QPointF &view
 
 void MapEditorTab::refreshToolbarSummary()
 {
-    // Status text is retained for future command-surface summaries.
+    emit statusHintChanged();
 }
 
 void MapEditorTab::updateMagnifierOverlayGeometry()

@@ -10,11 +10,6 @@
             <translation>Therion Studio</translation>
         </message>
         <message>
-            <location filename="../src/app/MainWindow.cpp" line="499" />
-            <source>Ready</source>
-            <translation>Pripravené</translation>
-        </message>
-        <message>
             <location filename="../src/app/MainWindowProjectUiFlowService.cpp" line="14" />
             <source>Open project cancelled</source>
             <translation>Otvorenie projektu zrušené</translation>
@@ -1189,6 +1184,12 @@ Načítať z disku a zahodiť zmeny v pamäti?</translation>
             <translation>Priblíženie mapy</translation>
         </message>
         <message>
+            <location filename="../src/app/MainWindowStatusUi.cpp" line="39" />
+            <location filename="../src/app/MainWindowStatusUi.cpp" line="153" />
+            <source>Map editor instructions</source>
+            <translation>Pokyny map editora</translation>
+        </message>
+        <message>
             <location filename="../src/app/MainWindowStatusUi.cpp" line="123" />
             <source>Insert</source>
             <translation>Vložiť</translation>
@@ -2167,6 +2168,11 @@ Zdroj: %2:%3</translation>
             <location filename="../src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.cpp" line="194" />
             <source>Map zoom</source>
             <translation>Priblíženie mapy</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.cpp" line="297" />
+            <source>Map editor instructions</source>
+            <translation>Pokyny map editora</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.cpp" line="197" />
@@ -5520,33 +5526,33 @@ subtype blocks</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp" line="53" />
-            <source>Point mode: click in map to insert a point.</source>
-            <translation>Režim bodu: kliknutím do mapy vložíte bod.</translation>
+            <source>Point mode: click in map to insert a point. Esc cancels.</source>
+            <translation>Režim bodu: kliknutím do mapy vložíte bod. Esc zruší.</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp" line="64" />
-            <source>Line mode: click to add vertices, then press Enter or Complete Draft.</source>
-            <translation>Režim línie: kliknutím pridávajte vrcholy, potom stlačte Enter alebo Dokončiť návrh.</translation>
+            <source>Line mode: click to add vertices. Enter completes, Esc cancels.</source>
+            <translation>Režim línie: kliknutím pridávajte vrcholy. Enter dokončí, Esc zruší.</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp" line="75" />
-            <source>Freehand mode: drag in map to draw a line, then release to finish.</source>
-            <translation>Režim voľnej kresby: ťahaním v mape nakreslite líniu, dokončite uvoľnením.</translation>
+            <source>Freehand mode: drag in map to draw a line; release inserts it. Esc cancels.</source>
+            <translation>Režim voľnej kresby: ťahaním v mape nakreslite líniu; uvoľnením ju vložíte. Esc zruší.</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp" line="86" />
-            <source>Area mode: click to add vertices, then press Enter or Complete Draft.</source>
-            <translation>Režim plochy: kliknutím pridávajte vrcholy, potom stlačte Enter alebo Dokončiť návrh.</translation>
+            <source>Area mode: click to add vertices. Enter completes, Esc cancels.</source>
+            <translation>Režim plochy: kliknutím pridávajte vrcholy. Enter dokončí, Esc zruší.</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp" line="97" />
-            <source>Smart Area mode: click inside a closed boundary, then press Enter or Complete Draft.</source>
-            <translation>Režim Smart Area: kliknite dovnútra uzavretej hranice a potom stlačte Enter alebo Dokončiť návrh.</translation>
+            <source>Smart Area mode: click inside a closed boundary. Enter completes, Esc cancels.</source>
+            <translation>Režim Smart Area: kliknite dovnútra uzavretej hranice. Enter dokončí, Esc zruší.</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp" line="108" />
-            <source>Selection mode: select map cards or draft objects.</source>
-            <translation>Režim výberu: vyberajte mapové objekty alebo rozpracované návrhy.</translation>
+            <source>Selection mode: click an object or vertex to select it.</source>
+            <translation>Režim výberu: kliknutím vyberte objekt alebo vertex.</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp" line="118" />

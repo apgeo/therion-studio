@@ -50,7 +50,7 @@ void MapEditorTab::handleAddPointTriggered()
     beginPendingInsertObject(QStringLiteral("point"));
     activateSelectionInspector();
     refreshObjectDetailsPanel();
-    toolbarStatusNote_ = tr("Point mode: click in map to insert a point.");
+    toolbarStatusNote_ = tr("Point mode: click in map to insert a point. Esc cancels.");
     refreshToolbarSummary();
 }
 
@@ -61,7 +61,7 @@ void MapEditorTab::handleAddLineTriggered()
     beginPendingInsertObject(QStringLiteral("line"));
     activateSelectionInspector();
     refreshObjectDetailsPanel();
-    toolbarStatusNote_ = tr("Line mode: click to add vertices, then press Enter or Complete Draft.");
+    toolbarStatusNote_ = tr("Line mode: click to add vertices. Enter completes, Esc cancels.");
     refreshToolbarSummary();
 }
 
@@ -72,7 +72,7 @@ void MapEditorTab::handleAddFreehandLineTriggered()
     beginPendingInsertObject(QStringLiteral("line"));
     activateSelectionInspector();
     refreshObjectDetailsPanel();
-    toolbarStatusNote_ = tr("Freehand mode: drag in map to draw a line, then release to finish.");
+    toolbarStatusNote_ = tr("Freehand mode: drag in map to draw a line; release inserts it. Esc cancels.");
     refreshToolbarSummary();
 }
 
@@ -83,7 +83,7 @@ void MapEditorTab::handleAddAreaTriggered()
     beginPendingInsertObject(QStringLiteral("area"));
     activateSelectionInspector();
     refreshObjectDetailsPanel();
-    toolbarStatusNote_ = tr("Area mode: click to add vertices, then press Enter or Complete Draft.");
+    toolbarStatusNote_ = tr("Area mode: click to add vertices. Enter completes, Esc cancels.");
     refreshToolbarSummary();
 }
 
@@ -94,7 +94,7 @@ void MapEditorTab::handleSmartAreaTriggered()
     beginPendingInsertObject(QStringLiteral("area"));
     activateSelectionInspector();
     refreshObjectDetailsPanel();
-    toolbarStatusNote_ = tr("Smart Area mode: click inside a closed boundary, then press Enter or Complete Draft.");
+    toolbarStatusNote_ = tr("Smart Area mode: click inside a closed boundary. Enter completes, Esc cancels.");
     refreshToolbarSummary();
 }
 
@@ -105,7 +105,7 @@ void MapEditorTab::handleSelectModeTriggered()
     clearPendingInsertObject();
     refreshObjectDetailsPanel();
     selectModeActive_ = true;
-    toolbarStatusNote_ = tr("Selection mode: select map cards or draft objects.");
+    toolbarStatusNote_ = tr("Selection mode: click an object or vertex to select it.");
     if (mapView_ != nullptr) {
         mapView_->setDragMode(QGraphicsView::NoDrag);
     }

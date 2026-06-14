@@ -262,6 +262,7 @@ private:
     bool saveAllOpenDocuments();
     void initializeDocumentStatusWidgets();
     void refreshDocumentStatusWidgets();
+    void updateStatusHintLabel(const QString &text);
     void updateDocumentMenuActionState();
     void setCompilerStatusIdle();
     void setCompilerStatusRunning(const QString &configPath);
@@ -407,6 +408,7 @@ private:
     QSet<QString> pendingWatchedDocumentChanges_;
     TherionStudio::TherionRunnerService *therionRunnerService_ = nullptr;
     TherionStudio::MainWindowTherionConsoleController therionConsoleController_;
+    QLabel *statusHintLabel_ = nullptr;
     QLabel *statusMapZoomLabel_ = nullptr;
     QLabel *statusMapModeLabel_ = nullptr;
     QToolButton *statusCompilerButton_ = nullptr;

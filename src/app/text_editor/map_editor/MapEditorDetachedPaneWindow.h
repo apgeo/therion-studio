@@ -28,6 +28,7 @@ protected:
 private:
     void refreshCommandBarState();
     void refreshCommandBarIconTheme();
+    void refreshStatusHint();
 
     QPointer<MapEditorTab> mapTab_;
     QWidget *commandBar_ = nullptr;
@@ -47,6 +48,7 @@ private:
     QToolButton *areaButton_ = nullptr;
     QToolButton *smartAreaButton_ = nullptr;
     QToolButton *mapWindowButton_ = nullptr;
+    QLabel *statusHintLabel_ = nullptr;
     QLabel *zoomLabel_ = nullptr;
     QLabel *modeLabel_ = nullptr;
     std::function<void()> closeCallback_;

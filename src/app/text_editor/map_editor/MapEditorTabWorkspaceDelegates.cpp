@@ -115,6 +115,11 @@ QString MapEditorTab::statusModeText() const
         : tr("Map mode: Insert");
 }
 
+QString MapEditorTab::statusHintText() const
+{
+    return toolbarStatusNote_;
+}
+
 int MapEditorTab::zoomPercent() const
 {
     return qRound(zoomFactor_ * 100.0);

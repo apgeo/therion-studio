@@ -51,7 +51,7 @@ Hlavné okno obsahuje:
 - hornú lištu s projektovými, ukladacími, editorovými a mapovými akciami,
 - ľavý aktivitný panel (`Súbory`, `Štruktúra`, `Kompilátor`) a rýchlu akciu kompilácie,
 - centrálnu oblasť so záložkami dokumentov,
-- stavový riadok so stavom kompilácie, kódovania a mapy.
+- stavový riadok s pokynmi mapy, stavom kompilácie, kódovaním a stavom mapy.
 
 Bežné akcie okna:
 
@@ -234,6 +234,8 @@ Existujúce Therion bloky `area ... endarea`, ktoré odkazujú na hranice `line 
 `Smart Area` vytvára práve túto referenčnú formu plochy namiesto kreslenia novej hraničnej geometrie. Pri potvrdení môže doplniť chýbajúce ID referencovaným hraničným čiaram, aby na ne nový blok `area ... endarea` mohol odkazovať, ale nemení ich geometriu. Po potvrdení sa mapa vráti do režimu výberu. `Esc` náhľad zruší.
 
 Počas vkladania bodov alebo kreslenia čiar a plôch sa vertexy blízkeho objektu zvýraznia ako kandidáti snapu. Aktívny snap cieľ sa zvýrazní výraznejšie; Bezier kontrolné body zostávajú bez snapu.
+
+Keď je aktívny map editor, ľavá časť stavového riadka zobrazuje aktuálny pokyn workflow vrátane krokov kreslenia a pomôcky pre dokončenie Enter/Esc.
 
 Počas kreslenia čiary alebo plochy:
 

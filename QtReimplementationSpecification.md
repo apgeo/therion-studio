@@ -333,6 +333,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The Settings dialog shall allow choosing the default editor mode for newly opened `.th` and Therion config documents: `Raw` or `Blocks`; the default shall be `Raw`.
 - The default text-editor mode preference shall apply only when opening a new `.th` or Therion config tab and shall not modify document source merely because the tab initially opens in Blocks mode.
 - The application shall show the active document's current text encoding as a compact status-bar value tied to the active document context.
+- When the active document is open in the map editor, the status area shall reserve the leftmost, expanding status-bar position for the current map workflow instruction, such as selection guidance, active drawing-mode steps, draft completion keys, and recent map-edit status messages.
 - Text, Blocks, and TH2 Visual inspector surfaces shall provide a `File` inspector view with a document panel titled by the active file name; the panel shall show the active document's full path, a copy-path action, on-disk size, last-modified timestamp, current text encoding, and any non-UTF-8 conversion warning/action.
 - Shared document inspector views such as `File` shall be composed through a common document-inspector implementation so Raw, Blocks, and TH2 Visual surfaces do not duplicate layout, styling, or metadata behavior.
 - When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `Select` shall be green and `Insert` shall be red.
@@ -404,6 +405,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - In the main window, map command actions shall be hosted in the shared full-width document command toolbar above the tab strip; the graphical map canvas shall not host a floating in-canvas map toolbar overlay.
 - In detached map windows, an equivalent top command toolbar shall be shown above the map canvas and inspector.
 - Toolbar actions should present compact icon-first controls, with text equivalents available through tooltips, accessibility names, and automation-stable identifiers.
+- When a map editor tab or detached map window is active, the status bar shall show the current map workflow instruction as the first left-aligned item, before zoom, mode, compiler, and encoding indicators.
 - When a map editor tab is active, the status bar shall show the current map zoom before the Select/Insert mode badge.
 - The main-window status bar shall show a compact global compiler indicator with the current compiler state and the last run result (`Idle`, `Running`, `OK`, or `Failed`).
 - Activating the compiler status indicator shall toggle the Compiler sidebar: open it when hidden/collapsed or showing another pane, and collapse it when the Compiler pane is already visible.

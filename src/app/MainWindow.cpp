@@ -496,7 +496,6 @@ void MainWindow::buildUi()
     QTimer::singleShot(0, this, [this]() {
         refreshWorkspaceModeSwitcherGeometry();
     });
-    statusBar()->showMessage(tr("Ready"));
 }
 
 
@@ -1596,6 +1595,8 @@ void MainWindow::connectMapEditorTabUiSignals(TherionStudio::MapEditorTab *tab)
                     refreshViewMenuActions();
                 }
             });
+    connect(tab, &TherionStudio::MapEditorTab::statusHintChanged, this,
+            [this, tab]() { if (currentDocumentWidget() == tab) { refreshDocumentStatusWidgets(); } });
     connect(tab, &TherionStudio::MapEditorTab::commandSurfaceStateChanged, this, [this, tab]() {
         if (currentDocumentWidget() == tab) {
             refreshWorkspaceModeSwitcher();

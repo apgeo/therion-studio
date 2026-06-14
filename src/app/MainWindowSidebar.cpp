@@ -11,6 +11,8 @@
 #include <QAbstractItemView>
 #include <QAction>
 #include <QApplication>
+#include <QAbstractButton>
+#include <QButtonGroup>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QCheckBox>
@@ -58,6 +60,13 @@ enum ProjectSearchResultRole
     SearchLineNumberRole,
     SearchColumnNumberRole,
     SearchIsMatchRole,
+};
+
+enum StructurePanelPage
+{
+    StructurePanelFilesPage = 0,
+    StructurePanelSurveyPage = 1,
+    StructurePanelMapPage = 2
 };
 
 QIcon therionBadgedFileIcon(const QIcon &baseIcon)
@@ -338,17 +347,13 @@ void MainWindow::buildProjectBrowser()
         return;
     }
 
-    auto *projectPage = new QWidget(sidebarPages_);
+    auto *projectPage = new QWidget;
     projectFilesPage_ = projectPage;
     projectPage->setMinimumWidth(0);
     projectPage->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
     auto *projectLayout = new QVBoxLayout(projectPage);
-    projectLayout->setContentsMargins(4, 4, 4, 4);
+    projectLayout->setContentsMargins(0, 0, 0, 0);
     projectLayout->setSpacing(8);
-
-    projectFilesDescriptionLabel_ = new QLabel(tr("Browse the files in the current project."), projectPage);
-    projectFilesDescriptionLabel_->setWordWrap(true);
-    projectLayout->addWidget(projectFilesDescriptionLabel_);
 
     projectFilesEmptyState_ = new QWidget(projectPage);
     auto *emptyLayout = new QVBoxLayout(projectFilesEmptyState_);
@@ -386,6 +391,7 @@ void MainWindow::buildProjectBrowser()
     projectTree_->hideColumn(1);
     projectTree_->hideColumn(2);
     projectTree_->hideColumn(3);
+    projectTree_->header()->hide();
     projectTree_->setItemDelegateForColumn(0, new ProjectTreeItemDelegate(projectModel_, projectTree_));
     connect(projectTree_, &QTreeView::activated, this, &MainWindow::handleProjectTreeActivated);
     connect(projectTree_, &QTreeView::customContextMenuRequested, this, &MainWindow::handleProjectTreeContextMenuRequested);
@@ -406,11 +412,6 @@ void MainWindow::refreshProjectBrowserView(const QString &focusPath, bool forceR
     }
 
     const bool hasOpenProject = !projectRootPath_.trimmed().isEmpty() && QDir(projectRootPath_).exists();
-    if (projectFilesDescriptionLabel_ != nullptr) {
-        projectFilesDescriptionLabel_->setText(hasOpenProject
-                                                   ? tr("Browse the files in the current project.")
-                                                   : tr("Open a project to browse its files."));
-    }
     if (projectFilesEmptyState_ != nullptr) {
         projectFilesEmptyState_->setVisible(!hasOpenProject);
     }
@@ -507,8 +508,9 @@ void MainWindow::buildSearchSidebar()
     searchOptionsRow->addStretch(1);
     searchLayout->addLayout(searchOptionsRow);
 
-    projectSearchStatusLabel_ = new QLabel(tr("Enter text to search the current project."), searchPage);
+    projectSearchStatusLabel_ = new QLabel(searchPage);
     projectSearchStatusLabel_->setWordWrap(true);
+    projectSearchStatusLabel_->setVisible(false);
     searchLayout->addWidget(projectSearchStatusLabel_);
 
     searchResultsModel_->clear();
@@ -1102,53 +1104,72 @@ void MainWindow::buildStructureSidebar()
     structureLayout->setContentsMargins(12, 12, 12, 12);
     structureLayout->setSpacing(8);
 
-    auto *structureDescription = new QLabel(tr("Browse project files, surveys, maps, and scraps."), structurePage);
-    structureDescription->setWordWrap(true);
-    structureLayout->addWidget(structureDescription);
+    auto *structureViewSelector = new QWidget(structurePage);
+    structureViewSelector->setObjectName(QStringLiteral("structureViewSegmentedControl"));
+    auto *structureViewSelectorLayout = new QHBoxLayout(structureViewSelector);
+    structureViewSelectorLayout->setContentsMargins(0, 0, 0, 0);
+    structureViewSelectorLayout->setSpacing(0);
+    structureViewModeButtons_ = new QButtonGroup(structureViewSelector);
+    structureViewModeButtons_->setExclusive(true);
 
-    structureViewTabs_ = new QTabWidget(structurePage);
-    structureViewTabs_->setObjectName(QStringLiteral("structureViewTabs"));
-    structureViewTabs_->setDocumentMode(false);
-    if (projectFilesPage_ == nullptr) {
-        projectFilesPage_ = new QWidget(structureViewTabs_);
+    auto *filesViewButton = new QPushButton(tr("Files"), structureViewSelector);
+    auto *surveyViewButton = new QPushButton(tr("Survey"), structureViewSelector);
+    auto *mapViewButton = new QPushButton(tr("Map"), structureViewSelector);
+    const QList<QPushButton *> structureViewButtons = {filesViewButton, surveyViewButton, mapViewButton};
+    for (QPushButton *button : structureViewButtons) {
+        button->setCheckable(true);
+        button->setObjectName(QStringLiteral("structureSegmentButton"));
+        button->setMinimumHeight(28);
+        button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        structureViewSelectorLayout->addWidget(button);
     }
-    auto *surveyStructurePage = new QWidget(structureViewTabs_);
-    auto *surveyStructureLayout = new QVBoxLayout(surveyStructurePage);
-    surveyStructureLayout->setContentsMargins(4, 4, 4, 4);
-    surveyStructureLayout->setSpacing(0);
-    auto *mapStructurePage = new QWidget(structureViewTabs_);
-    auto *mapStructureLayout = new QVBoxLayout(mapStructurePage);
-    mapStructureLayout->setContentsMargins(4, 4, 4, 4);
-    mapStructureLayout->setSpacing(0);
-    structureViewTabs_->addTab(projectFilesPage_, tr("Files"));
-    structureViewTabs_->addTab(surveyStructurePage, tr("Survey"));
-    structureViewTabs_->addTab(mapStructurePage, tr("Map"));
-    structureViewTabs_->setCurrentIndex(1);
-    connect(structureViewTabs_, &QTabWidget::currentChanged, this, [this](int index) {
-        if (index == 0) {
-            activeSidebarPane_ = SidebarPane::FileBrowser;
-            if (sidebarStructureButton_ != nullptr) {
-                sidebarStructureButton_->setChecked(true);
-            }
-            return;
-        }
+    filesViewButton->setProperty("firstSegment", true);
+    mapViewButton->setProperty("lastSegment", true);
+    structureViewSelector->setStyleSheet(QStringLiteral(
+        "QPushButton#structureSegmentButton {"
+        "  border: 1px solid palette(mid);"
+        "  border-left-width: 0;"
+        "  padding: 4px 10px;"
+        "  background: palette(window);"
+        "}"
+        "QPushButton#structureSegmentButton[firstSegment=\"true\"] {"
+        "  border-left-width: 1px;"
+        "  border-top-left-radius: 4px;"
+        "  border-bottom-left-radius: 4px;"
+        "}"
+        "QPushButton#structureSegmentButton[lastSegment=\"true\"] {"
+        "  border-top-right-radius: 4px;"
+        "  border-bottom-right-radius: 4px;"
+        "}"
+        "QPushButton#structureSegmentButton:checked {"
+        "  background: palette(base);"
+        "  font-weight: 600;"
+        "}"));
+    structureViewModeButtons_->addButton(filesViewButton, StructurePanelFilesPage);
+    structureViewModeButtons_->addButton(surveyViewButton, StructurePanelSurveyPage);
+    structureViewModeButtons_->addButton(mapViewButton, StructurePanelMapPage);
+    structureLayout->addWidget(structureViewSelector);
 
-        activeSidebarPane_ = SidebarPane::StructureBrowser;
-        if (sidebarStructureButton_ != nullptr) {
-            sidebarStructureButton_->setChecked(true);
-        }
-
-        const StructureViewMode nextMode = index == 2 ? StructureViewMode::Map : StructureViewMode::Survey;
-        if (structureViewMode_ == nextMode) {
-            return;
-        }
-        storeCurrentStructureExpansionState();
-        structureViewMode_ = nextMode;
-        hasAppliedStructureSidebarIndex_ = false;
-        lastAppliedStructureSidebarSignature_.clear();
-        if (!lastStructureSidebarProjectIndex_.projectRootPath.isEmpty()) {
-            applyStructureSidebarIndex(lastStructureSidebarProjectIndex_);
-        }
+    structureViewStack_ = new QStackedWidget(structurePage);
+    structureViewStack_->setObjectName(QStringLiteral("structureViewStack"));
+    structureViewStack_->setMinimumWidth(0);
+    structureViewStack_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
+    if (projectFilesPage_ == nullptr) {
+        projectFilesPage_ = new QWidget(structureViewStack_);
+    }
+    auto *surveyStructurePage = new QWidget(structureViewStack_);
+    structureSurveyLayout_ = new QVBoxLayout(surveyStructurePage);
+    structureSurveyLayout_->setContentsMargins(0, 0, 0, 0);
+    structureSurveyLayout_->setSpacing(0);
+    auto *mapStructurePage = new QWidget(structureViewStack_);
+    structureMapLayout_ = new QVBoxLayout(mapStructurePage);
+    structureMapLayout_->setContentsMargins(0, 0, 0, 0);
+    structureMapLayout_->setSpacing(0);
+    structureViewStack_->addWidget(projectFilesPage_);
+    structureViewStack_->addWidget(surveyStructurePage);
+    structureViewStack_->addWidget(mapStructurePage);
+    connect(structureViewModeButtons_, &QButtonGroup::idClicked, this, [this](int pageIndex) {
+        setStructurePanelPage(pageIndex);
     });
 
     structureTree_ = new QTreeView(surveyStructurePage);
@@ -1160,23 +1181,16 @@ void MainWindow::buildStructureSidebar()
     structureTree_->setSelectionMode(QAbstractItemView::SingleSelection);
     structureTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     structureTree_->setAlternatingRowColors(true);
+    structureTree_->header()->hide();
     connect(structureTree_, &QTreeView::activated, this, [this](const QModelIndex &index) {
         handleStructureItemActivated(index, structureTree_);
     });
 
-    surveyStructureLayout->addWidget(structureTree_, 1);
-    connect(structureViewTabs_, &QTabWidget::currentChanged, this, [surveyStructureLayout, mapStructureLayout, this](int index) {
-        if (structureTree_ == nullptr) {
-            return;
-        }
-        if (index == 2) {
-            mapStructureLayout->addWidget(structureTree_, 1);
-        } else if (index == 1) {
-            surveyStructureLayout->addWidget(structureTree_, 1);
-        }
-    });
-    structureLayout->addWidget(structureViewTabs_, 1);
+    structureSurveyLayout_->addWidget(structureTree_, 1);
+    structureLayout->addWidget(structureViewStack_, 1);
     sidebarPages_->addWidget(structurePage);
+    structureViewStack_->setCurrentIndex(StructurePanelSurveyPage);
+    surveyViewButton->setChecked(true);
 
     buildSearchSidebar();
     buildValidationSidebar();
@@ -1212,6 +1226,58 @@ void MainWindow::showSidebarPane(SidebarPane pane)
     setSidebarPane(pane);
 }
 
+void MainWindow::setStructurePanelPage(int pageIndex)
+{
+    if (structureViewStack_ == nullptr) {
+        return;
+    }
+
+    const int boundedPageIndex = qBound(static_cast<int>(StructurePanelFilesPage),
+                                        pageIndex,
+                                        static_cast<int>(StructurePanelMapPage));
+    structureViewStack_->setCurrentIndex(boundedPageIndex);
+    if (QAbstractButton *button = structureViewModeButtons_ != nullptr
+            ? structureViewModeButtons_->button(boundedPageIndex)
+            : nullptr) {
+        button->setChecked(true);
+    }
+
+    if (boundedPageIndex == StructurePanelFilesPage) {
+        activeSidebarPane_ = SidebarPane::FileBrowser;
+        if (sidebarStructureButton_ != nullptr) {
+            sidebarStructureButton_->setChecked(true);
+        }
+        return;
+    }
+
+    activeSidebarPane_ = SidebarPane::StructureBrowser;
+    if (sidebarStructureButton_ != nullptr) {
+        sidebarStructureButton_->setChecked(true);
+    }
+
+    const StructureViewMode nextMode = boundedPageIndex == StructurePanelMapPage
+        ? StructureViewMode::Map
+        : StructureViewMode::Survey;
+    if (structureTree_ != nullptr) {
+        if (nextMode == StructureViewMode::Map && structureMapLayout_ != nullptr) {
+            structureMapLayout_->addWidget(structureTree_, 1);
+        } else if (nextMode == StructureViewMode::Survey && structureSurveyLayout_ != nullptr) {
+            structureSurveyLayout_->addWidget(structureTree_, 1);
+        }
+    }
+    if (structureViewMode_ == nextMode) {
+        return;
+    }
+
+    storeCurrentStructureExpansionState();
+    structureViewMode_ = nextMode;
+    hasAppliedStructureSidebarIndex_ = false;
+    lastAppliedStructureSidebarSignature_.clear();
+    if (!lastStructureSidebarProjectIndex_.projectRootPath.isEmpty()) {
+        applyStructureSidebarIndex(lastStructureSidebarProjectIndex_);
+    }
+}
+
 void MainWindow::setSidebarPane(SidebarPane pane)
 {
     if (sidebarPages_ == nullptr) {
@@ -1223,11 +1289,14 @@ void MainWindow::setSidebarPane(SidebarPane pane)
         ? static_cast<int>(SidebarPane::StructureBrowser)
         : static_cast<int>(pane);
     sidebarPages_->setCurrentIndex(sidebarPageIndex);
-    if (structureViewTabs_ != nullptr) {
+    if (structureViewStack_ != nullptr) {
         if (pane == SidebarPane::FileBrowser) {
-            structureViewTabs_->setCurrentIndex(0);
-        } else if (pane == SidebarPane::StructureBrowser && structureViewTabs_->currentIndex() == 0) {
-            structureViewTabs_->setCurrentIndex(structureViewMode_ == StructureViewMode::Map ? 2 : 1);
+            setStructurePanelPage(StructurePanelFilesPage);
+        } else if (pane == SidebarPane::StructureBrowser
+                   && structureViewStack_->currentIndex() == StructurePanelFilesPage) {
+            setStructurePanelPage(structureViewMode_ == StructureViewMode::Map
+                                      ? StructurePanelMapPage
+                                      : StructurePanelSurveyPage);
         }
     }
     if (sidebarStructureButton_ != nullptr) {
@@ -1289,7 +1358,8 @@ void MainWindow::requestProjectSearch()
     const QString query = projectSearchEdit_ != nullptr ? projectSearchEdit_->text().trimmed() : QString();
     if (query.isEmpty()) {
         if (projectSearchStatusLabel_ != nullptr) {
-            projectSearchStatusLabel_->setText(tr("Enter text to search for."));
+            projectSearchStatusLabel_->clear();
+            projectSearchStatusLabel_->setVisible(false);
         }
         if (searchResultsModel_ != nullptr) {
             searchResultsModel_->clear();
@@ -1301,6 +1371,7 @@ void MainWindow::requestProjectSearch()
     if (projectRootPath_.isEmpty() || !QDir(projectRootPath_).exists()) {
         if (projectSearchStatusLabel_ != nullptr) {
             projectSearchStatusLabel_->setText(tr("Open a project before searching."));
+            projectSearchStatusLabel_->setVisible(true);
         }
         return;
     }
@@ -1338,6 +1409,7 @@ void MainWindow::requestProjectSearch()
 
     if (projectSearchStatusLabel_ != nullptr) {
         projectSearchStatusLabel_->setText(tr("Searching..."));
+        projectSearchStatusLabel_->setVisible(true);
     }
     if (projectSearchButton_ != nullptr) {
         projectSearchButton_->setEnabled(false);
@@ -1384,6 +1456,7 @@ void MainWindow::handleProjectSearchFinished(const TherionStudio::ProjectSearchS
     if (!result.errorMessage.isEmpty()) {
         if (projectSearchStatusLabel_ != nullptr) {
             projectSearchStatusLabel_->setText(result.errorMessage);
+            projectSearchStatusLabel_->setVisible(true);
         }
         return;
     }
@@ -1392,6 +1465,7 @@ void MainWindow::handleProjectSearchFinished(const TherionStudio::ProjectSearchS
         if (projectSearchStatusLabel_ != nullptr) {
             projectSearchStatusLabel_->setText(tr("No results in %1 searched file(s).")
                                                    .arg(result.searchedFileCount));
+            projectSearchStatusLabel_->setVisible(true);
         }
         return;
     }
@@ -1437,6 +1511,7 @@ void MainWindow::handleProjectSearchFinished(const TherionStudio::ProjectSearchS
             status += tr("Showing the first %1 result(s).").arg(result.matches.size());
         }
         projectSearchStatusLabel_->setText(status);
+        projectSearchStatusLabel_->setVisible(true);
     }
 }
 

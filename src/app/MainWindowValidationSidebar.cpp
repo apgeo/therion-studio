@@ -250,15 +250,15 @@ void MainWindow::buildValidationSidebar()
     validationHeader->setWordWrap(true);
     validationLayout->addWidget(validationHeader);
 
-    validationStatusLabel_ = new QLabel(tr("Project validation runs automatically for project files. Use Validate Project to refresh the open project."), validationPage);
-    validationStatusLabel_->setWordWrap(true);
-    validationLayout->addWidget(validationStatusLabel_);
-
     validationScanProjectButton_ = new QPushButton(tr("Validate Project"), validationPage);
     connect(validationScanProjectButton_, &QPushButton::clicked, this, [this]() {
         requestProjectValidation();
     });
     validationLayout->addWidget(validationScanProjectButton_);
+
+    validationStatusLabel_ = new QLabel(tr("Project validation runs automatically for project files. Use Validate Project to refresh the open project."), validationPage);
+    validationStatusLabel_->setWordWrap(true);
+    validationLayout->addWidget(validationStatusLabel_);
 
     validationResultsModel_->clear();
     validationResultsModel_->setHorizontalHeaderLabels({tr("Problems")});

@@ -171,7 +171,7 @@ Project search scans Therion text sources (`.th`, `.th2`, and Therion config fil
 
 ### 5.2 Project Navigation Pane
 
-The `Structure` activity opens the project navigation pane with `Files`, `Survey`, and `Map` tabs.
+The `Structure` activity opens the project navigation pane with a compact `Files` / `Survey` / `Map` selector.
 
 `Files` shows the project folder tree and supports file navigation and file/folder context-menu actions. `Survey` shows the survey namespace and definition hierarchy for `survey`, `map`, and `scrap` objects and recognizes both Therion centerline spellings: `centreline` and `centerline`. `Map` shows map composition: top-level maps, child maps, and referenced scraps.
 
@@ -183,7 +183,7 @@ Within each parent, rows are grouped as surveys, maps, then scraps, and each gro
 
 The index uses the selected `Target Config` when it points inside the opened project. Without an explicit target config, Therion Studio tries the root `thconfig`; if that does not exist and exactly one named root config exists (`*.thconfig` or `thconfig.*`), that file is used. If several config files are possible, choose the intended `Target Config` in the `Compiler` pane.
 
-In the `Survey` tab, maps and scraps remain under the survey namespace where they are defined, even when another map references them as part of map composition. In the `Map` tab, maps and scraps are shown under the maps that reference them. Unresolved or ambiguous map composition references appear as warning rows that navigate to the source line. The Therion compiler remains the authoritative validator for export behavior.
+In the `Survey` view, maps and scraps remain under the survey namespace where they are defined, even when another map references them as part of map composition. In the `Map` view, maps and scraps are shown under the maps that reference them. Unresolved or ambiguous map composition references appear as warning rows that navigate to the source line. The Therion compiler remains the authoritative validator for export behavior.
 
 ## 6. Visual Map Editing (`.th2`)
 

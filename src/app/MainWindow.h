@@ -23,6 +23,7 @@
 
 class QLabel;
 class QAction;
+class QButtonGroup;
 class QCheckBox;
 class QComboBox;
 class QFileSystemModel;
@@ -182,6 +183,7 @@ private:
     bool activateStructureSidebarAction(const QString &action);
     void updateStructureSidebarSourceLocations(const TherionStudio::ProjectIndexSnapshot &projectIndex);
     void storeCurrentStructureExpansionState();
+    void setStructurePanelPage(int pageIndex);
     void rebuildMapObjectsTree();
     void showSidebarPane(SidebarPane pane);
     void setSidebarPane(SidebarPane pane);
@@ -305,12 +307,14 @@ private:
     QWidget *editorAreaColumn_ = nullptr;
     QVBoxLayout *editorAreaLayout_ = nullptr;
     QTabWidget *editorTabs_ = nullptr;
-    QLabel *projectFilesDescriptionLabel_ = nullptr;
     QWidget *projectFilesEmptyState_ = nullptr;
     QPushButton *projectFilesOpenProjectButton_ = nullptr;
     QWidget *projectFilesPage_ = nullptr;
     QTreeView *projectTree_ = nullptr;
-    QTabWidget *structureViewTabs_ = nullptr;
+    QButtonGroup *structureViewModeButtons_ = nullptr;
+    QStackedWidget *structureViewStack_ = nullptr;
+    QVBoxLayout *structureSurveyLayout_ = nullptr;
+    QVBoxLayout *structureMapLayout_ = nullptr;
     QTreeView *structureTree_ = nullptr;
     QTreeView *searchResultsTree_ = nullptr;
     QTreeView *validationResultsTree_ = nullptr;

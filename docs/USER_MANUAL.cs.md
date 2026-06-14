@@ -169,7 +169,7 @@ Panel `Struktura` je lehký navigační index otevřeného projektu. Popis v pos
 
 Kliknutím řádek pouze vyberete ve stromu. Dvojklikem na zdrojový řádek, nebo jeho výběrem a stiskem `Enter`, otevřete zdrojový dokument a přejdete na odpovídající řádek.
 
-Záložky `Survey` a `Map` si při otevřeném stejném projektu pamatují svůj stav rozbalení/sbalení odděleně.
+Pohledy `Survey` a `Mapa` si při otevřeném stejném projektu pamatují svůj stav rozbalení/sbalení odděleně.
 
 Index používá vybranou `Cílovou konfiguraci`, pokud ukazuje do otevřeného projektu. Bez explicitního configu zkusí kořenový `thconfig`; pokud neexistuje a v kořeni je právě jeden pojmenovaný config (`*.thconfig` nebo `thconfig.*`), použije se ten. Pokud je možných configů víc, vyberte požadovanou `Cílovou konfiguraci` v panelu `Kompilátor`.
 

@@ -236,7 +236,7 @@ Required capabilities:
 - allow navigation through the project hierarchy
 - show selection state and the active document context
 - provide a readable overview of the current project structure
-- preserve user-expanded/collapsed tree state independently for the `Survey` and `Map` structure tabs across project-structure refreshes and tab switches while the same project remains open
+- preserve user-expanded/collapsed tree state independently for the `Survey` and `Map` structure views across project-structure refreshes and view switches while the same project remains open
 
 ### 3.6 Therion Runner and Console Output
 
@@ -514,7 +514,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Structure siblings under the same parent shall be displayed in category order survey, map, scrap, followed by diagnostics, and entries within the same category shall be sorted alphabetically by displayed name with source order used only as a stable tie-breaker.
 - Structure parsing shall treat Therion spelling aliases `centreline` / `centerline` and `endcentreline` / `endcenterline` equivalently.
 - Structure graph object-kind labels and summaries shall preserve canonical Therion source terms such as `survey`, `centerline`, `map`, `scrap`, `station`, `point`, `line`, and `area` instead of translating them.
-- The project navigation sidebar shall provide `Files`, `Survey`, and `Map` tabs. The `Files` tab shall host project file navigation and file/folder actions. The `Survey` and `Map` tabs shall host Structure projections.
+- The project navigation sidebar shall provide a compact `Files` / `Survey` / `Map` segmented view selector. The `Files` view shall host project file navigation and file/folder actions. The `Survey` and `Map` views shall host Structure projections.
 - The left activity rail `Structure` entry shall open the shared project navigation sidebar. The project navigation sidebar shall provide the `Files` tab internally rather than requiring a separate `Files` rail entry.
 - The Structure sidebar shall provide separate `Survey` and `Map` views. The default `Survey` hierarchy shall be the survey namespace and definition hierarchy. Map and scrap items shall remain under the survey namespace where they are defined; resolved map composition references shall not reparent those definition nodes in the `Survey` view.
 - The `Map` Structure view shall present map composition by showing top-level maps, child maps, and referenced scraps according to resolved map composition references.

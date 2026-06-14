@@ -291,7 +291,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - A supported Therion file row shall be shown with a Therion document icon; an unsupported file shall use a generic document icon.
 - A `.th2` file shall offer an explicit "Open in Map Editor" action.
 - Unsupported files shall offer an "Open Externally" action.
-- File rows shall offer duplicate, rename, and delete actions.
+- File rows shall offer duplicate, rename, and delete actions; deleting an open file shall ask for confirmation, close the corresponding open document after any unsaved-change close prompt is resolved, and then delete the file.
 - Folder rows shall offer rename and delete actions.
 
 #### 3.8.2 Text Editor Behavior

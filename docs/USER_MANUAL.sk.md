@@ -102,7 +102,7 @@ Ak je projekt otvorený, uvítacia karta zobrazuje názov a cestu aktívneho pro
 
 Cez `Súbor -> Nový` vytvoríte neuložený `.th`, `.th2` alebo `.thconfig` dokument a cestu zvolíte pri prvom uložení. Pravým kliknutím v paneli `Súbory` možno vytvárať priečinky, vytvárať uložené `.th`, `.th2` a `.thconfig` súbory priamo v projekte, premenovať položky, duplikovať súbory, mazať položky alebo otvoriť `.th2` priamo v map editore.
 
-Premenovanie a mazanie je blokované, ak je cieľový súbor alebo priečinok otvorený v záložke. Najprv zatvorte súvisiace záložky.
+Premenovanie je blokované, ak je cieľový súbor alebo priečinok otvorený v záložke. Mazanie priečinka je tiež blokované, kým sú otvorené súvisiace záložky. Zmazanie jedného otvoreného súboru sa po potvrdení pokúsi zavrieť jeho záložku, prípadne zobrazí výzvu k neuloženým zmenám, a potom súbor zmaže.
 
 ### 3.5 Uloženie zmien
 

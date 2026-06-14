@@ -10,12 +10,75 @@
 #include <QWidget>
 
 #include "MainWindowDocumentHelpers.h"
+#include "MainWindowDocumentController.h"
+#include "MainWindowDocumentOpenController.h"
 #include "text_editor/map_editor/MapEditorTab.h"
 
 bool MainWindow::confirmCloseTab(int index)
 {
     QWidget *tabWidget = editorTabs_->widget(index);
     return confirmCloseDocumentWidget(tabWidget);
+}
+
+bool MainWindow::closeOpenDocumentForFilePath(const QString &filePath)
+{
+    const QString canonicalPath = TherionStudio::MainWindowDocumentOpenController::canonicalDocumentPath(filePath);
+    if (canonicalPath.isEmpty()) {
+        return true;
+    }
+
+    for (int index = 0; index < editorTabs_->count(); ++index) {
+        QWidget *tabWidget = editorTabs_->widget(index);
+        const QString tabCanonicalPath =
+            TherionStudio::MainWindowDocumentOpenController::canonicalDocumentPath(documentPathForWidget(tabWidget));
+        if (tabCanonicalPath != canonicalPath) {
+            continue;
+        }
+
+        TherionStudio::MainWindowDocumentController::Actions actions;
+        actions.confirmCloseTab = [this](int tabIndex) { return confirmCloseTab(tabIndex); };
+        actions.closeTab = [this](int tabIndex) {
+            QWidget *widget = editorTabs_->widget(tabIndex);
+            if (widget == nullptr) {
+                return false;
+            }
+
+            const QString documentPath = documentPathForWidget(widget);
+            editorTabs_->removeTab(tabIndex);
+            unregisterDocumentFileWatcherIfUnused(documentPath);
+            widget->deleteLater();
+            return true;
+        };
+        actions.hasNoAttachedTabs = [this]() { return editorTabs_->count() == 0; };
+        actions.ensureWelcomeTab = [this]() { addWelcomeTab(); };
+        actions.refreshDocumentStatusWidgets = [this]() { refreshDocumentStatusWidgets(); };
+        actions.persistOpenDocuments = [this]() { persistOpenDocuments(); };
+
+        TherionStudio::MainWindowDocumentController::CloseTabRequest request;
+        request.tabIndex = index;
+        return TherionStudio::MainWindowDocumentController::closeTab(request, actions);
+    }
+
+    auto *detachedTab = detachedMapEditorTabForPath(canonicalPath);
+    if (detachedTab == nullptr) {
+        return true;
+    }
+    if (!confirmCloseDocumentWidget(detachedTab)) {
+        return false;
+    }
+
+    QMainWindow *window = detachedMapWindowsByPath_.value(canonicalPath);
+    if (window == nullptr) {
+        return false;
+    }
+
+    const bool wasClearingTabs = clearingDocumentTabs_;
+    clearingDocumentTabs_ = true;
+    window->close();
+    clearingDocumentTabs_ = wasClearingTabs;
+    refreshDocumentStatusWidgets();
+    persistOpenDocuments();
+    return true;
 }
 
 bool MainWindow::confirmCloseDocumentWidget(QWidget *documentWidget)

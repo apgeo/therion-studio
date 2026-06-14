@@ -773,8 +773,8 @@ Načíst z disku a zahodit změny v paměti?</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowSidebar.cpp" line="598" />
-            <source>Close open tabs for the selected path before renaming or deleting it.</source>
-            <translation>Před přejmenováním nebo odstraněním vybrané cesty zavřete otevřené karty.</translation>
+            <source>Close open tabs for the selected path before renaming it or deleting a folder.</source>
+            <translation>Před přejmenováním vybrané cesty nebo odstraněním složky zavřete otevřené karty.</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowSidebar.cpp" line="619" />
@@ -924,8 +924,12 @@ Načíst z disku a zahodit změny v paměti?</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowSidebar.cpp" line="757" />
-            <source>Delete %1?</source>
-            <translation>Odstranit %1?</translation>
+            <source>Delete %1?
+
+If the file is open, it will be closed first.</source>
+            <translation>Odstranit %1?
+
+Pokud je soubor otevřený, nejprve se zavře.</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowSidebar.cpp" line="765" />

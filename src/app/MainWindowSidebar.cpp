@@ -597,7 +597,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
         QMessageBox::information(this,
                                  tr("Project Browser"),
-                                 tr("Close open tabs for the selected path before renaming or deleting it."));
+                                 tr("Close open tabs for the selected path before renaming it or deleting a folder."));
         return true;
     };
 
@@ -749,17 +749,18 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
             refreshAfterProjectFileMutation(renamedPath);
         });
 
-        menu.addAction(tr("Delete"), this, [this, itemPath, &warnOpenTabs, &refreshAfterProjectFileMutation]() {
-            if (warnOpenTabs(itemPath)) {
-                return;
-            }
-
+        menu.addAction(tr("Delete"), this, [this, itemPath, &refreshAfterProjectFileMutation]() {
             const auto answer = QMessageBox::question(this,
                                                       tr("Delete File"),
-                                                      tr("Delete %1?").arg(QDir::toNativeSeparators(itemPath)),
+                                                      tr("Delete %1?\n\nIf the file is open, it will be closed first.")
+                                                          .arg(QDir::toNativeSeparators(itemPath)),
                                                       QMessageBox::Yes | QMessageBox::No,
                                                       QMessageBox::No);
             if (answer != QMessageBox::Yes) {
+                return;
+            }
+
+            if (!closeOpenDocumentForFilePath(itemPath)) {
                 return;
             }
 

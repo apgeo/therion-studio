@@ -203,6 +203,7 @@ private:
     void openStructureSourceIndex(const QModelIndex &current, QTreeView *sourceTree);
     void handleStructureItemActivated(const QModelIndex &index, QTreeView *sourceTree);
     bool confirmCloseTab(int index);
+    bool closeOpenDocumentForFilePath(const QString &filePath);
     bool confirmCloseDirtyDocuments();
     void clearDocumentTabs();
     TherionStudio::TextEditorTab *openTextTab(const QString &filePath,

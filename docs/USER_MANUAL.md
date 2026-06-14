@@ -107,7 +107,7 @@ When a project is open, the welcome tab shows the active project name and path. 
 
 Use `File -> New File` to create an unsaved `.th`, `.th2`, or `.thconfig` document in the active project and choose its path on first save. Right-click in the `Files` pane to create folders, create saved `.th`, `.th2`, and `.thconfig` files directly in the project, rename items, duplicate files, delete items, or open `.th2` files directly in the map editor.
 
-Rename and delete are blocked when the target file or folder is open in a document tab. Close the related tabs first, then retry the operation.
+Rename is blocked when the target file or folder is open in a document tab. Folder deletion is also blocked while related tabs are open. Deleting one open file asks for confirmation, closes its tab after any unsaved-change prompt is resolved, and then deletes the file.
 
 ### 3.5 Save Changes
 

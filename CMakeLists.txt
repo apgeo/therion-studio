@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-set(THERION_STUDIO_VERSION "2026.6.3" CACHE STRING
+set(THERION_STUDIO_VERSION "2026.6.4" CACHE STRING
     "Therion Studio numeric application version. CI may override this from release tags.")
 if(NOT THERION_STUDIO_VERSION MATCHES "^[0-9]+(\\.[0-9]+)?(\\.[0-9]+)?(\\.[0-9]+)?$")
     message(FATAL_ERROR "THERION_STUDIO_VERSION must be numeric, for example 2026.5.0")
@@ -123,6 +123,8 @@ function(therion_add_core_unit_test target_name)
 endfunction()
 
 set(THERION_PLATFORM_SOURCES
+    src/platform/ApplicationIdentity.cpp
+    src/platform/ApplicationIdentity.h
     src/platform/ApplicationLanguageOverride.h
     src/platform/PlatformPathResolver.h)
 
@@ -941,6 +943,11 @@ therion_add_core_unit_test(PocketTopoImportTest
 therion_add_core_unit_test(TherionXviParserTest
     tests/TherionXviParserTest.cpp)
 
+qt_add_executable(ApplicationIdentityTest
+    tests/ApplicationIdentityTest.cpp)
+
+target_link_libraries(ApplicationIdentityTest PRIVATE therion_platform)
+
 qt_add_executable(MapGeometryFeatureParsingTest
     tests/MapGeometryFeatureParsingTest.cpp
     src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.cpp
@@ -1412,6 +1419,7 @@ set(THERION_UNIT_TEST_TARGETS
     TherionDocumentParserTest
     TherionSourceTextTest
     TherionTokenRulesTest
+    ApplicationIdentityTest
     TherionProjectStructureIndexTest
     MapBackgroundPlacementTest
     TherionBackgroundMetadataTest

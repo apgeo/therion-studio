@@ -1,4 +1,5 @@
 #include "ApplicationStartupBootstrap.h"
+#include "ApplicationIdentity.h"
 #include "ApplicationLanguageOverride.h"
 
 #include <QApplication>
@@ -6,6 +7,7 @@
 #include <QLibraryInfo>
 #include <QLocale>
 #include <QSettings>
+#include <QStringList>
 #include <QTranslator>
 
 #include <array>
@@ -15,13 +17,45 @@
 namespace
 {
 constexpr auto kApplicationLanguageKey = "settings/applicationLanguage";
+constexpr auto kLegacySettingsOrganizationDomain = "therionstudio.example";
+constexpr auto kLegacySettingsApplicationName = "Therion Studio";
+constexpr auto kSettingsMigrationMarkerKey = "settings/migratedFromTherionstudioExample";
 
 void applyApplicationIdentity(QApplication &application)
 {
-    application.setApplicationName(QStringLiteral("Therion Studio"));
-    application.setOrganizationName(QStringLiteral("Therion Studio"));
-    application.setOrganizationDomain(QStringLiteral("therionstudio.example"));
+    const TherionStudio::Platform::ApplicationIdentity &identity =
+        TherionStudio::Platform::applicationIdentity();
+    application.setApplicationName(identity.applicationName);
+    application.setApplicationDisplayName(identity.applicationDisplayName);
+    application.setOrganizationName(identity.organizationName);
+    application.setOrganizationDomain(identity.organizationDomain);
     application.setWindowIcon(QIcon(QStringLiteral(":/resources/app/app-icon.png")));
+}
+
+void migrateLegacySettingsNamespace()
+{
+    QSettings currentSettings;
+    if (currentSettings.value(QString::fromLatin1(kSettingsMigrationMarkerKey), false).toBool()) {
+        return;
+    }
+
+    const QSettings legacySettings(QSettings::NativeFormat,
+                                   QSettings::UserScope,
+                                   QString::fromLatin1(kLegacySettingsOrganizationDomain),
+                                   QString::fromLatin1(kLegacySettingsApplicationName));
+    const QStringList legacyKeys = legacySettings.allKeys();
+    if (legacyKeys.isEmpty()) {
+        return;
+    }
+
+    for (const QString &key : legacyKeys) {
+        if (currentSettings.contains(key)) {
+            continue;
+        }
+        currentSettings.setValue(key, legacySettings.value(key));
+    }
+
+    currentSettings.setValue(QString::fromLatin1(kSettingsMigrationMarkerKey), true);
 }
 
 QLocale preferredApplicationLocale()
@@ -94,6 +128,7 @@ namespace TherionStudio
 ApplicationStartupState initializeApplicationStartup(QApplication &application)
 {
     applyApplicationIdentity(application);
+    migrateLegacySettingsNamespace();
 
     ApplicationStartupState state;
     state.translators = installApplicationTranslators(application);

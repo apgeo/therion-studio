@@ -15,6 +15,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P1 - Project templates: keep the bundled default project template compile-ready, including declared export directories, remembered project-parent defaults, and aligned welcome/project-menu/open-tab workflow.
 - P1 - Architecture maintenance: keep reducing `MainWindow`, `TextEditorTab`, and `MapEditorTab` shell responsibilities without behavior changes.
 - P1 - Change discipline: keep commits narrowly scoped with Conventional Commit-style English subjects and body notes for non-trivial architecture or verification context.
+- P1 - Release readiness: prepare `v2026.6.4` with local validation, release notes, and CI artifact workflow handoff before tagging and publishing.
 - P1 - Structure constraints hygiene: keep ratcheted translation-unit limits green by extracting oversized delegates, running `python3 scripts/check_structure_constraints.py` before commits/PRs, and keeping CMake source lists aligned with `src/`.
 - P1 - Unified source parser and transaction model: migrate Raw, Blocks, Map, inspector, validation, highlighting, help, completion, and undo ownership onto shared source snapshots and source-range transactions.
 - P1 - Project index relationships: extend the DOM-backed project snapshot with non-hierarchical graph links such as map preview, revise, join, and equate for validator and graph/detail views without mixing them into the Structure sidebar ownership tree.

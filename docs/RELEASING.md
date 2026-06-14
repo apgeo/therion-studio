@@ -146,7 +146,7 @@ mutable `continuous` downloads.
    - `TherionStudio-Windows-installer-manifest.json`
    - `TherionStudio-Linux-x86_64-artifacts-manifest.json`
    - `TherionStudio-Linux-aarch64-artifacts-manifest.json`
-5. Add release notes (key features/fixes/known limitations).
+5. Add release notes under `docs/releases/` (key features/fixes/known limitations).
 
 ## 8. Update Homebrew Tap Formula (macOS)
 

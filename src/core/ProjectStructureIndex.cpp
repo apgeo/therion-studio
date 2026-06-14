@@ -718,27 +718,6 @@ TherionSourcePhysicalRange parsedLineTokenPhysicalRange(const TherionParsedLine 
     return range;
 }
 
-ProjectStructureEntry nearestNamespaceEntryForLine(const QVector<ProjectStructureEntry> &entries,
-                                                   const QString &sourceFile,
-                                                   int lineNumber)
-{
-    ProjectStructureEntry nearestEntry;
-    const QString normalizedSourceFile = normalizedFilePathKey(sourceFile);
-    for (const ProjectStructureEntry &entry : entries) {
-        if (normalizedFilePathKey(entry.sourceFile) != normalizedSourceFile
-            || entry.lineNumber <= 0
-            || entry.lineNumber > lineNumber) {
-            continue;
-        }
-        if (nearestEntry.lineNumber <= 0
-            || entry.lineNumber > nearestEntry.lineNumber
-            || (entry.lineNumber == nearestEntry.lineNumber && entry.depth > nearestEntry.depth)) {
-            nearestEntry = entry;
-        }
-    }
-    return nearestEntry;
-}
-
 NamespaceEntriesByFile namespaceEntriesByFile(const QVector<ProjectStructureEntry> &entries)
 {
     NamespaceEntriesByFile entriesByFile;

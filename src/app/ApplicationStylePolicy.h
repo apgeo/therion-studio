@@ -190,6 +190,7 @@ inline QString statusBadgeStyleSheet(const QColor &accentColor)
     return QStringLiteral(
                "QLabel {"
                " color: white;"
+               " font-size: 14px;"
                " font-weight: 700;"
                " background-color: %1;"
                " border-radius: 4px;"
@@ -204,6 +205,7 @@ inline QString compilerStatusBadgeStyleSheet(const QColor &accentColor)
     return QStringLiteral(
                "QToolButton {"
                " color: white;"
+               " font-size: 14px;"
                " font-weight: 700;"
                " background-color: %1;"
                " border: none;"

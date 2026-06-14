@@ -1191,13 +1191,18 @@ Načítať z disku a zahodiť zmeny v pamäti?</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowStatusUi.cpp" line="123" />
-            <source>Insert</source>
-            <translation>Vložiť</translation>
+            <source>M: Select</source>
+            <translation>M: Vybrať</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowStatusUi.cpp" line="169" />
-            <source>Compiler: Idle</source>
-            <translation>Kompilátor: nečinný</translation>
+            <source>M: Insert</source>
+            <translation>M: Vložiť</translation>
+        </message>
+        <message>
+            <location filename="../src/app/MainWindowStatusUi.cpp" line="169" />
+            <source>C: Idle</source>
+            <translation>C: Nečinný</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowStatusUi.cpp" line="170" />
@@ -1216,18 +1221,18 @@ Načítať z disku a zahodiť zmeny v pamäti?</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowStatusUi.cpp" line="179" />
-            <source>Compiler: Running...</source>
-            <translation>Kompilátor: beží...</translation>
+            <source>C: Running...</source>
+            <translation>C: Beží...</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowStatusUi.cpp" line="186" />
-            <source>Compiler: OK %1</source>
-            <translation>Kompilátor: OK %1</translation>
+            <source>C: OK %1</source>
+            <translation>C: OK %1</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowStatusUi.cpp" line="187" />
-            <source>Compiler: Failed %1</source>
-            <translation>Kompilátor: zlyhal %1</translation>
+            <source>C: Failed %1</source>
+            <translation>C: Zlyhal %1</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowStatusUi.cpp" line="189" />
@@ -2176,8 +2181,13 @@ Zdroj: %2:%3</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.cpp" line="197" />
-            <source>Insert</source>
-            <translation>Vložiť</translation>
+            <source>M: Select</source>
+            <translation>M: Vybrať</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.cpp" line="197" />
+            <source>M: Insert</source>
+            <translation>M: Vložiť</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorSceneInternals.h" line="130" />

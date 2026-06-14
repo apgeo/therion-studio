@@ -247,7 +247,7 @@ Existing Therion `area ... endarea` blocks that reference `line -id ...` borders
 
 While placing points or drafting lines and areas, nearby object vertices are highlighted as snap candidates. The active snap target is highlighted more strongly; Bezier control handles remain free-form.
 
-When the map editor is active, the left side of the status bar shows the current workflow instruction, including drawing steps and Enter/Esc completion hints.
+When the map editor is active, the left side of the status bar shows the current workflow instruction, including drawing steps and Enter/Esc completion hints. The compact map mode badge uses `M: Select` or `M: Insert`.
 
 While drafting a line or area:
 
@@ -364,7 +364,7 @@ Closing a project clears `Target Config` and `Working Directory Override` becaus
 - `Clear Output`
 - `Copy Output`
 
-The status bar shows compile state: `Idle`, `Running`, `OK`, or `Failed`.
+The status bar shows compile state with the compact `C:` prefix: `C: Idle`, `C: Running`, `C: OK`, or `C: Failed`.
 
 ## 8. Settings
 

@@ -205,7 +205,7 @@ void MapEditorDetachedPaneWindow::setMapStatus(int zoomPercent, bool insertMode,
         zoomLabel_->setToolTip(QObject::tr("Map zoom"));
     }
     if (modeLabel_ != nullptr) {
-        const QString badgeText = insertMode ? QObject::tr("Insert") : QObject::tr("Select");
+        const QString badgeText = insertMode ? QObject::tr("M: Insert") : QObject::tr("M: Select");
         modeLabel_->setText(badgeText);
         modeLabel_->setToolTip(modeText);
         modeLabel_->setStyleSheet(

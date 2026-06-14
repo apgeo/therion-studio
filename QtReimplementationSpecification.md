@@ -336,7 +336,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - When the active document is open in the map editor, the status area shall reserve the leftmost, expanding status-bar position for the current map workflow instruction, such as selection guidance, active drawing-mode steps, draft completion keys, and recent map-edit status messages.
 - Text, Blocks, and TH2 Visual inspector surfaces shall provide a `File` inspector view with a document panel titled by the active file name; the panel shall show the active document's full path, a copy-path action, on-disk size, last-modified timestamp, current text encoding, and any non-UTF-8 conversion warning/action.
 - Shared document inspector views such as `File` shall be composed through a common document-inspector implementation so Raw, Blocks, and TH2 Visual surfaces do not duplicate layout, styling, or metadata behavior.
-- When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `Select` shall be green and `Insert` shall be red.
+- When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `M: Select` shall be green and `M: Insert` shall be red.
 - When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8 in the `File` inspector view.
 - The text editor shall provide a contextual help/documentation panel that shows Therion command summaries, arguments, accepted values, options, and related keywords when metadata is available for the token or item at the caret. Argument and option signatures shall be visually distinguished from explanatory text while preserving canonical Therion spelling. Arguments shall remain in catalog-defined positional order, while options shall be listed alphabetically by option signature.
 - The help/documentation panel shall be collapsible and resizable and shall not disturb the active editor selection when it is shown or hidden.
@@ -384,7 +384,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Embedded and detached map presentations shall remain synchronized with the same selection, undo history, and underlying text document.
 - When the map pane is detached, the main tab shall continue showing the raw source editor while the detached map window presents the graphical map plus the same right-side map inspector for the same TH2 session.
 - When the map pane is detached, main-window TH2 map zoom/drawing/selection tool groups shall be hidden because those commands apply to the detached map window; the main document toolbar shall retain only document-level actions and the map-pane return/focus control.
-- When the map pane is detached, map zoom and Select/Insert mode indicators shall be shown in the detached map window status bar and shall not remain duplicated in the main-window status area.
+- When the map pane is detached, map zoom and `M: Select`/`M: Insert` mode indicators shall be shown in the detached map window status bar and shall not remain duplicated in the main-window status area.
 - On first display, scrap nodes shall default to expanded state.
 - If a map object is selected elsewhere in the application, the corresponding scrap shall expand automatically so the object remains visible in the list.
 - Clicking a map object row shall select that object, update the map selection, and reveal the corresponding source location in the text editor when the source line is known.
@@ -405,9 +405,9 @@ The rules below define the expected day-to-day interaction model. If a later req
 - In the main window, map command actions shall be hosted in the shared full-width document command toolbar above the tab strip; the graphical map canvas shall not host a floating in-canvas map toolbar overlay.
 - In detached map windows, an equivalent top command toolbar shall be shown above the map canvas and inspector.
 - Toolbar actions should present compact icon-first controls, with text equivalents available through tooltips, accessibility names, and automation-stable identifiers.
-- When a map editor tab or detached map window is active, the status bar shall show the current map workflow instruction as the first left-aligned item, before zoom, mode, compiler, and encoding indicators.
-- When a map editor tab is active, the status bar shall show the current map zoom before the Select/Insert mode badge.
-- The main-window status bar shall show a compact global compiler indicator with the current compiler state and the last run result (`Idle`, `Running`, `OK`, or `Failed`).
+- When a map editor tab or detached map window is active, the status bar shall show the current map workflow instruction as the first left-aligned item, before zoom, map mode, compiler, and encoding indicators.
+- When a map editor tab is active, the status bar shall show the current map zoom before the `M: Select`/`M: Insert` mode badge.
+- The main-window status bar shall show a compact global compiler indicator prefixed with `C:` and containing the current compiler state and the last run result (`Idle`, `Running`, `OK`, or `Failed`).
 - Activating the compiler status indicator shall toggle the Compiler sidebar: open it when hidden/collapsed or showing another pane, and collapse it when the Compiler pane is already visible.
 - The status bar shall not show the active document file name or path; persistent document identity remains available in the tab title and tooltips.
 - Bundled map toolbar icons shall be permissively licensed, shall include their license notice in the repository, and shall adapt to the active light/dark application palette.

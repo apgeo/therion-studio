@@ -48,6 +48,7 @@ void MainWindow::initializeDocumentStatusWidgets()
     statusMapModeLabel_ = new QLabel(statusBar());
     statusMapModeLabel_->setTextInteractionFlags(Qt::NoTextInteraction);
     statusMapModeLabel_->setAlignment(Qt::AlignCenter);
+    statusMapModeLabel_->setFont(statusBar()->font());
     statusMapModeLabel_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
     statusMapModeLabel_->setVisible(false);
 
@@ -55,6 +56,7 @@ void MainWindow::initializeDocumentStatusWidgets()
     statusCompilerButton_->setAutoRaise(true);
     statusCompilerButton_->setToolButtonStyle(Qt::ToolButtonTextOnly);
     statusCompilerButton_->setCursor(Qt::PointingHandCursor);
+    statusCompilerButton_->setFont(statusMapModeLabel_->font());
     statusCompilerButton_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
     statusCompilerButton_->setToolTip(tr("Open Compiler output"));
     connect(statusCompilerButton_, &QToolButton::clicked, this, [this]() {
@@ -134,7 +136,7 @@ void MainWindow::refreshDocumentStatusWidgets()
         statusMapZoomLabel_->setToolTip(tr("Map zoom"));
         statusMapZoomLabel_->setVisible(true);
 
-        const QString badgeText = mapModeInsertActive ? tr("Insert") : tr("Select");
+        const QString badgeText = mapModeInsertActive ? tr("M: Insert") : tr("M: Select");
         statusMapModeLabel_->setText(badgeText);
         statusMapModeLabel_->setToolTip(mapModeText);
         statusMapModeLabel_->setStyleSheet(
@@ -192,7 +194,7 @@ void MainWindow::updateDocumentMenuActionState()
 
 void MainWindow::setCompilerStatusIdle()
 {
-    updateCompilerStatusButton(tr("Compiler: Idle"),
+    updateCompilerStatusButton(tr("C: Idle"),
                                tr("Therion compiler is idle. Click to open Compiler output."),
                                QStringLiteral("#6c757d"));
 }
@@ -202,15 +204,15 @@ void MainWindow::setCompilerStatusRunning(const QString &configPath)
     const QString toolTip = configPath.isEmpty()
         ? tr("Therion is running. Click to open Compiler output.")
         : tr("Therion is running %1. Click to open Compiler output.").arg(QDir::toNativeSeparators(configPath));
-    updateCompilerStatusButton(tr("Compiler: Running..."), toolTip, QStringLiteral("#2f80ed"));
+    updateCompilerStatusButton(tr("C: Running..."), toolTip, QStringLiteral("#2f80ed"));
 }
 
 void MainWindow::setCompilerStatusResult(bool success, const QString &details)
 {
     const QString finishedAt = QTime::currentTime().toString(QStringLiteral("HH:mm"));
     const QString statusText = success
-        ? tr("Compiler: OK %1").arg(finishedAt)
-        : tr("Compiler: Failed %1").arg(finishedAt);
+        ? tr("C: OK %1").arg(finishedAt)
+        : tr("C: Failed %1").arg(finishedAt);
     const QString toolTip = details.trimmed().isEmpty()
         ? tr("Last Therion run finished at %1. Click to open Compiler output.").arg(finishedAt)
         : tr("%1 Click to open Compiler output.").arg(details);

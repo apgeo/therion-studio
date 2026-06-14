@@ -235,7 +235,7 @@ Existujúce Therion bloky `area ... endarea`, ktoré odkazujú na hranice `line 
 
 Počas vkladania bodov alebo kreslenia čiar a plôch sa vertexy blízkeho objektu zvýraznia ako kandidáti snapu. Aktívny snap cieľ sa zvýrazní výraznejšie; Bezier kontrolné body zostávajú bez snapu.
 
-Keď je aktívny map editor, ľavá časť stavového riadka zobrazuje aktuálny pokyn workflow vrátane krokov kreslenia a pomôcky pre dokončenie Enter/Esc.
+Keď je aktívny map editor, ľavá časť stavového riadka zobrazuje aktuálny pokyn workflow vrátane krokov kreslenia a pomôcky pre dokončenie Enter/Esc. Kompaktný odznak režimu mapy používa `M: Vybrať` alebo `M: Vložiť`.
 
 Počas kreslenia čiary alebo plochy:
 
@@ -347,7 +347,7 @@ Zatvorenie projektu vyčistí `Cieľovú konfiguráciu` a `Náhradný pracovný 
 - `Vymazať výstup`
 - `Kopírovať výstup`
 
-Stavový riadok ukazuje stav kompilácie: `Idle`, `Running`, `OK` alebo `Failed`.
+Stavový riadok ukazuje stav kompilácie s kompaktným prefixom `C:`: `C: Nečinný`, `C: Beží...`, `C: OK` alebo `C: Zlyhal`.
 
 ## 8. Nastavenia
 

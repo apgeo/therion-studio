@@ -31,6 +31,14 @@ Bundled application translations:
 - Czech: `translations/therion_studio_cs.ts`
 - Slovak: `translations/therion_studio_sk.ts`
 
+Staged application translations are present for translation work but are not user-selectable or advertised as supported until they are complete:
+
+- French: `translations/therion_studio_fr.ts`
+- German: `translations/therion_studio_de.ts`
+- Italian: `translations/therion_studio_it.ts`
+- Spanish: `translations/therion_studio_es.ts`
+- Portuguese: `translations/therion_studio_pt.ts`
+
 The initial language set is advertised in:
 
 - `CMakeLists.txt`, through `THERION_STUDIO_TRANSLATION_FILES`
@@ -39,6 +47,7 @@ The initial language set is advertised in:
 - `cmake/macos/Info.plist.in`, through `CFBundleLocalizations`
 
 When adding a language, update all of these locations in the same change.
+When staging a language before it is complete, list it in `THERION_STUDIO_STAGED_TRANSLATION_FILES` only and do not add it to startup loading, Settings, or `CFBundleLocalizations`.
 
 ## Required Tools
 
@@ -137,13 +146,26 @@ Before committing localization changes:
 
 - `cmake --build build --target update_translations` finds no unexpected new strings
 - `cmake --build build --target release_translations` reports zero unfinished translations for bundled languages
-- `rg 'type="unfinished"' translations/therion_studio_*.ts` returns no output
+- `rg 'type="unfinished"' translations/therion_studio_cs.ts translations/therion_studio_sk.ts` returns no output
+- `python3 scripts/check_localization.py` passes
 - placeholders in source and translation match
 - command syntax, accepted values, option names, and examples remain canonical Therion text
 - application builds successfully
 - relevant tests pass
 
-A quick placeholder sanity check:
+The repository-local localization check verifies shipped catalogs, staged catalog wiring, placeholders in completed translations, and whether staged languages remain hidden from runtime language selection:
+
+```sh
+python3 scripts/check_localization.py
+```
+
+Use strict staged mode only when preparing to promote staged languages:
+
+```sh
+python3 scripts/check_localization.py --strict-staged
+```
+
+A quick placeholder-only sanity check:
 
 ```sh
 python3 - <<'PY'
@@ -188,6 +210,8 @@ The Settings dialog exposes:
 - `Czech`
 - `Slovak`
 
+French, German, Italian, Spanish, and Portuguese are staged for translation work and must not be added here until their application catalogs and manuals pass `scripts/check_localization.py --strict-staged`.
+
 `System Default` means the application follows the operating system locale when a bundled translation is available.
 
 On macOS, Therion Studio also writes the native per-app language override through the app-domain `AppleLanguages` preference. Selecting `System Default` clears that override so macOS controls the language again.
@@ -226,14 +250,18 @@ The AppImage uses a staged AppDir. Ensure Qt translation catalogs needed by stan
 ## Adding A New Language
 
 1. Add a `.ts` file under `translations/`, for example `translations/therion_studio_de.ts`.
-2. Add it to `THERION_STUDIO_TRANSLATION_FILES` in `CMakeLists.txt`.
-3. Add the language to startup language normalization/loading if it is user-selectable.
-4. Add the language to `MainWindowSettingsDialog`.
-5. Add the language to `CFBundleLocalizations` in `cmake/macos/Info.plist.in`.
-6. Run `cmake --build build --target update_translations`.
-7. Translate with Qt Linguist.
-8. Run `release_translations`, build, tests, and the review checklist.
-9. Update `docs/USER_MANUAL.md`, `QtReimplementationSpecification.md`, and release/packaging docs if the supported language set changes.
+2. While the translation is incomplete, add it to `THERION_STUDIO_STAGED_TRANSLATION_FILES` in `CMakeLists.txt`.
+3. Add the localized `docs/USER_MANUAL.<language>.md` before promotion.
+4. During staging, refresh shipped catalogs with `cmake --build build --target update_translations`, then regenerate or merge staged `.ts` skeletons from the updated shipped catalog so staged files keep the same source/context set.
+5. When the language is complete, run `python3 scripts/check_localization.py --strict-staged` for the promoted language set, then move it to `THERION_STUDIO_TRANSLATION_FILES`.
+6. Run `python3 scripts/check_localization.py` during staging.
+7. Add the language to startup language normalization/loading if it is user-selectable.
+8. Add the language to `MainWindowSettingsDialog`.
+9. Add the language to `CFBundleLocalizations` in `cmake/macos/Info.plist.in`.
+10. Run `cmake --build build --target update_translations`.
+11. Translate with Qt Linguist.
+12. Run `release_translations`, build, tests, and the review checklist.
+13. Update `docs/USER_MANUAL.md`, `QtReimplementationSpecification.md`, and release/packaging docs if the supported language set changes.
 
 Do not add a language to the Settings dialog until its application catalog is complete enough for normal use.
 

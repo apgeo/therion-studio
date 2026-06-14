@@ -761,6 +761,7 @@ The Qt application shall support a multilingual user interface and locale-aware 
 Required behavior:
 
 - the initial release language set shall include English (`en`), Czech (`cs`), and Slovak (`sk`)
+- additional language catalogs may be staged before release, but staged languages shall not be advertised, user-selectable, or loaded automatically until their application catalog and localized user manual are complete
 - user-facing UI strings shall be localizable, including menus, toolbars, dialogs, alerts, empty states, inspector labels, search controls, console labels, and help-panel chrome
 - platform/Qt-provided standard menu items and standard dialog chrome shall participate in application localization when the relevant Qt translation catalogs are available
 - English shall be the required default source language and fallback language
@@ -1217,6 +1218,7 @@ The criteria below are intended for implementation verification and QA.
 - Menus, dialogs, toolbar labels, inspector labels, search controls, and console labels participate in localization.
 - Platform/Qt-provided standard actions such as the macOS application menu `Preferences...` item display in the selected application language when matching Qt translation catalogs are installed.
 - Bundled Czech and Slovak translation catalogs build with no unfinished application-string entries for the shipped UI coverage.
+- Staged language catalogs can exist in the repository without being exposed to users; promoting a staged language to the supported set requires complete application translations, a localized user manual, placeholder validation, and runtime/packaging wiring.
 - Therion commands, options, keywords, and serialized file content remain in canonical Therion syntax and are not translated.
 - Unicode file paths, project names, and editor content can be opened, displayed, searched, and saved correctly.
 - Locale-sensitive UI does not change the numeric formatting written into Therion files.

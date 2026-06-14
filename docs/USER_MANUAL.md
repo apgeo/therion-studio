@@ -151,11 +151,11 @@ For `.th2` files:
 - `Ctrl+Space` to open autocomplete manually
 - contextual help for the current command or option; Raw and Blocks show the same complete command help, positional arguments stay in documented order, options are listed alphabetically, and the help panel is titled with the current command or selected help target
 - Raw editor diagnostics list issues such as malformed option tokens, unknown commands or options, commands used in the wrong document type or block context, missing arguments, unclosed blocks, duplicate IDs, unresolved object references, and area references to lines missing from the current scrap. Project validation additionally reports missing files referenced by `input` and `source` plus map/scrap/join/station references that the project index cannot resolve unambiguously, including `point station -name` references that do not resolve to survey data and `join` references to named line-point marks that are missing from the resolved line. `point ... station` objects without `-name` are allowed; they are not validated against survey stations. Opening or restoring a project, saving or editing a project document, and external changes to project `.th`, `.th2`, or `thconfig` files refresh project validation in the background without switching panels, and `Validate Project` in the `Validation` panel manually refreshes all `.th`, `.th2`, and `thconfig` files in the open project. Background refreshes keep the previous visible findings and rail severity until the new result is ready. The Validation rail icon, findings list, and Raw editor diagnostics distinguish warning-only results from results that contain errors. Inline wave underlines and subtle backgrounds in Raw mode are editor projections of the same validation findings shown in the panel or tooltip; normal syntax colors only identify token roles. The Context Help panel continues to show command documentation. Activate a finding to jump to the affected raw source line, or use `Apply Fix` when the selected finding shows an explicit safe source edit.
-- a `Selection` inspector tab in Blocks mode for editing the selected block header and supported inline options; the first panel is titled with the selected Therion command and shows its source line
-- when no block is selected, the Blocks `Selection` tab shows `No block selected.`; when the fixed root `encoding` card is selected, it shows the command and encoding value as read-only text
+- a `Selection` inspector view in Blocks mode for editing the selected block header and supported inline options; the first panel is titled with the selected Therion command and shows its source line
+- when no block is selected, the Blocks `Selection` inspector view shows `No block selected.`; when the fixed root `encoding` card is selected, it shows the command and encoding value as read-only text
 - find and replace from the `Edit` menu
 - `File -> Import -> Import PocketTopo Text...` is shown only when an existing or unsaved `.th` text document is active, and imports a PocketTopo Therion export (`.txt`) at the cursor as Therion `centreline` blocks
-- a `File` inspector tab with a panel titled by the current file name, full path, copy-path action, on-disk size, last-modified timestamp, current encoding, and UTF-8 conversion for non-UTF-8 files
+- a `File` inspector view with a panel titled by the current file name, full path, copy-path action, on-disk size, last-modified timestamp, current encoding, and UTF-8 conversion for non-UTF-8 files
 
 ### 4.3 Blocks Data Rows
 
@@ -192,7 +192,7 @@ In the `Survey` view, maps and scraps remain under the survey namespace where th
 `Visual` mode contains:
 
 - the map canvas
-- inspector tabs: `Selection`, `Objects`, `Backgrounds`, `File`
+- inspector selector views: `Selection`, `Objects`, `Backgrounds`, `File`
 
 `Raw` mode remains available for direct source editing.
 

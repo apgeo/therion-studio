@@ -2,6 +2,8 @@
 
 #include <QFrame>
 
+class QButtonGroup;
+class QHBoxLayout;
 class QLabel;
 class QScrollArea;
 class QTabWidget;
@@ -37,6 +39,12 @@ protected:
 private:
     static void configureScrollArea(QScrollArea *scrollArea);
 
+    void rebuildSelector();
+    void syncSelectorFromTabs();
+
+    QWidget *selector_ = nullptr;
+    QHBoxLayout *selectorLayout_ = nullptr;
+    QButtonGroup *selectorButtons_ = nullptr;
     QTabWidget *tabs_ = nullptr;
     QFrame *leftEdge_ = nullptr;
 };

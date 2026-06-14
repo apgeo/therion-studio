@@ -112,10 +112,10 @@ Structured block-canvas requirements:
 - in Therion config structured mode, top-level configuration directives such as `select`, `export`, and `unselect` shall be rendered as leaf cards at document root when present in source.
 - directives that support both inline and block forms (for example `source`) shall open nested scope only in explicit block form; inline single-line form shall remain a leaf card.
 - in structured mode for `.th` and Therion config documents, an existing `encoding` directive shall be treated as a fixed document-root directive; opening a file or switching editor modes shall not auto-insert a missing `encoding ...` line or otherwise mutate source text, and an existing `encoding` card shall not be insertable from toolbox, movable, or deletable.
-- The Blocks inspector tab that edits the currently selected block shall be titled `Selection` to align with the Map editor inspector convention.
-- The first section in the Blocks `Selection` tab shall use the selected command token or object-reference label as its section title and shall show source location as a compact `Source line N` metadata line instead of a generic `Block Details` / `Command: ...` header.
-- When no canvas block is selected, the Blocks `Selection` tab shall show an explicit empty state message (`No block selected.`) rather than an empty panel.
-- When the fixed document-root `encoding` card is selected in Blocks mode, the Blocks `Selection` tab shall show its command title, source line, and encoding value in non-editable read-only text form; interacting with that value shall not mark the document dirty.
+- The Blocks inspector view that edits the currently selected block shall be titled `Selection` to align with the Map editor inspector convention.
+- The first section in the Blocks `Selection` view shall use the selected command token or object-reference label as its section title and shall show source location as a compact `Source line N` metadata line instead of a generic `Block Details` / `Command: ...` header.
+- When no canvas block is selected, the Blocks `Selection` view shall show an explicit empty state message (`No block selected.`) rather than an empty panel.
+- When the fixed document-root `encoding` card is selected in Blocks mode, the Blocks `Selection` view shall show its command title, source line, and encoding value in non-editable read-only text form; interacting with that value shall not mark the document dirty.
 - Block Details for editable blocks shall expose an always-visible optional inline comment field that maps to end-of-line Therion comments and preserves comments on line rewrites.
 - Block Details shall auto-commit inline field and option edits on editing completion or focus-out; it shall not require or expose a separate `Apply` button.
 - Block Details shall expose only workflow-specific action buttons that cannot be represented as safe inline fields; for MVP this means `Edit Data Rows...` for `data` block body rows. The Blocks inspector shall not introduce a separate `Actions` section for these controls.
@@ -333,10 +333,10 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The Settings dialog shall allow choosing the default editor mode for newly opened `.th` and Therion config documents: `Raw` or `Blocks`; the default shall be `Raw`.
 - The default text-editor mode preference shall apply only when opening a new `.th` or Therion config tab and shall not modify document source merely because the tab initially opens in Blocks mode.
 - The application shall show the active document's current text encoding as a compact status-bar value tied to the active document context.
-- Text, Blocks, and TH2 Visual inspector surfaces shall provide a `File` tab with a document panel titled by the active file name; the panel shall show the active document's full path, a copy-path action, on-disk size, last-modified timestamp, current text encoding, and any non-UTF-8 conversion warning/action.
-- Shared document inspector tabs such as `File` shall be composed through a common document-inspector implementation so Raw, Blocks, and TH2 Visual surfaces do not duplicate layout, styling, or metadata behavior.
+- Text, Blocks, and TH2 Visual inspector surfaces shall provide a `File` inspector view with a document panel titled by the active file name; the panel shall show the active document's full path, a copy-path action, on-disk size, last-modified timestamp, current text encoding, and any non-UTF-8 conversion warning/action.
+- Shared document inspector views such as `File` shall be composed through a common document-inspector implementation so Raw, Blocks, and TH2 Visual surfaces do not duplicate layout, styling, or metadata behavior.
 - When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `Select` shall be green and `Insert` shall be red.
-- When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8 in the `File` inspector tab.
+- When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8 in the `File` inspector view.
 - The text editor shall provide a contextual help/documentation panel that shows Therion command summaries, arguments, accepted values, options, and related keywords when metadata is available for the token or item at the caret. Argument and option signatures shall be visually distinguished from explanatory text while preserving canonical Therion spelling. Arguments shall remain in catalog-defined positional order, while options shall be listed alphabetically by option signature.
 - The help/documentation panel shall be collapsible and resizable and shall not disturb the active editor selection when it is shown or hidden.
 - In the text-editor workspace, the contextual help panel shall be presented as a persistent right-side inspector column with spacing/padding consistent with the structured Blocks workspace side inspector.
@@ -346,7 +346,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Dash-prefixed free-text option values, including quoted point labels such as `-text "-21 m"`, shall remain values and shall not be reinterpreted as new command options.
 - Raw and Blocks modes shall use the same contextual-help renderer and metadata scope for command-level help, including syntax, arguments, accepted values, options, summaries, and related keyword data where available.
 - Contextual help inspector content shall be wrapped in a standard inspector panel whose header reflects the current command, validation context, or special help target; the help content shall use the available panel height without adding a redundant inner `Contextual Help` heading.
-- Inspector tabs shall use one outer tab-level vertical scrollbar for overflow content; inner content widgets such as contextual help renderers shall not introduce a second nested scrollbar when they are hosted inside an inspector tab.
+- Inspector views shall use one outer view-level vertical scrollbar for overflow content; inner content widgets such as contextual help renderers shall not introduce a second nested scrollbar when they are hosted inside an inspector view.
 - When a TH2 file is open, the text editor selection shall stay synchronized with the graphical map selection.
 - When map/object selection reveals a source location in the text editor, the corresponding source line shall be visibly highlighted in the editor viewport.
 - When the text cursor is on a `scrap` or `endscrap` directive, the map selection shall include all selectable map objects that belong to that scrap block.
@@ -360,23 +360,23 @@ The rules below define the expected day-to-day interaction model. If a later req
 - When a TH2 document is active in the main window, map-pane detach/reattach (`Separate Map` / `Return Map`) shall be provided in the same document command toolbar control area as the `Raw`/`Visual` mode selector.
 - Right-aligned document command toolbar controls such as `Raw`, `Visual`, `Blocks`, and map-pane detach/reattach shall be compact square icon-only controls with accessible names and tooltips; map-pane detach shall use the screen-share icon and map-pane return shall use the monitor-x icon.
 - Embedded TH2 `Visual` mode shall align its canvas/inspector content edge with the same thin top separator used by Raw and Blocks editor content under the main file tabs.
-- TH2 `Visual` inspector tabs shall use native `QTabWidget` rendering and shall not override platform tab geometry or tab shape.
+- TH2 `Visual` inspector views shall use the shared segmented inspector selector and shall not override platform tab geometry or tab shape.
 - When a TH2 map editor is presented outside the main tab strip (for example in a detached dedicated map-editor window), the top command toolbar shall omit `Visual`/`Raw` mode switching and keep only actions relevant to the detached visual workspace.
 - Detached map-window command toolbars shall draw a top separator below the native titlebar area and one bottom separator above the detached map canvas/inspector content.
 - In embedded `Visual` mode, the workspace shall present the graphical map canvas together with a right-side map inspector.
-- The right-side map inspector in `Visual` mode shall provide tabs for `Selection`, `Objects`, `Backgrounds`, and `File`.
-- The right-side map inspector shall use the tab labels as its primary heading and shall not add a redundant standalone `Inspector` title above the tab bar.
-- The right-side map inspector may reinforce only the left edge of the tab pane when needed for visual consistency; other tab pane borders shall remain native.
-- The `Selection` and `Backgrounds` tabs shall use the same framed-section pattern, with each section heading placed inside its box rather than as a standalone label above the box.
-- The `Objects` tab shall provide source-linked object-tree navigation grouped by scrap.
-- The `Selection` tab shall provide selection details/settings editing for the currently selected map object.
-- When no map object or pending insert object is selected, the `Selection` tab shall show an explicit framed empty state consistent with the Blocks `Selection` inspector and shall not infer an editable selection from the current text cursor line.
-- For selected or pending-insert `point`, `line`, and `area` objects, the `Selection` tab shall show a `Preview` row next to the object quick-edit fields, using the same map object style catalog resolution as the canvas renderer. The preview tile shall use a map-like light preview surface in both light and dark themes so dark map symbols remain readable without inverting their configured colors. Area previews shall use the available preview tile area for fill-pattern readability, including deterministic dot-pattern jitter when configured. The preview shall preserve readability with preview-only contrast treatment when necessary; this shall not alter the configured style colors used by the canvas renderer.
+- The right-side map inspector in `Visual` mode shall provide selector views for `Selection`, `Objects`, `Backgrounds`, and `File`.
+- The right-side map inspector shall use the selector labels as its primary heading and shall not add a redundant standalone `Inspector` title above the selector.
+- The right-side map inspector shall not draw a separate outer pane border around selector content; the active view content shall align horizontally with the segmented selector.
+- The `Selection` and `Backgrounds` views shall use the same framed-section pattern, with each section heading placed inside its box rather than as a standalone label above the box.
+- The `Objects` view shall provide source-linked object-tree navigation grouped by scrap.
+- The `Selection` view shall provide selection details/settings editing for the currently selected map object.
+- When no map object or pending insert object is selected, the `Selection` view shall show an explicit framed empty state consistent with the Blocks `Selection` inspector and shall not infer an editable selection from the current text cursor line.
+- For selected or pending-insert `point`, `line`, and `area` objects, the `Selection` view shall show a `Preview` row next to the object quick-edit fields, using the same map object style catalog resolution as the canvas renderer. The preview tile shall use a map-like light preview surface in both light and dark themes so dark map symbols remain readable without inverting their configured colors. Area previews shall use the available preview tile area for fill-pattern readability, including deterministic dot-pattern jitter when configured. The preview shall preserve readability with preview-only contrast treatment when necessary; this shall not alter the configured style colors used by the canvas renderer.
 - Map hit testing shall use screen-space stroke tolerance for line bodies so line selection remains precise across zoom levels; clicking inside an area fill shall select the area unless the click is on a higher-priority handle/vertex or within the visible line-stroke hit tolerance.
-- Activating `Point`, `Line`, `Freehand`, or `Area` insertion shall activate the `Selection` tab before the first point or vertex is placed and shall expose pending object fields for type, subtype, ID, point name, and supported point value where applicable; edits to those fields shall not mutate source text until the new object is inserted, and the inserted command shall use the pending values.
+- Activating `Point`, `Line`, `Freehand`, or `Area` insertion shall activate the `Selection` view before the first point or vertex is placed and shall expose pending object fields for type, subtype, ID, point name, and supported point value where applicable; edits to those fields shall not mutate source text until the new object is inserted, and the inserted command shall use the pending values.
 - Activating `Point`, `Line`, `Freehand`, or `Area` insertion while a map object or scrap is selected shall target the selected object's enclosing scrap for the inserted source text; the pending insert metadata shall show the target scrap identifier before the write occurs. When existing scraps are available, the pending insert controls shall provide an `Insert into` target-scrap selector so the user can choose a different existing target scrap before committing the new object. If no existing scrap can be resolved, the insertion workflow may create and target the default draft scrap as a safe fallback.
-- Activating `Insert Scrap` shall immediately create a new scrap block, select the newly created scrap source line, select the corresponding item in the `Objects` tree, and keep the `Selection` tab active so the user can edit the new scrap ID/projection before inserting points, lines, freehand lines, or areas into it. Scrap insertion shall not show target-scrap metadata or an `Insert into` selector because scraps are not inserted inside other scraps.
-- When the selected object is a `scrap`, the `Selection` tab shall expose manual scrap scale editing as a separate `Scrap Scale` section below the basic scrap identity/projection section. The scale section shall edit XTherion/Therion-compatible 8-parameter `-scale` calibration values, including picture point 1/2 in pixels, real point 1/2, unit, and an action that writes the resulting `-scale [...]` option to the selected scrap command.
+- Activating `Insert Scrap` shall immediately create a new scrap block, select the newly created scrap source line, select the corresponding item in the `Objects` tree, and keep the `Selection` view active so the user can edit the new scrap ID/projection before inserting points, lines, freehand lines, or areas into it. Scrap insertion shall not show target-scrap metadata or an `Insert into` selector because scraps are not inserted inside other scraps.
+- When the selected object is a `scrap`, the `Selection` view shall expose manual scrap scale editing as a separate `Scrap Scale` section below the basic scrap identity/projection section. The scale section shall edit XTherion/Therion-compatible 8-parameter `-scale` calibration values, including picture point 1/2 in pixels, real point 1/2, unit, and an action that writes the resulting `-scale [...]` option to the selected scrap command.
 - In embedded `Raw` mode, the workspace shall present the source text editor together with the contextual help inspector and no embedded map pane.
 - The embedded graphical map pane shall stay dedicated to map editing and shall not include a separate persistent map-help panel.
 - The user shall be able to detach the current TH2 session into a dedicated map editor window without creating a separate document state.
@@ -1084,7 +1084,7 @@ The criteria below are intended for implementation verification and QA.
 - In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, separator, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`, `Smart Area`) after `Undo`/`Redo`.
 - In the main window, these TH2 zoom and map-tool groups are enabled only while the embedded TH2 tab is in `Visual` mode; in `Raw` mode they remain visible but inactive.
 - In detached dedicated map-editor windows (without shared tab strip), an equivalent in-window top command toolbar remains available.
-- In embedded `Visual` mode, the tab shows the graphical map editor plus a right-side map inspector (`Selection`, `Objects`, `Backgrounds` tabs).
+- In embedded `Visual` mode, the tab shows the graphical map editor plus a right-side map inspector (`Selection`, `Objects`, `Backgrounds` views).
 - In embedded `Raw` mode, the tab shows the source text editor plus contextual help inspector.
 - The graphical map pane does not show a separate persistent map-help panel.
 - The same TH2 session can be shown in an embedded workspace and a detached map pane window without diverging document state.
@@ -1517,11 +1517,11 @@ Required parity scope:
 
 - project files sidebar
 - project structure sidebar
-- map inspector `Objects` tab with selection-coupled behavior
+- map inspector `Objects` view with selection-coupled behavior
 - object settings inspector for scrap/line/point/area
 - line-point options editing (orientation and l-size)
 - debug sidebar and inspector diagnostic surfaces
-- shared document inspector infrastructure for common tabs such as `File`, with editor-specific tabs supplying only their own content panels
+- shared document inspector infrastructure for common views such as `File`, with editor-specific views supplying only their own content panels
 
 ### 14.8 JSON/Metadata-Driven Runtime Configuration
 

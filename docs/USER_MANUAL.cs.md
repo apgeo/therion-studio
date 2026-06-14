@@ -145,11 +145,11 @@ Pro `.th2` soubory:
 - `Ctrl+Space` pro ruční otevření doplňování,
 - kontextová nápověda pro aktuální příkaz nebo volbu; režimy Zdroj i Bloky zobrazují stejnou úplnou nápovědu příkazů a panel nápovědy je pojmenovaný podle aktuálního příkazu, validačního kontextu nebo vybraného cíle nápovědy,
 - diagnostika v raw editoru a panelu `Validation` zobrazuje problémy jako chybně zapsané option tokeny, neznámé příkazy nebo volby, chybějící argumenty a neuzavřené bloky; `Validate Project` v panelu `Validation` ručně obnoví kontrolu všech `.th`, `.th2` a `thconfig` souborů v otevřeném projektu; projektová validace u `thconfig` souborů nehlásí nejistá varování `unknown command`, dokud nebude k dispozici samostatný thconfig katalog; aktivací nálezu přejdete na dotčený řádek raw zdroje a u nálezů s explicitním bezpečným přepisem můžete použít `Apply Fix`,
-- záložka `Výběr` v inspektoru režimu Bloky pro editaci hlavičky vybraného bloku a podporovaných inline voleb; první panel je pojmenovaný podle vybraného příkazu Therionu a ukazuje zdrojový řádek,
-- když není vybraný žádný blok, záložka `Výběr` v režimu Bloky ukazuje `Není vybrán žádný blok.`; při výběru pevné kořenové karty `encoding` ukazuje příkaz a hodnotu kódování jako text pouze pro čtení,
+- pohled `Výběr` v inspektoru režimu Bloky pro editaci hlavičky vybraného bloku a podporovaných inline voleb; první panel je pojmenovaný podle vybraného příkazu Therionu a ukazuje zdrojový řádek,
+- když není vybraný žádný blok, pohled `Výběr` v režimu Bloky ukazuje `Není vybrán žádný blok.`; při výběru pevné kořenové karty `encoding` ukazuje příkaz a hodnotu kódování jako text pouze pro čtení,
 - hledání a nahrazení z menu `Úpravy`,
 - `Soubor -> Import -> Importovat PocketTopo text...` se zobrazí jen tehdy, když je aktivní existující nebo neuložený `.th` textový dokument, a importuje PocketTopo Therion export (`.txt`) na pozici kurzoru jako Therion bloky `centreline`,
-- záložka `Soubor` v inspektoru s panelem pojmenovaným podle aktuálního souboru, plnou cestou, akcí pro zkopírování cesty, velikostí na disku, časem poslední změny, aktuálním kódováním a převodem do UTF-8 pro soubory mimo UTF-8.
+- pohled `Soubor` v inspektoru s panelem pojmenovaným podle aktuálního souboru, plnou cestou, akcí pro zkopírování cesty, velikostí na disku, časem poslední změny, aktuálním kódováním a převodem do UTF-8 pro soubory mimo UTF-8.
 
 ### 4.3 Datové řádky v režimu Bloky
 
@@ -182,7 +182,7 @@ Mapy a scrapy referencované uvnitř `map ... endmap` se zobrazí pod danou mapo
 Režim `Vizuálně` obsahuje:
 
 - mapové plátno,
-- inspektor se záložkami `Výběr`, `Objekty`, `Pozadí`, `Soubor`.
+- inspektor s přepínačem pohledů `Výběr`, `Objekty`, `Pozadí`, `Soubor`.
 
 Režim `Zdroj` zůstává dostupný pro přímou editaci zdroje.
 

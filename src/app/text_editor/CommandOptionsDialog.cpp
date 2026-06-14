@@ -328,7 +328,7 @@ std::optional<QString> CommandOptionsDialog::configureLine(const QString &comman
     }
     layout->addWidget(optionsTable, 1);
 
-    auto *helpLabel = new QLabel(tr("Context Help"), &dialog);
+    auto *helpLabel = new QLabel(tr("Help"), &dialog);
     QFont helpLabelFont = helpLabel->font();
     helpLabelFont.setBold(true);
     helpLabel->setFont(helpLabelFont);

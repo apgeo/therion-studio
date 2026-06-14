@@ -629,7 +629,7 @@ void MainWindow::buildMenus()
         setCurrentDocumentRightPanelCollapsed(!currentDocumentRightPanelCollapsed());
     });
     contextHelpCollapseAction_ = viewMenu->addAction(QString());
-    contextHelpCollapseAction_->setStatusTip(tr("Expand or collapse contextual help while the map pane is detached."));
+    contextHelpCollapseAction_->setStatusTip(tr("Expand or collapse the help panel while the map pane is detached."));
     connect(contextHelpCollapseAction_, &QAction::triggered, this, [this]() {
         setCurrentDetachedMapContextHelpCollapsed(!currentDetachedMapContextHelpCollapsed());
     });

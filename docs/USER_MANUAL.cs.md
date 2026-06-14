@@ -59,11 +59,11 @@ Běžné akce okna:
 - `Soubor -> Nový -> Therion zdroj (.th)`, `Therion mapa (.th2)` nebo `Therion config (.thconfig)` otevře nový neuložený dokument. Nové dokumenty `.th`, `.th2` a `.thconfig` začínají direktivou `encoding utf-8`. Tlačítko `Nový dokument` v toolbaru nabízí stejné volby. První `Uložit` se zeptá, kam ho uložit.
 - `Soubor -> Nastavení...` otevře nastavení aplikace.
 - `Zobrazení -> Rozbalit postranní panel` / `Sbalit postranní panel` zobrazí nebo skryje obsah levého panelu.
-- `Zobrazení -> Rozbalit kontextovou nápovědu`, `Rozbalit inspektor bloku` nebo `Rozbalit inspektor mapy` ovládá aktivní pravý panel podle aktuálního editoru.
+- `Zobrazení -> Rozbalit nápovědu`, `Rozbalit inspektor bloku` nebo `Rozbalit inspektor mapy` ovládá aktivní pravý panel podle aktuálního editoru.
 - `Zobrazení -> Zobrazit mapovou lupu` / `Skrýt mapovou lupu` zapíná nebo vypíná lupu mapy. Je to jen stav UI a nemění `.th2` soubor.
 - `Zobrazení -> Celá obrazovka` / `Ukončit celou obrazovku` přepíná celou obrazovku.
 
-Pokud je mapa oddělená do samostatného okna, hlavní okno může současně zobrazit ovládání `Inspektor mapy` i `Kontextová nápověda`, protože vizuální mapa a zdroj mohou být viditelné zároveň.
+Pokud je mapa oddělená do samostatného okna, hlavní okno může současně zobrazit ovládání `Inspektor mapy` i `Nápověda`, protože vizuální mapa a zdroj mohou být viditelné zároveň.
 
 ## 3. Začínáme
 

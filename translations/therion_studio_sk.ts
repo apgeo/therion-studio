@@ -385,8 +385,8 @@
         </message>
         <message>
             <location filename="../src/app/MainWindow.cpp" line="632" />
-            <source>Expand or collapse contextual help while the map pane is detached.</source>
-            <translation>Rozbaliť alebo zbaliť kontextovú pomoc pri oddelenom mapovom paneli.</translation>
+            <source>Expand or collapse the help panel while the map pane is detached.</source>
+            <translation>Rozbaliť alebo zbaliť nápovedu pri oddelenom mapovom paneli.</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindow.cpp" line="640" />
@@ -1584,13 +1584,13 @@ Načítať z disku a zahodiť zmeny v pamäti?</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowViewMenu.cpp" line="28" />
-            <source>Expand Context Help</source>
-            <translation>Rozbaliť kontextovú pomoc</translation>
+            <source>Expand Help</source>
+            <translation>Rozbaliť nápovedu</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowViewMenu.cpp" line="29" />
-            <source>Collapse Context Help</source>
-            <translation>Zbaliť kontextovú pomoc</translation>
+            <source>Collapse Help</source>
+            <translation>Zbaliť nápovedu</translation>
         </message>
         <message>
             <location filename="../src/app/MainWindowViewMenu.cpp" line="34" />
@@ -2713,8 +2713,8 @@ Line-point options: %1</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp" line="98" />
-            <source>Context Help</source>
-            <translation>Kontextová pomoc</translation>
+            <source>Help</source>
+            <translation>Nápoveda</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp" line="99" />
@@ -3164,8 +3164,8 @@ Line-point options: %1</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/CommandOptionsDialog.cpp" line="331" />
-            <source>Context Help</source>
-            <translation>Kontextová nápoveda</translation>
+            <source>Help</source>
+            <translation>Nápoveda</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/CommandOptionsDialog.cpp" line="461" />
@@ -3227,8 +3227,8 @@ Line-point options: %1</translation>
         <message>
             <location filename="../src/app/text_editor/ContextHelpInspector.cpp" line="25" />
             <location filename="../src/app/text_editor/ContextHelpInspector.cpp" line="76" />
-            <source>Context Help</source>
-            <translation>Kontextová pomoc</translation>
+            <source>Help</source>
+            <translation>Nápoveda</translation>
         </message>
     </context>
     <context>
@@ -5808,8 +5808,8 @@ subtype blocks</translation>
             <location filename="../src/app/text_editor/TextEditorContextHelpController.cpp" line="113" />
             <location filename="../src/app/text_editor/TextEditorContextHelpController.cpp" line="116" />
             <location filename="../src/app/text_editor/TextEditorContextHelpController.cpp" line="216" />
-            <source>Context Help</source>
-            <translation>Kontextová pomoc</translation>
+            <source>Help</source>
+            <translation>Nápoveda</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/TextEditorContextHelpController.cpp" line="120" />
@@ -6108,8 +6108,8 @@ subtype blocks</translation>
             <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="322" />
             <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="325" />
             <location filename="../src/app/text_editor/TextEditorTabDocumentModeDelegates.cpp" line="167" />
-            <source>Context Help</source>
-            <translation>Kontextová pomoc</translation>
+            <source>Help</source>
+            <translation>Nápoveda</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/TextEditorTabStatusCursorDelegates.cpp" line="51" />

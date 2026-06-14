@@ -164,7 +164,7 @@ QString TextEditorTab::rightPanelLabel() const
 {
     return editorMode() == EditorMode::Blocks
         ? tr("Block Inspector")
-        : tr("Context Help");
+        : tr("Help");
 }
 
 void TextEditorTab::setRightPanelCollapsed(bool collapsed)

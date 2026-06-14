@@ -22,7 +22,7 @@ ContextHelpInspector::ContextHelpInspector(QWidget *parent, const QString &title
 
     QVBoxLayout *sectionLayout = nullptr;
     auto *section = InspectorPanel::createSection(this,
-                                                  title.trimmed().isEmpty() ? tr("Context Help") : title,
+                                                  title.trimmed().isEmpty() ? tr("Help") : title,
                                                   &sectionLayout,
                                                   &titleLabel_);
     section->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
@@ -73,7 +73,7 @@ void ContextHelpInspector::setTitle(const QString &title)
         return;
     }
     const QString normalized = title.trimmed();
-    titleLabel_->setText(normalized.isEmpty() ? tr("Context Help") : normalized);
+    titleLabel_->setText(normalized.isEmpty() ? tr("Help") : normalized);
 }
 
 void ContextHelpInspector::setHtml(const QString &html)

@@ -974,8 +974,11 @@ void MainWindow::buildStructureSidebar()
             setSidebarPane(pane);
             return;
         }
-        if (pane == SidebarPane::StructureBrowser && activeSidebarPane_ == SidebarPane::FileBrowser) {
-            setSidebarPane(pane);
+        const bool projectNavigationPaneActive = pane == SidebarPane::StructureBrowser
+            && (activeSidebarPane_ == SidebarPane::FileBrowser
+                || activeSidebarPane_ == SidebarPane::StructureBrowser);
+        if (projectNavigationPaneActive) {
+            setSidebarCollapsed(true);
             return;
         }
         if (activeSidebarPane_ == pane) {
@@ -1114,7 +1117,7 @@ void MainWindow::buildStructureSidebar()
 
     auto *filesViewButton = new QPushButton(tr("Files"), structureViewSelector);
     auto *surveyViewButton = new QPushButton(tr("Survey"), structureViewSelector);
-    auto *mapViewButton = new QPushButton(tr("Map"), structureViewSelector);
+    auto *mapViewButton = new QPushButton(QStringLiteral("Map"), structureViewSelector);
     const QList<QPushButton *> structureViewButtons = {filesViewButton, surveyViewButton, mapViewButton};
     for (QPushButton *button : structureViewButtons) {
         button->setCheckable(true);
@@ -1292,11 +1295,6 @@ void MainWindow::setSidebarPane(SidebarPane pane)
     if (structureViewStack_ != nullptr) {
         if (pane == SidebarPane::FileBrowser) {
             setStructurePanelPage(StructurePanelFilesPage);
-        } else if (pane == SidebarPane::StructureBrowser
-                   && structureViewStack_->currentIndex() == StructurePanelFilesPage) {
-            setStructurePanelPage(structureViewMode_ == StructureViewMode::Map
-                                      ? StructurePanelMapPage
-                                      : StructurePanelSurveyPage);
         }
     }
     if (sidebarStructureButton_ != nullptr) {

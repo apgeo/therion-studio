@@ -110,10 +110,10 @@ void TextEditorContextHelpController::buildHelpPanel()
     setHelpPanel(inspectorPanel);
     helpPanel()->setObjectName(QStringLiteral("textContextHelpPanel"));
 
-    auto *contextTab = inspectorPanel->addScrollTab(tr("Context Help"));
+    auto *contextTab = inspectorPanel->addScrollTab(tr("Help"));
     auto *contextLayout = qobject_cast<QVBoxLayout *>(contextTab->layout());
 
-    helpInspector_ = new ContextHelpInspector(contextTab, tr("Context Help"));
+    helpInspector_ = new ContextHelpInspector(contextTab, tr("Help"));
     setHelpBrowser(helpInspector_->browser());
     helpBrowser()->setObjectName(QStringLiteral("rawContextHelpBrowser"));
     helpBrowser()->setHtml(
@@ -213,7 +213,7 @@ void TextEditorContextHelpController::updateContextHelp()
         return;
     }
 
-    setHelpTitle(tr("Context Help"));
+    setHelpTitle(tr("Help"));
     helpBrowser()->setHtml(tr("<p>No contextual help is available for the current token.</p>"));
 }
 

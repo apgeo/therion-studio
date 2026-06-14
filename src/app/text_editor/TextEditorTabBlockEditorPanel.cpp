@@ -319,10 +319,10 @@ void TextEditorTab::buildBlockEditorPanel()
 
     detailsTabLayout->addWidget(blockDetailsEditPanel_);
     detailsTabLayout->addStretch(1);
-    auto *helpTabPanel = inspectorPanel->addScrollTab(tr("Context Help"));
+    auto *helpTabPanel = inspectorPanel->addScrollTab(tr("Help"));
     auto *helpTabLayout = qobject_cast<QVBoxLayout *>(helpTabPanel->layout());
 
-    blockDetailsHelpInspector_ = new ContextHelpInspector(helpTabPanel, tr("Context Help"));
+    blockDetailsHelpInspector_ = new ContextHelpInspector(helpTabPanel, tr("Help"));
     blockDetailsHelpPanel_ = blockDetailsHelpInspector_;
     blockDetailsHelpBrowser_ = blockDetailsHelpInspector_->browser();
     blockDetailsHelpBrowser_->setObjectName(QStringLiteral("blockDetailsHelpBrowser"));

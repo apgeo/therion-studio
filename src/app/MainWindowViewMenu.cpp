@@ -25,8 +25,8 @@ void MainWindow::refreshViewMenuActions()
         contextHelpCollapseAction_->setVisible(visible);
         contextHelpCollapseAction_->setEnabled(visible);
         contextHelpCollapseAction_->setText(currentDetachedMapContextHelpCollapsed()
-                                                ? tr("Expand Context Help")
-                                                : tr("Collapse Context Help"));
+                                                ? tr("Expand Help")
+                                                : tr("Collapse Help"));
     }
 
     if (mapMagnifierAction_ != nullptr) {

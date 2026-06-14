@@ -121,7 +121,7 @@ Structured block-canvas requirements:
 - Block Details shall expose only workflow-specific action buttons that cannot be represented as safe inline fields; for MVP this means `Edit Data Rows...` for `data` block body rows. The Blocks inspector shall not introduce a separate `Actions` section for these controls.
 - structured block cards should visually indicate presence of inline comment and expose the comment text on hover.
 - selecting or configuring a structure card shall mutate the underlying source text through the same safe-edit pipeline used by raw mode
-- when no canvas block is selected, the third column shall keep the Blocks inspector visible with its explicit empty selection state while toolbox-command contextual preview remains available through the `Context Help` tab.
+- when no canvas block is selected, the third column shall keep the Blocks inspector visible with its explicit empty selection state while toolbox-command contextual preview remains available through the `Help` view.
 - in Blocks mode, contextual help focus shall stay at command/parameter level while editing options; selecting an option row shall not permanently replace command-level help with option-only help.
 - dragging a structure card in the canvas should reorder the corresponding source block; for container directives, reordering shall move the full block span including nested lines
 - dropping a toolbox command below the lowest canvas block shall append it at document top-level end; dropping above the first block shall insert at document start.
@@ -611,10 +611,10 @@ Platform modifier mapping:
 | Settings / Preferences | File or native application menu | platform-standard Preferences placement where available | Open application settings for language override, Therion executable path, and default `.th` / Therion config editor mode |
 | About Therion Studio | Help or native application menu | none | Show installed version/build metadata, Qt/platform details, repository, license, maintainer, and third-party notice location |
 | Expand/Collapse Sidebar | View | none | Expand or collapse the left sidebar content without changing the active document |
-| Expand/Collapse Context Help | View | none | Expand or collapse the Raw editor's contextual help column without modifying document source |
+| Expand/Collapse Help | View | none | Expand or collapse the Raw editor's contextual help column without modifying document source |
 | Expand/Collapse Block Inspector | View | none | Expand or collapse the Block editor's details/inspector column without modifying document source |
 | Expand/Collapse Map Inspector | View | none | Expand or collapse the TH2 Visual map editor's inspector column without modifying document source |
-| Expand/Collapse Map Inspector and Context Help | View | none | When a TH2 Visual map pane is detached, expose both controls because the detached visual map and raw source context help are visible at the same time |
+| Expand/Collapse Map Inspector and Help | View | none | When a TH2 Visual map pane is detached, expose both controls because the detached visual map and raw source help are visible at the same time |
 | Show/Hide Map Magnifier | View | none | Enable or disable the visual map magnifier overlay as UI/session state only |
 | Enter/Exit Full Screen | View | platform full-screen shortcut | Toggle the main window full-screen state |
 | New Project | File | none | Expose `Project from Template...` and `Empty Project...` creation choices; disabled while a project is already open |

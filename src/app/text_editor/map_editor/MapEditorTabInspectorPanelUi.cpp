@@ -419,7 +419,9 @@ void MapEditorTab::buildInspectorPanelUi()
     disableAutoDefault({objectDetailsUiState_.objectConfigureButton_, objectDetailsUiState_.objectDeleteButton_});
     connect(objectDetailsUiState_.objectDeleteButton_, &QPushButton::clicked, this, &MapEditorTab::deleteSelectedObjectFromSelection);
     advancedSelectionLayout->addWidget(objectDetailsUiState_.objectDeleteButton_);
-    selectionLayout->addWidget(objectDetailsUiState_.advancedSelectionSection_);
+    const int geometrySectionIndex = selectionLayout->indexOf(objectDetailsUiState_.geometrySelectionSection_);
+    selectionLayout->insertWidget(geometrySectionIndex >= 0 ? geometrySectionIndex + 1 : selectionLayout->count(),
+                                  objectDetailsUiState_.advancedSelectionSection_);
     selectionLayout->addStretch(1);
 
     auto *objectsTab = inspectorPanel->addPlainTab(tr("Objects"));

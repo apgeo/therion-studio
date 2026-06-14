@@ -95,7 +95,7 @@ void BlockEditorDetailsHelpController::updateHelpForCurrentFocus()
 
     const QString selectedKind = context_.selectedKind();
     if (selectedKind.isEmpty()) {
-        context_.helpInspector->setTitle(tr("Context Help"));
+        context_.helpInspector->setTitle(tr("Help"));
         context_.helpBrowser->setHtml(tr("<p>Select a block parameter to see contextual help.</p>"));
         return;
     }

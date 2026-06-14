@@ -37,6 +37,9 @@ namespace TherionStudio
 {
 namespace
 {
+constexpr int kInspectorFormSpacing = 4;
+constexpr int kInspectorInlineSpacing = 6;
+
 void configureSelectionEditableCombo(QComboBox *combo, const QString &objectName)
 {
     if (combo == nullptr) {
@@ -64,7 +67,7 @@ void disableAutoDefault(std::initializer_list<QPushButton *> buttons)
 void setPlainTextEditVisibleLineCount(QPlainTextEdit *edit, int visibleLineCount)
 {
     if (edit != nullptr) {
-        edit->setFixedHeight(edit->fontMetrics().lineSpacing() * visibleLineCount + 12);
+        edit->setFixedHeight(edit->fontMetrics().lineSpacing() * visibleLineCount + 8);
     }
 }
 }
@@ -128,7 +131,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.objectQuickFieldsEditor_ = new QWidget(objectDetailsUiState_.objectSelectionSection_);
     auto *objectQuickForm = new QFormLayout(objectDetailsUiState_.objectQuickFieldsEditor_);
     objectQuickForm->setContentsMargins(0, 0, 0, 0);
-    objectQuickForm->setSpacing(6);
+    objectQuickForm->setSpacing(kInspectorFormSpacing);
     objectDetailsUiState_.objectQuickTypeCombo_ = new QComboBox(objectDetailsUiState_.objectQuickFieldsEditor_);
     configureSelectionEditableCombo(objectDetailsUiState_.objectQuickTypeCombo_, QStringLiteral("mapObjectQuickTypeCombo"));
     objectDetailsUiState_.objectQuickSubtypeCombo_ = new QComboBox(objectDetailsUiState_.objectQuickFieldsEditor_);
@@ -199,7 +202,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.lineOptionsEditor_ = new QWidget(objectDetailsUiState_.geometrySelectionSection_);
     auto *lineOptionsLayout = new QVBoxLayout(objectDetailsUiState_.lineOptionsEditor_);
     lineOptionsLayout->setContentsMargins(0, 0, 0, 0);
-    lineOptionsLayout->setSpacing(6);
+    lineOptionsLayout->setSpacing(kInspectorFormSpacing);
     objectDetailsUiState_.lineClosedCheck_ = new QCheckBox(tr("Closed (-close)"), objectDetailsUiState_.lineOptionsEditor_);
     objectDetailsUiState_.lineReversedCheck_ = new QCheckBox(tr("Reversed (-reverse)"), objectDetailsUiState_.lineOptionsEditor_);
     objectDetailsUiState_.objectClipDisabledCheck_ = new QCheckBox(tr("Disable clipping (-clip off)"), objectDetailsUiState_.lineOptionsEditor_);
@@ -218,7 +221,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.objectOrientationEditor_ = new QWidget(objectDetailsUiState_.vertexSelectionSection_);
     auto *orientationLayout = new QVBoxLayout(objectDetailsUiState_.objectOrientationEditor_);
     orientationLayout->setContentsMargins(0, 0, 0, 0);
-    orientationLayout->setSpacing(6);
+    orientationLayout->setSpacing(kInspectorFormSpacing);
     objectDetailsUiState_.objectOrientationEnabledCheck_ = new QCheckBox(tr("Orientation override (-orientation)"), objectDetailsUiState_.objectOrientationEditor_);
     objectDetailsUiState_.objectOrientationSpin_ = new QDoubleSpinBox(objectDetailsUiState_.objectOrientationEditor_);
     objectDetailsUiState_.objectOrientationSpin_->setDecimals(3);
@@ -228,7 +231,7 @@ void MapEditorTab::buildInspectorPanelUi()
     auto *linePointControlEditor = new QWidget(objectDetailsUiState_.objectOrientationEditor_);
     auto *linePointControlLayout = new QHBoxLayout(linePointControlEditor);
     linePointControlLayout->setContentsMargins(0, 0, 0, 0);
-    linePointControlLayout->setSpacing(10);
+    linePointControlLayout->setSpacing(8);
     objectDetailsUiState_.linePointPreviousControlCheck_ = new QCheckBox(tr("<<"), linePointControlEditor);
     objectDetailsUiState_.linePointSmoothCheck_ = new QCheckBox(tr("Smooth (-smooth)"), linePointControlEditor);
     objectDetailsUiState_.linePointNextControlCheck_ = new QCheckBox(tr(">>"), linePointControlEditor);
@@ -240,7 +243,7 @@ void MapEditorTab::buildInspectorPanelUi()
     auto *linePointSubtypeEditor = new QWidget(objectDetailsUiState_.objectOrientationEditor_);
     auto *linePointSubtypeLayout = new QHBoxLayout(linePointSubtypeEditor);
     linePointSubtypeLayout->setContentsMargins(0, 0, 0, 0);
-    linePointSubtypeLayout->setSpacing(8);
+    linePointSubtypeLayout->setSpacing(kInspectorInlineSpacing);
     objectDetailsUiState_.linePointSegmentSubtypeLabel_ = new QLabel(tr("Subtype"), linePointSubtypeEditor);
     objectDetailsUiState_.linePointSegmentSubtypeCombo_ = new QComboBox(linePointSubtypeEditor);
     configureSelectionEditableCombo(objectDetailsUiState_.linePointSegmentSubtypeCombo_, QStringLiteral("linePointSegmentSubtypeCombo"));
@@ -249,7 +252,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.pointAlignEditor_ = new QWidget(objectDetailsUiState_.objectOrientationEditor_);
     auto *pointAlignLayout = new QHBoxLayout(objectDetailsUiState_.pointAlignEditor_);
     pointAlignLayout->setContentsMargins(0, 0, 0, 0);
-    pointAlignLayout->setSpacing(8);
+    pointAlignLayout->setSpacing(kInspectorInlineSpacing);
     objectDetailsUiState_.pointAlignLabel_ = new QLabel(tr("Align (-align)"), objectDetailsUiState_.pointAlignEditor_);
     objectDetailsUiState_.pointAlignCombo_ = new QComboBox(objectDetailsUiState_.pointAlignEditor_);
     objectDetailsUiState_.pointAlignCombo_->setObjectName(QStringLiteral("pointAlignCombo"));
@@ -318,7 +321,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.vertexActionsEditor_ = new QWidget(objectDetailsUiState_.linePointActionsSection_);
     auto *vertexActionsLayout = new QGridLayout(objectDetailsUiState_.vertexActionsEditor_);
     vertexActionsLayout->setContentsMargins(0, 0, 0, 0);
-    vertexActionsLayout->setSpacing(6);
+    vertexActionsLayout->setSpacing(kInspectorFormSpacing);
     objectDetailsUiState_.vertexInsertBeforeButton_ = new QPushButton(tr("Insert Before"), objectDetailsUiState_.vertexActionsEditor_);
     objectDetailsUiState_.vertexInsertAfterButton_ = new QPushButton(tr("Insert After"), objectDetailsUiState_.vertexActionsEditor_);
     objectDetailsUiState_.vertexDeleteButton_ = new QPushButton(tr("Delete Point"), objectDetailsUiState_.vertexActionsEditor_);
@@ -362,7 +365,7 @@ void MapEditorTab::buildInspectorPanelUi()
         auto *row = new QWidget(block);
         auto *rowLayout = new QHBoxLayout(row);
         rowLayout->setContentsMargins(0, 0, 0, 0);
-        rowLayout->setSpacing(4);
+        rowLayout->setSpacing(kInspectorFormSpacing);
         rowLayout->addWidget(new QLabel(QStringLiteral("X"), row));
         rowLayout->addWidget(xSpin, 1);
         rowLayout->addWidget(new QLabel(QStringLiteral("Y"), row));
@@ -387,7 +390,7 @@ void MapEditorTab::buildInspectorPanelUi()
     auto *scrapScaleUnitRow = new QWidget(objectDetailsUiState_.scrapScaleEditor_);
     auto *scrapScaleUnitLayout = new QHBoxLayout(scrapScaleUnitRow);
     scrapScaleUnitLayout->setContentsMargins(0, 0, 0, 0);
-    scrapScaleUnitLayout->setSpacing(6);
+    scrapScaleUnitLayout->setSpacing(kInspectorInlineSpacing);
     scrapScaleUnitLayout->addWidget(new QLabel(tr("Unit"), scrapScaleUnitRow));
     objectDetailsUiState_.scrapScaleUnitCombo_ = new QComboBox(objectDetailsUiState_.scrapScaleEditor_);
     objectDetailsUiState_.scrapScaleUnitCombo_->addItems({QStringLiteral("m"), QStringLiteral("cm"), QStringLiteral("mm"), QStringLiteral("ft"), QStringLiteral("in")});

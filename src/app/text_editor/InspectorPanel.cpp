@@ -30,8 +30,8 @@ InspectorPanel::InspectorPanel(QWidget *parent)
         "}"));
 
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(8, 8, 8, 8);
-    layout->setSpacing(8);
+    layout->setContentsMargins(6, 6, 6, 6);
+    layout->setSpacing(6);
 
     selector_ = new QWidget(this);
     selector_->setObjectName(QStringLiteral("inspectorPanelSegmentedControl"));
@@ -113,7 +113,7 @@ QWidget *InspectorPanel::addPlainTab(const QString &title)
     page->setAutoFillBackground(true);
     auto *layout = new QVBoxLayout(page);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(8);
+    layout->setSpacing(6);
     tabs_->addTab(page, title);
     rebuildSelector();
     return page;
@@ -133,7 +133,7 @@ QWidget *InspectorPanel::addScrollTab(const QString &title, const QString &objec
     page->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     auto *layout = new QVBoxLayout(page);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(8);
+    layout->setSpacing(6);
 
     scrollArea->setWidget(page);
     tabs_->addTab(scrollArea, title);
@@ -149,8 +149,8 @@ QFrame *InspectorPanel::createSection(QWidget *parent,
     auto *section = new QFrame(parent);
     section->setFrameShape(QFrame::StyledPanel);
     auto *sectionLayout = new QVBoxLayout(section);
-    sectionLayout->setContentsMargins(8, 8, 8, 8);
-    sectionLayout->setSpacing(6);
+    sectionLayout->setContentsMargins(6, 6, 6, 6);
+    sectionLayout->setSpacing(4);
 
     auto *titleLabel = new QLabel(title, section);
     QFont titleFont = titleLabel->font();

@@ -824,7 +824,7 @@ void drawAreaPatternPreview(QPainter *painter,
 MapEditorStylePreviewWidget::MapEditorStylePreviewWidget(QWidget *parent)
     : QWidget(parent)
 {
-    setMinimumHeight(82);
+    setMinimumHeight(72);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 }
 
@@ -860,12 +860,12 @@ void MapEditorStylePreviewWidget::clearStyleSelection()
 
 QSize MapEditorStylePreviewWidget::minimumSizeHint() const
 {
-    return QSize(150, 82);
+    return QSize(150, 72);
 }
 
 QSize MapEditorStylePreviewWidget::sizeHint() const
 {
-    return QSize(260, 88);
+    return QSize(260, 76);
 }
 
 void MapEditorStylePreviewWidget::paintEvent(QPaintEvent *event)

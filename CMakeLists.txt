@@ -954,6 +954,8 @@ qt_add_executable(MapGeometryFeatureParsingTest
     src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h
     src/app/text_editor/map_editor/MapEditorLineDecorationItem.cpp
     src/app/text_editor/map_editor/MapEditorLineDecorationItem.h
+    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
     src/app/text_editor/map_editor/MapEditorPointSymbolGeometry.h
     src/app/text_editor/map_editor/MapEditorSceneItems.cpp
     src/app/text_editor/map_editor/MapEditorSceneInternals.h
@@ -974,6 +976,8 @@ qt_add_executable(MapEditorSourceReferenceResolverTest
     src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h
     src/app/text_editor/map_editor/MapEditorLineDecorationItem.cpp
     src/app/text_editor/map_editor/MapEditorLineDecorationItem.h
+    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
     src/app/text_editor/map_editor/MapEditorPointSymbolGeometry.h
     src/app/text_editor/map_editor/MapEditorSceneItems.cpp
     src/app/text_editor/map_editor/MapEditorSceneInternals.h

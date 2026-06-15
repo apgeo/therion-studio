@@ -1,5 +1,8 @@
 #include "InspectorPanel.h"
 
+#include "InspectorPanelStyle.h"
+#include "../ui/ApplicationControlMetrics.h"
+
 #include <QAbstractButton>
 #include <QButtonGroup>
 #include <QEvent>
@@ -23,15 +26,11 @@ InspectorPanel::InspectorPanel(QWidget *parent)
     setAttribute(Qt::WA_StyledBackground, true);
     setBackgroundRole(QPalette::Base);
     setAutoFillBackground(true);
-    setStyleSheet(QStringLiteral(
-        "TherionStudio--InspectorPanel {"
-        " background-color: palette(base);"
-        " border: none;"
-        "}"));
+    setStyleSheet(inspectorPanelStyleSheet());
 
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(6, 6, 6, 6);
-    layout->setSpacing(6);
+    layout->setContentsMargins(UiMetrics::inspectorPanelMargins());
+    layout->setSpacing(UiMetrics::standardSpacing());
 
     selector_ = new QWidget(this);
     selector_->setObjectName(QStringLiteral("inspectorPanelSegmentedControl"));
@@ -40,41 +39,13 @@ InspectorPanel::InspectorPanel(QWidget *parent)
     selectorLayout_->setSpacing(0);
     selectorButtons_ = new QButtonGroup(selector_);
     selectorButtons_->setExclusive(true);
-    selector_->setStyleSheet(QStringLiteral(
-        "QPushButton#inspectorSegmentButton {"
-        " background-color: palette(window);"
-        " border: 1px solid palette(mid);"
-        " border-left-width: 0;"
-        " border-radius: 0;"
-        " padding: 4px 10px;"
-        "}"
-        "QPushButton#inspectorSegmentButton[firstSegment=\"true\"] {"
-        " border-left-width: 1px;"
-        " border-top-left-radius: 4px;"
-        " border-bottom-left-radius: 4px;"
-        "}"
-        "QPushButton#inspectorSegmentButton[lastSegment=\"true\"] {"
-        " border-top-right-radius: 4px;"
-        " border-bottom-right-radius: 4px;"
-        "}"
-        "QPushButton#inspectorSegmentButton:checked {"
-        " background-color: palette(base);"
-        " font-weight: 600;"
-        "}"));
+    selector_->setStyleSheet(inspectorPanelSegmentedControlStyleSheet());
     selector_->hide();
     layout->addWidget(selector_);
 
     tabs_ = new QTabWidget(this);
     tabs_->setObjectName(QStringLiteral("inspectorPanelTabs"));
-    tabs_->setStyleSheet(QStringLiteral(
-        "QTabWidget#inspectorPanelTabs {"
-        " border: none;"
-        "}"
-        "QTabWidget#inspectorPanelTabs::pane {"
-        " border: none;"
-        " margin: 0;"
-        " padding: 0;"
-        "}"));
+    tabs_->setStyleSheet(inspectorPanelTabsStyleSheet());
     if (QTabBar *tabBar = tabs_->tabBar(); tabBar != nullptr) {
         tabBar->setDrawBase(true);
         tabBar->hide();
@@ -113,7 +84,7 @@ QWidget *InspectorPanel::addPlainTab(const QString &title)
     page->setAutoFillBackground(true);
     auto *layout = new QVBoxLayout(page);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(6);
+    layout->setSpacing(UiMetrics::standardSpacing());
     tabs_->addTab(page, title);
     rebuildSelector();
     return page;
@@ -133,7 +104,7 @@ QWidget *InspectorPanel::addScrollTab(const QString &title, const QString &objec
     page->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     auto *layout = new QVBoxLayout(page);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(6);
+    layout->setSpacing(UiMetrics::standardSpacing());
 
     scrollArea->setWidget(page);
     tabs_->addTab(scrollArea, title);
@@ -149,8 +120,8 @@ QFrame *InspectorPanel::createSection(QWidget *parent,
     auto *section = new QFrame(parent);
     section->setFrameShape(QFrame::StyledPanel);
     auto *sectionLayout = new QVBoxLayout(section);
-    sectionLayout->setContentsMargins(6, 6, 6, 6);
-    sectionLayout->setSpacing(4);
+    sectionLayout->setContentsMargins(UiMetrics::inspectorSectionMargins());
+    sectionLayout->setSpacing(UiMetrics::compactSpacing());
 
     auto *titleLabel = new QLabel(title, section);
     QFont titleFont = titleLabel->font();
@@ -212,7 +183,7 @@ void InspectorPanel::rebuildSelector()
         auto *button = new QPushButton(tabs_->tabText(index), selector_);
         button->setObjectName(QStringLiteral("inspectorSegmentButton"));
         button->setCheckable(true);
-        button->setMinimumHeight(28);
+        button->setMinimumHeight(UiMetrics::segmentedControlMinimumHeight());
         button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         button->setProperty("firstSegment", index == 0);
         button->setProperty("lastSegment", index == count - 1);

@@ -6,6 +6,8 @@
 #include "LucideIconFactory.h"
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
+#include "ui/ApplicationControlMetrics.h"
+#include "ui/ApplicationSegmentedControlStyle.h"
 #include "../core/TherionFileTypes.h"
 
 #include <QAbstractItemView>
@@ -941,8 +943,8 @@ void MainWindow::buildStructureSidebar()
     const QString searchIconName = QStringLiteral("search");
     const QString validationIconName = QStringLiteral("spell-check");
     const QString consoleIconName = QStringLiteral("cog");
-    const QSize activityIconSize(20, 20);
-    const QSize activityButtonSize(34, 34);
+    const QSize activityIconSize = TherionStudio::UiMetrics::squareSize(TherionStudio::UiMetrics::sidebarActivityIconSize());
+    const QSize activityButtonSize = TherionStudio::UiMetrics::squareSize(TherionStudio::UiMetrics::sidebarActivityButtonSize());
     const auto configureActivityButton = [&](QToolButton *button, const QString &iconName, const QString &toolTip) {
         if (button == nullptr) {
             return;
@@ -1123,32 +1125,14 @@ void MainWindow::buildStructureSidebar()
     for (QPushButton *button : structureViewButtons) {
         button->setCheckable(true);
         button->setObjectName(QStringLiteral("structureSegmentButton"));
-        button->setMinimumHeight(28);
+        button->setMinimumHeight(TherionStudio::UiMetrics::segmentedControlMinimumHeight());
         button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         structureViewSelectorLayout->addWidget(button);
     }
     filesViewButton->setProperty("firstSegment", true);
     mapViewButton->setProperty("lastSegment", true);
-    structureViewSelector->setStyleSheet(QStringLiteral(
-        "QPushButton#structureSegmentButton {"
-        "  border: 1px solid palette(mid);"
-        "  border-left-width: 0;"
-        "  padding: 4px 10px;"
-        "  background: palette(window);"
-        "}"
-        "QPushButton#structureSegmentButton[firstSegment=\"true\"] {"
-        "  border-left-width: 1px;"
-        "  border-top-left-radius: 4px;"
-        "  border-bottom-left-radius: 4px;"
-        "}"
-        "QPushButton#structureSegmentButton[lastSegment=\"true\"] {"
-        "  border-top-right-radius: 4px;"
-        "  border-bottom-right-radius: 4px;"
-        "}"
-        "QPushButton#structureSegmentButton:checked {"
-        "  background: palette(base);"
-        "  font-weight: 600;"
-        "}"));
+    structureViewSelector->setStyleSheet(
+        TherionStudio::segmentedControlButtonStyleSheet(QStringLiteral("QPushButton#structureSegmentButton")));
     structureViewModeButtons_->addButton(filesViewButton, StructurePanelFilesPage);
     structureViewModeButtons_->addButton(surveyViewButton, StructurePanelSurveyPage);
     structureViewModeButtons_->addButton(mapViewButton, StructurePanelMapPage);

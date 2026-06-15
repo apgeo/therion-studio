@@ -5,6 +5,7 @@
 #include "WorkspaceCommandBarStyle.h"
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
+#include "ui/ApplicationControlMetrics.h"
 
 #include <QColor>
 #include <QFrame>
@@ -27,9 +28,6 @@
 
 namespace
 {
-constexpr int kWorkspaceCommandButtonSize = 22;
-constexpr int kWorkspaceCommandIconSize = 14;
-
 class WorkspaceCommandFlowLayout final : public QLayout
 {
 public:
@@ -205,16 +203,16 @@ QToolButton *createWorkspaceIconButton(QWidget *parent,
 {
     auto *button = new QToolButton(parent);
     button->setAutoRaise(false);
-    button->setIconSize(QSize(kWorkspaceCommandIconSize, kWorkspaceCommandIconSize));
+    button->setIconSize(TherionStudio::UiMetrics::squareSize(TherionStudio::UiMetrics::workspaceCommandIconSize()));
     button->setIcon(TherionStudio::themedLucideIcon(iconName,
                                                     button->palette(),
-                                                    kWorkspaceCommandIconSize,
+                                                    TherionStudio::UiMetrics::workspaceCommandIconSize(),
                                                     button->devicePixelRatioF()));
     button->setProperty("lucideIconName", iconName);
     button->setToolButtonStyle(Qt::ToolButtonIconOnly);
     button->setToolTip(toolTip);
     button->setAccessibleName(toolTip);
-    button->setFixedSize(QSize(kWorkspaceCommandButtonSize, kWorkspaceCommandButtonSize));
+    button->setFixedSize(TherionStudio::UiMetrics::squareSize(TherionStudio::UiMetrics::workspaceCommandButtonSize()));
     button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     return button;
 }
@@ -225,7 +223,7 @@ QFrame *createWorkspaceToolbarSeparator(QWidget *parent)
     separator->setFrameShape(QFrame::VLine);
     separator->setFrameShadow(QFrame::Sunken);
     separator->setObjectName(QStringLiteral("workspaceToolbarSeparator"));
-    separator->setFixedSize(QSize(1, kWorkspaceCommandButtonSize));
+    separator->setFixedSize(QSize(1, TherionStudio::UiMetrics::workspaceCommandButtonSize()));
     return separator;
 }
 }

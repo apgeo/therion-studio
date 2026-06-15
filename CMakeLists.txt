@@ -285,6 +285,10 @@ set(THERION_MAIN_WINDOW_SOURCES
     src/app/ApplicationStylePolicy.h
     src/app/LucideIconFactory.h
     src/app/WorkspaceCommandBarStyle.h
+    src/app/ui/ApplicationControlMetrics.h
+    src/app/ui/ApplicationSegmentedControlStyle.h
+    src/app/ui/ApplicationStyleTokens.cpp
+    src/app/ui/ApplicationStyleTokens.h
 )
 
 set(THERION_TEXT_EDITOR_SHARED_SOURCES
@@ -298,6 +302,8 @@ set(THERION_TEXT_EDITOR_SHARED_SOURCES
     src/app/text_editor/DocumentInspectorPanel.h
     src/app/text_editor/InspectorPanel.cpp
     src/app/text_editor/InspectorPanel.h
+    src/app/text_editor/InspectorPanelStyle.cpp
+    src/app/text_editor/InspectorPanelStyle.h
     src/app/text_editor/TextEditorOptionValidation.cpp
     src/app/text_editor/TextEditorCommandMetadata.h
     src/app/text_editor/TextEditorOptionValidation.h

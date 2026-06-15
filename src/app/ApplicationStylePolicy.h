@@ -1,31 +1,20 @@
 #pragma once
 
 #include "../editor/ValidationSeverityStyle.h"
+#include "ui/ApplicationControlMetrics.h"
+#include "ui/ApplicationStyleTokens.h"
 
 #include <QColor>
 #include <QPalette>
 #include <QString>
 
-#include <algorithm>
-
 namespace TherionStudio
 {
-
-inline QString rgbaColorCss(const QColor &color, qreal alpha)
-{
-    const qreal clampedAlpha = std::clamp(alpha, 0.0, 1.0);
-    return QStringLiteral("rgba(%1, %2, %3, %4)")
-        .arg(color.red())
-        .arg(color.green())
-        .arg(color.blue())
-        .arg(clampedAlpha, 0, 'f', 3);
-}
 
 inline QString workspaceCommandBarStyleSheet(const QColor &backgroundColor,
                                              bool topBorderEnabled,
                                              bool bottomBorderEnabled)
 {
-    constexpr int commandButtonSize = 22;
     const QString topBorder = topBorderEnabled
         ? QStringLiteral("1px solid palette(midlight)")
         : QStringLiteral("none");
@@ -52,14 +41,14 @@ inline QString workspaceCommandBarStyleSheet(const QColor &backgroundColor,
                " min-height: %4px;"
                " max-height: %4px;"
                " border: 1px solid palette(mid);"
-               " border-radius: 6px;"
+               " border-radius: %5px;"
                " padding: 0px;"
                " background-color: palette(button);"
                "}"
                "QWidget#workspaceCommandBar QPushButton {"
                " min-height: 26px;"
                " border: 1px solid palette(mid);"
-               " border-radius: 6px;"
+               " border-radius: %5px;"
                " padding: 0 10px;"
                " background-color: palette(button);"
                "}"
@@ -81,7 +70,8 @@ inline QString workspaceCommandBarStyleSheet(const QColor &backgroundColor,
         .arg(topBorder,
              bottomBorder,
              backgroundColor.name(QColor::HexRgb),
-             QString::number(commandButtonSize));
+             QString::number(UiMetrics::workspaceCommandButtonSize()),
+             QString::number(UiMetrics::toolbarButtonRadius()));
 }
 
 inline QString mainEditorSurfaceStyleSheet()
@@ -115,7 +105,7 @@ inline QString sidebarActivityRailStyleSheet(const QPalette &palette)
                "#SidebarActivityRail QToolButton {"
                "border: none;"
                "background: transparent;"
-               "border-radius: 9px;"
+               "border-radius: %11px;"
                "padding: 0px;"
                "}"
                "#SidebarActivityRail QToolButton:hover {"
@@ -141,16 +131,17 @@ inline QString sidebarActivityRailStyleSheet(const QPalette &palette)
                "#SidebarActivityRail QFrame#SidebarActivitySeparator {"
                "background-color: %4;"
                "}")
-        .arg(rgbaColorCss(railBase, 0.78))
-        .arg(rgbaColorCss(railHover, 0.24))
-        .arg(rgbaColorCss(railChecked, 0.34))
-        .arg(rgbaColorCss(palette.color(QPalette::Mid), 0.7))
-        .arg(rgbaColorCss(railWarning, 0.24))
-        .arg(rgbaColorCss(railWarning, 0.92))
-        .arg(rgbaColorCss(railWarning, 0.38))
-        .arg(rgbaColorCss(railError, 0.24))
-        .arg(rgbaColorCss(railError, 0.92))
-        .arg(rgbaColorCss(railError, 0.38));
+        .arg(UiStyleTokens::rgbaColorCss(railBase, 0.78))
+        .arg(UiStyleTokens::rgbaColorCss(railHover, 0.24))
+        .arg(UiStyleTokens::rgbaColorCss(railChecked, 0.34))
+        .arg(UiStyleTokens::rgbaColorCss(palette.color(QPalette::Mid), 0.7))
+        .arg(UiStyleTokens::rgbaColorCss(railWarning, 0.24))
+        .arg(UiStyleTokens::rgbaColorCss(railWarning, 0.92))
+        .arg(UiStyleTokens::rgbaColorCss(railWarning, 0.38))
+        .arg(UiStyleTokens::rgbaColorCss(railError, 0.24))
+        .arg(UiStyleTokens::rgbaColorCss(railError, 0.92))
+        .arg(UiStyleTokens::rgbaColorCss(railError, 0.38))
+        .arg(UiMetrics::sidebarRailButtonRadius());
 }
 
 inline QString sidebarContentPaneStyleSheet()
@@ -181,8 +172,8 @@ inline QString sidebarContentPaneStyleSheet()
 inline QColor mapModeStatusAccentColor(bool insertMode)
 {
     return insertMode
-        ? QColor(QStringLiteral("#d34a4a"))
-        : QColor(QStringLiteral("#2e9f5c"));
+        ? UiStyleTokens::mapModeInsertAccentColor()
+        : UiStyleTokens::mapModeSelectAccentColor();
 }
 
 inline QString statusBadgeStyleSheet(const QColor &accentColor)
@@ -193,11 +184,11 @@ inline QString statusBadgeStyleSheet(const QColor &accentColor)
                " font-size: 14px;"
                " font-weight: 700;"
                " background-color: %1;"
-               " border-radius: 4px;"
+               " border-radius: %2px;"
                " padding: 1px 8px;"
                " min-height: 18px;"
                "}")
-        .arg(accentColor.name(QColor::HexRgb));
+        .arg(accentColor.name(QColor::HexRgb), QString::number(UiMetrics::standardControlRadius()));
 }
 
 inline QString compilerStatusBadgeStyleSheet(const QColor &accentColor)
@@ -209,11 +200,11 @@ inline QString compilerStatusBadgeStyleSheet(const QColor &accentColor)
                " font-weight: 700;"
                " background-color: %1;"
                " border: none;"
-               " border-radius: 4px;"
+               " border-radius: %2px;"
                " padding: 1px 8px;"
                " min-height: 18px;"
                "}")
-        .arg(accentColor.name(QColor::HexRgb));
+        .arg(accentColor.name(QColor::HexRgb), QString::number(UiMetrics::standardControlRadius()));
 }
 
 } // namespace TherionStudio

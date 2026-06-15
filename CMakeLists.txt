@@ -271,6 +271,7 @@ set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindowProjectLifecycle.cpp
     src/app/MainWindowSettingsDialog.cpp
     src/app/MainWindowSettingsDialog.h
+    src/app/MainWindowSearchSidebar.cpp
     src/app/MainWindowSidebar.cpp
     src/app/MainWindowStatusUi.cpp
     src/app/MainWindowStructureBrowser.cpp

@@ -267,6 +267,7 @@ set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindowHelpDialog.h
     src/app/MainWindowMapBackground.cpp
     src/app/MainWindowProjectFileWatcher.cpp
+    src/app/MainWindowProjectBrowserSidebar.cpp
     src/app/MainWindowProjectTemplate.cpp
     src/app/MainWindowProjectLifecycle.cpp
     src/app/MainWindowSettingsDialog.cpp

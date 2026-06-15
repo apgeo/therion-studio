@@ -7,11 +7,14 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QFile>
+#include <QGraphicsView>
 #include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMainWindow>
+#include <QMouseEvent>
+#include <QThread>
 #include <QTemporaryDir>
 #include <QVBoxLayout>
 #include <QtMath>
@@ -39,6 +42,16 @@ bool nearlyEqual(qreal a, qreal b, qreal epsilon = 0.0001)
 void pumpEvents()
 {
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+    QThread::msleep(1);
+}
+
+void pumpEventsFor(int milliseconds)
+{
+    const qint64 deadline = QDateTime::currentMSecsSinceEpoch() + milliseconds;
+    while (QDateTime::currentMSecsSinceEpoch() < deadline) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 25);
+        QThread::msleep(5);
+    }
 }
 
 bool writeTextFile(const QString &path, const QByteArray &content)
@@ -48,6 +61,18 @@ bool writeTextFile(const QString &path, const QByteArray &content)
         return false;
     }
     return file.write(content) == content.size();
+}
+
+QString repositoryFilePath(const QString &relativePath)
+{
+    const QString fromCurrentDirectory = QDir::current().absoluteFilePath(relativePath);
+    if (QFileInfo::exists(fromCurrentDirectory)) {
+        return QFileInfo(fromCurrentDirectory).absoluteFilePath();
+    }
+
+    const QString fromBuildDirectory = QDir(QCoreApplication::applicationDirPath())
+                                           .absoluteFilePath(QStringLiteral("../") + relativePath);
+    return QFileInfo(fromBuildDirectory).absoluteFilePath();
 }
 
 int runBackgroundVisibilityDoesNotDirtyDocumentTest()
@@ -153,6 +178,56 @@ int runBackgroundVisibilityDoesNotDirtyDocumentTest()
     return 0;
 }
 
+int runMapiahPercentEncodedXviSampleLoadsTest()
+{
+    const QString filePath =
+        repositoryFilePath(QStringLiteral("sample_data/bruce/3-BulmerResurgencePlan.th2"));
+    const QString xviPath =
+        repositoryFilePath(QStringLiteral("sample_data/bruce/ptopo/3--BulmerResurgence_p.xvi"));
+    if (!expect(QFileInfo::exists(filePath), "Expected Bruce Mapiah sample TH2 file to exist.")) {
+        return 1;
+    }
+    if (!expect(QFileInfo::exists(xviPath), "Expected Bruce percent-encoded Mapiah sample XVI file to exist.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    FakeSessionStore sessionStore;
+    QMainWindow hostWindow;
+    hostWindow.resize(960, 720);
+    auto *central = new QWidget(&hostWindow);
+    auto *layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), central);
+    layout->addWidget(mapTab);
+    hostWindow.setCentralWidget(central);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                "MapEditorTab failed to load Bruce Mapiah percent-encoded XVI sample.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+    pumpEventsFor(250);
+
+    if (!expect(mapTab->backgroundLayerCount() == 1,
+                "Expected one background layer from percent-encoded Mapiah XVI sample path.")) {
+        return 1;
+    }
+    if (!expect(mapTab->backgroundLayerSceneBounds(0).isValid(),
+                "Expected percent-encoded Mapiah XVI sample layer to have valid scene bounds.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runRasterBackgroundKeepsFullResolutionTest()
 {
     QTemporaryDir tempDir;
@@ -240,6 +315,298 @@ int runRasterBackgroundKeepsFullResolutionTest()
     // The on-screen footprint must be the fitted preview size, not the source pixel size.
     if (!expect(bounds.width() < static_cast<qreal>(sourceWidth),
                 "Raster scene footprint should be the projected preview size, not raw source pixels.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runMapiahRasterBackgroundTransformTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory for Mapiah raster test.")) {
+        return 1;
+    }
+
+    const int sourceWidth = 120;
+    const int sourceHeight = 60;
+    const QString imagePath = tempDir.filePath(QStringLiteral("scan.png"));
+    QImage image(sourceWidth, sourceHeight, QImage::Format_ARGB32);
+    image.fill(QColor(120, 90, 160, 255));
+    if (!expect(image.save(imagePath), "Failed to create temporary Mapiah raster image.")) {
+        return 1;
+    }
+
+    const QString filePath = tempDir.filePath(QStringLiteral("mapiah_raster.th2"));
+    const QString th2Contents = QStringLiteral(
+        "encoding utf-8\n"
+        "##XTHERION## xth_me_area_adjust -128 -128 512 512\n"
+        "##XTHERION## xth_me_area_zoom_to 100\n"
+        "##MAPIAH## image_insert_v1 {format=raster;filename=scan.png;xx=0;yy=0;xScale=1;yScale=1;rotationCenterDx=0;rotationCenterDy=0;rotationDeg=45;pivotSet=false}\n"
+        "\n"
+        "scrap mapiah-raster -projection plan\n"
+        "point 0 0 station -name A\n"
+        "endscrap\n");
+    if (!expect(writeTextFile(filePath, th2Contents.toUtf8()),
+                "Failed to create temporary TH2 file for Mapiah raster test.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    FakeSessionStore sessionStore;
+    QMainWindow hostWindow;
+    hostWindow.resize(960, 720);
+    auto *central = new QWidget(&hostWindow);
+    auto *layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), central);
+    layout->addWidget(mapTab);
+    hostWindow.setCentralWidget(central);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                "MapEditorTab failed to load TH2 file for Mapiah raster test.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+
+    const QSize expectedSize(sourceWidth, sourceHeight);
+    for (int attempt = 0; attempt < 200 && mapTab->backgroundLayerSourcePixelSize(0) != expectedSize; ++attempt) {
+        pumpEvents();
+    }
+
+    if (!expect(mapTab->backgroundLayerCount() == 1,
+                "Expected one Mapiah raster background layer to auto-load.")) {
+        return 1;
+    }
+    if (!expect(mapTab->backgroundLayerSourcePixelSize(0) == expectedSize,
+                "Expected Mapiah raster layer to load the referenced image.")) {
+        return 1;
+    }
+
+    const QRectF bounds = mapTab->backgroundLayerSceneBounds(0);
+    if (!expect(bounds.isValid() && bounds.width() > 0.0 && bounds.height() > 0.0,
+                "Expected Mapiah raster layer to have valid transformed scene bounds.")) {
+        return 1;
+    }
+    const qreal transformedAspect = bounds.width() / bounds.height();
+    if (!expect(!nearlyEqual(transformedAspect, static_cast<qreal>(sourceWidth) / static_cast<qreal>(sourceHeight), 0.10),
+                "Expected Mapiah raster rotation to affect the scene bounds aspect ratio.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runBackgroundTransformWritesMapiahMetadataTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory for background transform write test.")) {
+        return 1;
+    }
+
+    const QString imagePath = tempDir.filePath(QStringLiteral("scan.png"));
+    QImage image(80, 40, QImage::Format_ARGB32);
+    image.fill(QColor(140, 110, 90, 255));
+    if (!expect(image.save(imagePath), "Failed to create temporary transform-write background image.")) {
+        return 1;
+    }
+
+    const QString filePath = tempDir.filePath(QStringLiteral("background_transform_write.th2"));
+    const QString th2Contents = QStringLiteral(
+        "encoding utf-8\n"
+        "##XTHERION## xth_me_area_adjust 0 -40 80 0\n"
+        "##XTHERION## xth_me_area_zoom_to 100\n"
+        "##XTHERION## xth_me_image_insert {0 1 1} {0 {}} scan.png 0 {}\n"
+        "\n"
+        "scrap transform-write -projection plan\n"
+        "point 0 0 station -name A\n"
+        "endscrap\n");
+    if (!expect(writeTextFile(filePath, th2Contents.toUtf8()),
+                "Failed to create temporary TH2 file for background transform write test.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    FakeSessionStore sessionStore;
+    QMainWindow hostWindow;
+    hostWindow.resize(960, 720);
+    auto *central = new QWidget(&hostWindow);
+    auto *layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), central);
+    layout->addWidget(mapTab);
+    hostWindow.setCentralWidget(central);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                "MapEditorTab failed to load TH2 file for background transform write test.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+    pumpEvents();
+
+    if (!expect(mapTab->backgroundLayerCount() == 1,
+                "Expected one background layer for transform write test.")) {
+        return 1;
+    }
+
+    mapTab->setSelectedBackgroundLayerIndex(0);
+    mapTab->setSelectedBackgroundLayerXScale(1.25);
+    mapTab->setSelectedBackgroundLayerYScale(0.75);
+    mapTab->setSelectedBackgroundLayerRotationDeg(-12.5);
+    pumpEvents();
+
+    const QString updatedText = mapTab->text();
+    if (!expect(updatedText.contains(QStringLiteral("##MAPIAH## image_insert_v1")),
+                "Transforming a background layer should write Mapiah image metadata.")) {
+        return 1;
+    }
+    if (!expect(!updatedText.contains(QStringLiteral("xth_me_image_insert")),
+                "Transforming a background layer should replace the simple XTherion image metadata line.")) {
+        return 1;
+    }
+
+    const QVector<TherionBackgroundReference> references = parseTherionBackgroundReferences(updatedText, filePath);
+    if (!expect(references.size() == 1,
+                "Expected one background metadata reference after transform write.")) {
+        return 1;
+    }
+    const TherionBackgroundReference &reference = references.first();
+    if (!expect(reference.metadataFormat == TherionBackgroundMetadataFormat::Mapiah
+                    && reference.layerFormat == TherionBackgroundLayerFormat::Raster,
+                "Transform write should produce a Mapiah raster metadata reference.")) {
+        return 1;
+    }
+    if (!expect(nearlyEqual(reference.xScale, 1.25)
+                    && nearlyEqual(reference.yScale, 0.75)
+                    && nearlyEqual(reference.rotationDeg, -12.5),
+                "Mapiah metadata should preserve the edited scale and rotation values.")) {
+        return 1;
+    }
+    if (!expect(reference.hasBasePosition
+                    && nearlyEqual(reference.basePosition.x(), 0.0)
+                    && nearlyEqual(reference.basePosition.y(), 0.0),
+                "Mapiah conversion should preserve the original XTherion raster anchor.")) {
+        return 1;
+    }
+    if (!expect(mapTab->canUndo(),
+                "Background transform should leave map undo available immediately after the edit.")) {
+        return 1;
+    }
+
+    mapTab->setWorkspaceMode(MapEditorTab::WorkspaceMode::Raw);
+    pumpEventsFor(1000);
+    if (!expect(mapTab->canUndo(),
+                "Background transform undo should remain available after switching to Raw mode.")) {
+        return 1;
+    }
+
+    mapTab->triggerUndo();
+    pumpEvents();
+    const QString undoneText = mapTab->text();
+    if (!expect(undoneText.contains(QStringLiteral("##MAPIAH## image_insert_v1")),
+                "Undoing once should revert the last background transform snapshot, not remove all Mapiah metadata.")) {
+        return 1;
+    }
+    if (!expect(undoneText.contains(QStringLiteral("rotationDeg=0")),
+                "Undoing the rotation transform should restore the previous Mapiah rotation value.")) {
+        return 1;
+    }
+
+    mapTab->setWorkspaceMode(MapEditorTab::WorkspaceMode::Visual);
+    mapTab->beginSetSelectedBackgroundLayerPivot();
+    mapTab->setSelectedBackgroundLayerRotationDeg(-6.0);
+    pumpEventsFor(150);
+    mapTab->resetSelectedBackgroundLayerPivot();
+    pumpEvents();
+
+    return 0;
+}
+
+int runBackgroundRotationUndoSurvivesRawModeSwitchTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory for background rotate undo test.")) {
+        return 1;
+    }
+
+    const QString imagePath = tempDir.filePath(QStringLiteral("scan.png"));
+    QImage image(80, 40, QImage::Format_ARGB32);
+    image.fill(QColor(90, 120, 150, 255));
+    if (!expect(image.save(imagePath), "Failed to create temporary rotate-undo background image.")) {
+        return 1;
+    }
+
+    const QString filePath = tempDir.filePath(QStringLiteral("background_rotate_undo.th2"));
+    const QString th2Contents = QStringLiteral(
+        "encoding utf-8\n"
+        "##XTHERION## xth_me_area_adjust 0 -40 80 0\n"
+        "##XTHERION## xth_me_area_zoom_to 100\n"
+        "##XTHERION## xth_me_image_insert {0 1 1} {0 {}} scan.png 0 {}\n"
+        "\n"
+        "scrap rotate-undo -projection plan\n"
+        "point 0 0 station -name A\n"
+        "endscrap\n");
+    if (!expect(writeTextFile(filePath, th2Contents.toUtf8()),
+                "Failed to create temporary TH2 file for background rotate undo test.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    FakeSessionStore sessionStore;
+    QMainWindow hostWindow;
+    hostWindow.resize(960, 720);
+    auto *central = new QWidget(&hostWindow);
+    auto *layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), central);
+    layout->addWidget(mapTab);
+    hostWindow.setCentralWidget(central);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                "MapEditorTab failed to load TH2 file for background rotate undo test.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+    pumpEvents();
+
+    mapTab->setSelectedBackgroundLayerIndex(0);
+    mapTab->setSelectedBackgroundLayerRotationDeg(10.0);
+    pumpEvents();
+    if (!expect(mapTab->canUndo(), "Background rotation should make map undo available.")) {
+        return 1;
+    }
+
+    mapTab->setWorkspaceMode(MapEditorTab::WorkspaceMode::Raw);
+    pumpEventsFor(1000);
+    if (!expect(mapTab->canUndo(), "Background rotation undo should remain available in Raw mode.")) {
+        return 1;
+    }
+
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(!mapTab->text().contains(QStringLiteral("rotationDeg=10")),
+                "Undoing background rotation from Raw mode should remove the rotated Mapiah metadata.")) {
         return 1;
     }
 
@@ -731,7 +1098,19 @@ int main(int argc, char **argv)
     if (const int rc = runBackgroundVisibilityDoesNotDirtyDocumentTest(); rc != 0) {
         return rc;
     }
+    if (const int rc = runMapiahPercentEncodedXviSampleLoadsTest(); rc != 0) {
+        return rc;
+    }
     if (const int rc = runRasterBackgroundKeepsFullResolutionTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runMapiahRasterBackgroundTransformTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runBackgroundTransformWritesMapiahMetadataTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runBackgroundRotationUndoSurvivesRawModeSwitchTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runBackgroundGammaPreservesPlacementTest(); rc != 0) {

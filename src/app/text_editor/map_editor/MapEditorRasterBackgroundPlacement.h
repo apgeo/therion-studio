@@ -17,6 +17,13 @@ struct TherionBackgroundReference;
 // must occupy. The displayed pixmap stays at full resolution; the item scale is
 // derived from this rectangle and the current pixmap size.
 constexpr int kMapEditorRasterPreviewRectRole = 110;
+constexpr int kMapEditorBackgroundRotationDegRole = 111;
+constexpr int kMapEditorBackgroundRotationCenterDxRole = 112;
+constexpr int kMapEditorBackgroundRotationCenterDyRole = 113;
+constexpr int kMapEditorBackgroundPivotSetRole = 114;
+constexpr int kMapEditorBackgroundMetadataFormatRole = 115;
+constexpr int kMapEditorBackgroundXScaleRole = 116;
+constexpr int kMapEditorBackgroundYScaleRole = 117;
 
 // Re-derives the raster layer item scale from its stored target rectangle and
 // current (full-resolution) pixmap size. Position is left untouched so a moved
@@ -62,5 +69,8 @@ bool placeMapEditorRasterLayerPlaceholderFromMetadata(QGraphicsPixmapItem *item,
                                                       const TherionAreaAdjust &areaAdjust,
                                                       const QRectF &modelBounds,
                                                       const QRectF &previewBounds);
+
+void storeMapEditorBackgroundTransformMetadata(QGraphicsPixmapItem *item,
+                                               const TherionBackgroundReference &reference);
 
 }

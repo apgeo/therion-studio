@@ -169,12 +169,19 @@ void MapEditorInspectorBackgroundController::refreshInspectorBackgroundSelection
     const bool hasLayer = selectedIndex >= 0 && selectedIndex < layerCount;
     const bool supportsGamma = hasLayer
         && (!context_.layerSupportsGamma || context_.layerSupportsGamma(selectedIndex));
+    const bool supportsTransformEditing = hasLayer
+        && (!context_.layerSupportsTransformEditing || context_.layerSupportsTransformEditing(selectedIndex));
     const bool supportsPositionEditing = hasLayer
         && (!context_.layerSupportsPositionEditing || context_.layerSupportsPositionEditing(selectedIndex));
     context_.moveUpButton->setEnabled(hasLayer && selectedIndex > 0);
     context_.moveDownButton->setEnabled(hasLayer && selectedIndex >= 0 && selectedIndex < layerCount - 1);
     context_.positionXSpin->setEnabled(supportsPositionEditing);
     context_.positionYSpin->setEnabled(supportsPositionEditing);
+    context_.scaleXSpin->setEnabled(supportsTransformEditing);
+    context_.scaleYSpin->setEnabled(supportsTransformEditing);
+    context_.rotationSpin->setEnabled(supportsTransformEditing);
+    context_.setPivotButton->setEnabled(supportsTransformEditing);
+    context_.resetPivotButton->setEnabled(supportsTransformEditing);
     context_.opacitySlider->setEnabled(hasLayer);
     context_.gammaSlider->setEnabled(supportsGamma);
     context_.opacityResetButton->setEnabled(hasLayer);
@@ -183,6 +190,9 @@ void MapEditorInspectorBackgroundController::refreshInspectorBackgroundSelection
     if (!hasLayer) {
         context_.positionXSpin->setValue(0.0);
         context_.positionYSpin->setValue(0.0);
+        context_.scaleXSpin->setValue(1.0);
+        context_.scaleYSpin->setValue(1.0);
+        context_.rotationSpin->setValue(0.0);
         context_.opacitySlider->setValue(58);
         context_.gammaSlider->setValue(100);
         return;
@@ -191,6 +201,9 @@ void MapEditorInspectorBackgroundController::refreshInspectorBackgroundSelection
     const QPointF position = context_.layerPosition ? context_.layerPosition(selectedIndex) : QPointF();
     context_.positionXSpin->setValue(position.x());
     context_.positionYSpin->setValue(position.y());
+    context_.scaleXSpin->setValue(context_.layerXScale ? context_.layerXScale(selectedIndex) : 1.0);
+    context_.scaleYSpin->setValue(context_.layerYScale ? context_.layerYScale(selectedIndex) : 1.0);
+    context_.rotationSpin->setValue(context_.layerRotationDeg ? context_.layerRotationDeg(selectedIndex) : 0.0);
     context_.opacitySlider->setValue(qBound(5, qRound((context_.layerOpacity ? context_.layerOpacity(selectedIndex) : 0.58) * 100.0), 100));
     context_.gammaSlider->setValue(supportsGamma
                                        ? qBound(20, qRound((context_.layerGamma ? context_.layerGamma(selectedIndex) : 1.0) * 100.0), 250)

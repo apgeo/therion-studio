@@ -62,6 +62,8 @@ Do not solve projection drift by copying parser logic into UI renderers, inspect
 
 Map raster background layers hold a full-resolution (display-capped) pixmap and are sized into the preview canvas through an item-level transform, not by baking the source down to preview pixels. This keeps backgrounds sharp under view zoom and separates pixmap updates (source load, Gamma) from placement (position/scale), so repositioning and refit do not re-rasterize. `.xvi`/vector reference layers remain vector-painted projections and are unaffected.
 
+Background metadata parsing and writing is a source projection boundary. XTherion `xth_me_image_insert` remains the default compatibility format for simple placement, while Mapiah `image_insert_v1` metadata is used for advanced background transforms such as rotation, non-uniform scale, and custom pivot. Treat both formats as import/export representations of one background placement model; do not duplicate placement state into parallel editor-specific metadata records.
+
 Therion namespace and reference semantics are compatibility-critical. In particular, qualified survey references use Therion's innermost-to-outermost order (`child.parent`), not filesystem-style `parent.child`; project-index and validation code should follow `docs/THERION_COMPATIBILITY.md` before adding or changing namespace logic.
 
 ## UI Surface Ownership

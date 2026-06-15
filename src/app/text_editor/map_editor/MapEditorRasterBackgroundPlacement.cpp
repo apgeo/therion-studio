@@ -3,6 +3,7 @@
 #include <QGraphicsPixmapItem>
 #include <QImage>
 #include <QPixmap>
+#include <QTransform>
 #include <QtMath>
 
 #include "MapEditorRasterBackgroundImage.h"
@@ -33,7 +34,7 @@ QRectF rasterModelRectFromMetadata(const QString &layerPath,
                                    const TherionBackgroundReference &reference,
                                    const TherionAreaAdjust &areaAdjust)
 {
-    const QSizeF modelSize = mapEditorRasterModelSize(layerPath, reference.hasImageScale ? reference.imageScale : 1.0);
+    QSizeF modelSize = mapEditorRasterModelSize(layerPath, 1.0);
     RasterPlacementMetadata placement{};
     placement.basePosition = reference.basePosition;
     placement.hasBasePosition = reference.hasBasePosition;
@@ -144,9 +145,34 @@ void applyMapEditorRasterLayerTransform(QGraphicsPixmapItem *item)
         return;
     }
 
+    const qreal scaleX = viewRect.width() / static_cast<qreal>(pixmapSize.width());
+    const qreal scaleY = viewRect.height() / static_cast<qreal>(pixmapSize.height());
+    const qreal layerScaleX = item->data(kMapEditorBackgroundXScaleRole).isValid()
+        ? qMax(0.01, item->data(kMapEditorBackgroundXScaleRole).toDouble())
+        : 1.0;
+    const qreal layerScaleY = item->data(kMapEditorBackgroundYScaleRole).isValid()
+        ? qMax(0.01, item->data(kMapEditorBackgroundYScaleRole).toDouble())
+        : 1.0;
+    const qreal rotationDeg = item->data(kMapEditorBackgroundRotationDegRole).toDouble();
+    const bool pivotSet = item->data(kMapEditorBackgroundPivotSetRole).toBool();
+    const qreal pivotX = pivotSet
+        ? item->data(kMapEditorBackgroundRotationCenterDxRole).toDouble()
+        : viewRect.width() / 2.0;
+    const qreal pivotY = pivotSet
+        ? item->data(kMapEditorBackgroundRotationCenterDyRole).toDouble()
+        : viewRect.height() / 2.0;
+
+    QTransform transform;
+    transform.translate(pivotX, pivotY);
+    transform.rotate(rotationDeg);
+    transform.translate(-pivotX, -pivotY);
+    transform.scale(scaleX * layerScaleX, scaleY * layerScaleY);
+
     item->setTransformationMode(Qt::SmoothTransformation);
     item->setTransformOriginPoint(0.0, 0.0);
-    item->setScale(viewRect.width() / static_cast<qreal>(pixmapSize.width()));
+    item->setScale(1.0);
+    item->setRotation(0.0);
+    item->setTransform(transform, false);
 }
 
 bool placeMapEditorRasterLayerInPreviewRect(QGraphicsPixmapItem *item,
@@ -218,6 +244,7 @@ bool placeMapEditorRasterLayerFromMetadata(QGraphicsPixmapItem *item,
         return false;
     }
 
+    storeMapEditorBackgroundTransformMetadata(item, reference);
     return placeMapEditorRasterLayerByModelRect(item, sourceImage, modelRect, modelBounds, previewBounds);
 }
 
@@ -236,7 +263,25 @@ bool placeMapEditorRasterLayerPlaceholderFromMetadata(QGraphicsPixmapItem *item,
         return false;
     }
 
+    storeMapEditorBackgroundTransformMetadata(item, reference);
     return placeMapEditorRasterLayerPlaceholderByModelRect(item, modelRect, modelBounds, previewBounds);
+}
+
+void storeMapEditorBackgroundTransformMetadata(QGraphicsPixmapItem *item,
+                                               const TherionBackgroundReference &reference)
+{
+    if (item == nullptr) {
+        return;
+    }
+
+    item->setData(kMapEditorBackgroundRotationDegRole, reference.rotationDeg);
+    item->setData(kMapEditorBackgroundRotationCenterDxRole, reference.rotationCenterDx);
+    item->setData(kMapEditorBackgroundRotationCenterDyRole, reference.rotationCenterDy);
+    item->setData(kMapEditorBackgroundPivotSetRole, reference.pivotSet);
+    item->setData(kMapEditorBackgroundMetadataFormatRole,
+                  static_cast<int>(reference.metadataFormat));
+    item->setData(kMapEditorBackgroundXScaleRole, reference.xScale);
+    item->setData(kMapEditorBackgroundYScaleRole, reference.yScale);
 }
 
 }

@@ -30,6 +30,10 @@ MapEditorCanvasEditContext MapEditorTab::canvasEditContext()
         .translate = [this](const char *text) {
             return tr(text);
         },
+        .markSourceChangeOriginatedFromMapTransaction = [this]() {
+            preserveNextSourceDrivenMapRefresh_ = true;
+            preserveMapUndoForSourceRevision_ = textEditor_ != nullptr ? textEditor_->documentRevision() : 0;
+        },
         .refreshToolbarSummary = [this]() {
             refreshToolbarSummary();
         },

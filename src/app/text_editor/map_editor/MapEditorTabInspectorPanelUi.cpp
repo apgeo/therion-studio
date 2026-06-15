@@ -452,6 +452,11 @@ void MapEditorTab::buildInspectorPanelUi()
     }
 
     buildInspectorBackgroundTab(inspectorPanel);
+    if (mapInspectorTabs_ != nullptr) {
+        connect(mapInspectorTabs_, &QTabWidget::currentChanged, this, [this]() {
+            refreshBackgroundPivotMarkerVisibility();
+        });
+    }
 
     DocumentFileInspectorContext fileContext;
     fileContext.filePath = [this]() {

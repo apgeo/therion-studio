@@ -41,6 +41,7 @@ struct MapEditorCanvasEditContext
     int *nextDraftGeometryId = nullptr;
 
     std::function<QString(const char *)> translate;
+    std::function<void()> markSourceChangeOriginatedFromMapTransaction;
     std::function<void()> refreshToolbarSummary;
     std::function<void()> flushPendingSceneRefreshAfterCommand;
     std::function<QPointF(const QPointF &)> sourcePointFromScenePosition;

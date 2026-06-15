@@ -186,6 +186,120 @@ int runXviInsertParsingTest()
     return 0;
 }
 
+int runMapiahRasterInsertParsingTest()
+{
+    const QString documentPath = documentPathForTest(QStringLiteral("mapiah-raster.th2"));
+    const QString text =
+        QStringLiteral("encoding utf-8\n"
+                       "##MAPIAH## image_insert_v1 {format=raster;filename=background%20scans%2Fscan.png;xx=2125.4;yy=1339.1;xScale=1.2;yScale=0.8;rotationCenterDx=10;rotationCenterDy=-5;rotationDeg=-12.5;pivotSet=true;gamma=1.4}\n");
+
+    const QVector<TherionBackgroundReference> references = parseTherionBackgroundReferences(text, documentPath);
+    if (!expect(references.size() == 1, "Expected one parsed Mapiah raster background reference.")) {
+        return 1;
+    }
+
+    const TherionBackgroundReference &reference = references.first();
+    if (!expect(reference.metadataFormat == TherionBackgroundMetadataFormat::Mapiah,
+                "Expected Mapiah raster metadata format to be reported.")) {
+        return 1;
+    }
+    if (!expect(reference.layerFormat == TherionBackgroundLayerFormat::Raster && !reference.xviReference,
+                "Expected Mapiah raster format to parse as raster.")) {
+        return 1;
+    }
+    if (!expect(reference.metadataTopEdgeAnchor,
+                "Expected Mapiah raster metadata to use image-bottom/base anchoring like XTherion raster placement.")) {
+        return 1;
+    }
+    if (!expect(reference.hasBasePosition
+                    && nearlyEqual(reference.basePosition.x(), 2125.4)
+                    && nearlyEqual(reference.basePosition.y(), 1339.1),
+                "Expected Mapiah raster position to parse.")) {
+        return 1;
+    }
+    if (!expect(nearlyEqual(reference.xScale, 1.2)
+                    && nearlyEqual(reference.yScale, 0.8)
+                    && nearlyEqual(reference.rotationCenterDx, 10.0)
+                    && nearlyEqual(reference.rotationCenterDy, -5.0)
+                    && nearlyEqual(reference.rotationDeg, -12.5)
+                    && reference.pivotSet,
+                "Expected Mapiah raster transform fields to parse.")) {
+        return 1;
+    }
+    if (!expect(reference.hasImageScale && nearlyEqual(reference.imageScale, 1.4),
+                "Expected optional Mapiah raster gamma extension to parse.")) {
+        return 1;
+    }
+
+    const QString expectedPath = QFileInfo(documentPath).dir().filePath(QStringLiteral("background scans/scan.png"));
+    if (!expect(normalizedPathForCompare(reference.absolutePath) == normalizedPathForCompare(expectedPath),
+                "Expected Mapiah percent-encoded raster path to resolve against document directory.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runMapiahXviInsertParsingTest()
+{
+    const QString documentPath = documentPathForTest(QStringLiteral("mapiah-xvi.th2"));
+    const QString text =
+        QStringLiteral("##MAPIAH## image_insert_v1 {format=xvi;filename=ptopo%2F4-BulmerResurgence_p.xvi;xx=2222.519685;yy=906.377953;xScale=1;yScale=1;rotationCenterDx=0;rotationCenterDy=0;rotationDeg=-90.2;pivotSet=true;xviRoot=2.32}\n");
+
+    const QVector<TherionBackgroundReference> references = parseTherionBackgroundReferences(text, documentPath);
+    if (!expect(references.size() == 1, "Expected one parsed Mapiah XVI background reference.")) {
+        return 1;
+    }
+
+    const TherionBackgroundReference &reference = references.first();
+    if (!expect(reference.metadataFormat == TherionBackgroundMetadataFormat::Mapiah
+                    && reference.layerFormat == TherionBackgroundLayerFormat::Xvi
+                    && reference.xviReference,
+                "Expected Mapiah XVI metadata format to parse.")) {
+        return 1;
+    }
+    if (!expect(!reference.metadataTopEdgeAnchor,
+                "Expected Mapiah XVI metadata to disable raster top-edge anchoring.")) {
+        return 1;
+    }
+    if (!expect(reference.hasBasePosition
+                    && nearlyEqual(reference.basePosition.x(), 2222.519685)
+                    && nearlyEqual(reference.basePosition.y(), 906.377953)
+                    && nearlyEqual(reference.rotationDeg, -90.2),
+                "Expected Mapiah XVI position and rotation to parse.")) {
+        return 1;
+    }
+    if (!expect(reference.rootStationName == QStringLiteral("2.32"),
+                "Expected Mapiah xviRoot to parse as root station name.")) {
+        return 1;
+    }
+    const QString expectedPath = QFileInfo(documentPath).dir().filePath(QStringLiteral("ptopo/4-BulmerResurgence_p.xvi"));
+    if (!expect(normalizedPathForCompare(reference.absolutePath) == normalizedPathForCompare(expectedPath),
+                "Expected percent-encoded Mapiah XVI path to resolve against TH2 document directory.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runMapiahSvgRecognizedAsUnsupportedTest()
+{
+    const QString documentPath = documentPathForTest(QStringLiteral("mapiah-svg.th2"));
+    const QString text =
+        QStringLiteral("##MAPIAH## image_insert_v1 {format=svg;filename=sketch.svg;xx=1;yy=2;xScale=1;yScale=1;rotationDeg=0;pivotSet=false}\n");
+
+    const QVector<TherionBackgroundReference> references = parseTherionBackgroundReferences(text, documentPath);
+    if (!expect(references.size() == 1, "Expected Mapiah SVG metadata to parse as a recognized reference.")) {
+        return 1;
+    }
+    if (!expect(references.first().layerFormat == TherionBackgroundLayerFormat::Svg,
+                "Expected Mapiah SVG metadata to be marked as SVG for UI-side unsupported handling.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runAreaAdjustParsingTest()
 {
     const QString text =
@@ -307,6 +421,15 @@ int main()
         return rc;
     }
     if (const int rc = runXviInsertParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runMapiahRasterInsertParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runMapiahXviInsertParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runMapiahSvgRecognizedAsUnsupportedTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runAreaAdjustParsingTest(); rc != 0) {

@@ -44,6 +44,7 @@ void MapEditorTab::updateCommandSurfaceState()
 
 void MapEditorTab::clearMapScene()
 {
+    backgroundPivotMarker_ = nullptr;
     MapEditorSceneLifecycleController(sceneLifecycleContext()).clearMapScene();
 }
 

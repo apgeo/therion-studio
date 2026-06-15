@@ -1,5 +1,7 @@
 #include "MapEditorTab.h"
 
+#include "../TextEditorTab.h"
+
 #include <QApplication>
 #include <QAbstractSpinBox>
 #include <QComboBox>
@@ -8,6 +10,7 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsView>
 #include <QKeyEvent>
+#include <QKeySequence>
 #include <QLineEdit>
 #include <QMainWindow>
 #include <QMenu>
@@ -97,6 +100,16 @@ bool globalPositionInsideVisibleMenu(const QPoint &globalPosition)
     }
     return false;
 }
+
+bool isDescendantOf(QObject *receiver, QObject *ancestor)
+{
+    for (QObject *object = receiver; object != nullptr; object = object->parent()) {
+        if (object == ancestor) {
+            return true;
+        }
+    }
+    return false;
+}
 }
 
 bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
@@ -115,6 +128,24 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
 
     if (event == nullptr) {
         return QWidget::eventFilter(watched, event);
+    }
+
+    if (event->type() == QEvent::KeyPress
+        && textEditor_ != nullptr
+        && isDescendantOf(watched, textEditor_)) {
+        auto *keyEvent = static_cast<QKeyEvent *>(event);
+        if (keyEvent->matches(QKeySequence::Undo)
+            && nextUndoOwner() == MapEditorUndoOwner::MapCommand) {
+            triggerUndo();
+            event->accept();
+            return true;
+        }
+        if (keyEvent->matches(QKeySequence::Redo)
+            && nextRedoOwner() == MapEditorUndoOwner::MapCommand) {
+            triggerRedo();
+            event->accept();
+            return true;
+        }
     }
 
     if (watched == objectDetailsUiState_.linePointFlagsEdit_
@@ -159,6 +190,13 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
                 return keyResult.value();
             }
         }
+    }
+
+    if (backgroundPivotPickActive_
+        && event->type() == QEvent::KeyPress
+        && isMapEditorEventReceiver(watched)
+        && handleBackgroundPivotPickViewportEvent(event)) {
+        return true;
     }
 
     if (handleMapEditorEscapeKeyEvent(watched, event)) {
@@ -212,6 +250,9 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             break;
         default:
             break;
+        }
+        if (handleBackgroundPivotPickViewportEvent(event)) {
+            return true;
         }
     }
 

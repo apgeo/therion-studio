@@ -32,6 +32,7 @@ struct TextEditorSourceTransactionContext
     QUndoStack *undoStack = nullptr;
     bool *commandApplyInProgress = nullptr;
     std::function<void()> flushPendingRefresh;
+    std::function<void()> markSourceChangeOriginatedFromTransaction;
     std::function<void(const QString &)> statusCallback;
 };
 

@@ -97,10 +97,6 @@ void MapEditorTab::applyPendingNavigationSelection(bool consume)
 
 void MapEditorTab::scheduleSourceDrivenMapRefresh()
 {
-    if (suppressSourceDrivenMapRefresh_) {
-        return;
-    }
-
     if (mapCommandApplyInProgress_) {
         if (sourceDrivenMapRefreshTimer_ != nullptr) {
             sourceDrivenMapRefreshTimer_->stop();
@@ -124,7 +120,17 @@ void MapEditorTab::applySourceDrivenMapRefresh()
         return;
     }
 
-    refreshMapScene();
+    const bool currentRevisionFromMapTransaction = textEditor_ != nullptr
+        && preserveMapUndoForSourceRevision_ > 0
+        && textEditor_->documentRevision() == preserveMapUndoForSourceRevision_;
+    const bool preserveUndoStack = preserveNextSourceDrivenMapRefresh_
+        || currentRevisionFromMapTransaction;
+    preserveNextSourceDrivenMapRefresh_ = false;
+    if (preserveUndoStack) {
+        refreshMapScenePreservingUndoStack();
+    } else {
+        refreshMapScene();
+    }
     rebuildInspectorObjectsTree();
     applyPendingNavigationSelection(true);
 }

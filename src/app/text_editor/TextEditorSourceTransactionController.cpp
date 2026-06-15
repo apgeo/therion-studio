@@ -244,12 +244,18 @@ void TextEditorSourceTransactionController::applyChangeWithSnapshot(const TextEd
     if (context_.commandApplyInProgress != nullptr) {
         const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
         applyTextEditorSourceSnapshot(context_.textEditor, afterText.value());
+        if (context_.markSourceChangeOriginatedFromTransaction) {
+            context_.markSourceChangeOriginatedFromTransaction();
+        }
         pushSnapshotCommand(context_, request, afterText.value());
         applyRequestPolicies(context_, request);
         return;
     }
 
     applyTextEditorSourceSnapshot(context_.textEditor, afterText.value());
+    if (context_.markSourceChangeOriginatedFromTransaction) {
+        context_.markSourceChangeOriginatedFromTransaction();
+    }
     pushSnapshotCommand(context_, request, afterText.value());
     applyRequestPolicies(context_, request);
 }

@@ -4,6 +4,7 @@
 #include "../InspectorPanel.h"
 
 #include <QAbstractItemView>
+#include <QCheckBox>
 #include <QDoubleSpinBox>
 #include <QFrame>
 #include <QFont>
@@ -25,6 +26,9 @@ namespace TherionStudio
 void MapEditorTab::buildInspectorBackgroundTab(DocumentInspectorPanel *inspectorPanel)
 {
     auto *backgroundTab = inspectorPanel->addPlainTab(tr("Backgrounds"));
+    mapInspectorBackgroundTabIndex_ = inspectorPanel->tabs() != nullptr
+        ? inspectorPanel->tabs()->indexOf(backgroundTab)
+        : -1;
     auto *backgroundLayout = qobject_cast<QVBoxLayout *>(backgroundTab->layout());
     auto createBackgroundSection = [backgroundTab](const QString &title, QVBoxLayout **contentLayout) {
         return InspectorPanel::createSection(backgroundTab, title, contentLayout);
@@ -94,8 +98,51 @@ void MapEditorTab::buildInspectorBackgroundTab(DocumentInspectorPanel *inspector
     positionLayout->addLayout(yRow);
     backgroundLayout->addWidget(positionFrame);
 
+    QVBoxLayout *transformLayout = nullptr;
+    auto *transformFrame = createBackgroundSection(tr("Transform"), &transformLayout);
+    auto *scaleXRow = new QHBoxLayout;
+    scaleXRow->addWidget(new QLabel(tr("Scale X"), transformFrame));
+    mapBackgroundScaleXSpin_ = new QDoubleSpinBox(transformFrame);
+    mapBackgroundScaleXSpin_->setRange(0.01, 100.0);
+    mapBackgroundScaleXSpin_->setDecimals(3);
+    mapBackgroundScaleXSpin_->setSingleStep(0.1);
+    scaleXRow->addWidget(mapBackgroundScaleXSpin_, 1);
+    transformLayout->addLayout(scaleXRow);
+
+    auto *scaleYRow = new QHBoxLayout;
+    scaleYRow->addWidget(new QLabel(tr("Scale Y"), transformFrame));
+    mapBackgroundScaleYSpin_ = new QDoubleSpinBox(transformFrame);
+    mapBackgroundScaleYSpin_->setRange(0.01, 100.0);
+    mapBackgroundScaleYSpin_->setDecimals(3);
+    mapBackgroundScaleYSpin_->setSingleStep(0.1);
+    scaleYRow->addWidget(mapBackgroundScaleYSpin_, 1);
+    transformLayout->addLayout(scaleYRow);
+
+    mapBackgroundLockScaleCheck_ = new QCheckBox(tr("Lock proportions"), transformFrame);
+    mapBackgroundLockScaleCheck_->setChecked(true);
+    transformLayout->addWidget(mapBackgroundLockScaleCheck_);
+
+    auto *rotationRow = new QHBoxLayout;
+    rotationRow->addWidget(new QLabel(tr("Rotation"), transformFrame));
+    mapBackgroundRotationSpin_ = new QDoubleSpinBox(transformFrame);
+    mapBackgroundRotationSpin_->setRange(-360.0, 360.0);
+    mapBackgroundRotationSpin_->setDecimals(1);
+    mapBackgroundRotationSpin_->setSingleStep(1.0);
+    mapBackgroundRotationSpin_->setSuffix(QStringLiteral("°"));
+    rotationRow->addWidget(mapBackgroundRotationSpin_, 1);
+    transformLayout->addLayout(rotationRow);
+
+    auto *pivotRow = new QHBoxLayout;
+    mapBackgroundSetPivotButton_ = new QPushButton(tr("Set Pivot"), transformFrame);
+    mapBackgroundResetPivotButton_ = new QPushButton(tr("Reset Pivot"), transformFrame);
+    pivotRow->addWidget(mapBackgroundSetPivotButton_);
+    pivotRow->addWidget(mapBackgroundResetPivotButton_);
+    transformLayout->addLayout(pivotRow);
+
+    backgroundLayout->addWidget(transformFrame);
+
     QVBoxLayout *adjustmentsLayout = nullptr;
-    auto *adjustmentsFrame = createBackgroundSection(tr("Adjustments"), &adjustmentsLayout);
+    auto *adjustmentsFrame = createBackgroundSection(tr("Display"), &adjustmentsLayout);
     auto *opacityRow = new QHBoxLayout;
     opacityRow->addWidget(new QLabel(tr("Opacity"), adjustmentsFrame));
     opacityRow->addStretch(1);
@@ -136,6 +183,33 @@ void MapEditorTab::buildInspectorBackgroundTab(DocumentInspectorPanel *inspector
             setSelectedBackgroundLayerPosition(QPointF(mapBackgroundPosXSpin_->value(), y));
         }
     });
+    connect(mapBackgroundScaleXSpin_, &QDoubleSpinBox::valueChanged, this, [this](double scale) {
+        if (!updatingMapInspectorBackgroundUi_) {
+            setSelectedBackgroundLayerXScale(scale);
+            if (mapBackgroundLockScaleCheck_ != nullptr
+                && mapBackgroundLockScaleCheck_->isChecked()
+                && mapBackgroundScaleYSpin_ != nullptr
+                && !qFuzzyCompare(mapBackgroundScaleYSpin_->value(), scale)) {
+                mapBackgroundScaleYSpin_->setValue(scale);
+            }
+        }
+    });
+    connect(mapBackgroundScaleYSpin_, &QDoubleSpinBox::valueChanged, this, [this](double scale) {
+        if (!updatingMapInspectorBackgroundUi_) {
+            setSelectedBackgroundLayerYScale(scale);
+            if (mapBackgroundLockScaleCheck_ != nullptr
+                && mapBackgroundLockScaleCheck_->isChecked()
+                && mapBackgroundScaleXSpin_ != nullptr
+                && !qFuzzyCompare(mapBackgroundScaleXSpin_->value(), scale)) {
+                mapBackgroundScaleXSpin_->setValue(scale);
+            }
+        }
+    });
+    connect(mapBackgroundRotationSpin_, &QDoubleSpinBox::valueChanged, this, [this](double rotationDeg) {
+        if (!updatingMapInspectorBackgroundUi_) {
+            setSelectedBackgroundLayerRotationDeg(rotationDeg);
+        }
+    });
     connect(mapBackgroundOpacitySlider_, &QSlider::valueChanged, this, [this](int value) {
         if (!updatingMapInspectorBackgroundUi_) {
             setSelectedBackgroundLayerOpacity(static_cast<qreal>(value) / 100.0);
@@ -148,6 +222,8 @@ void MapEditorTab::buildInspectorBackgroundTab(DocumentInspectorPanel *inspector
     });
     connect(mapBackgroundOpacityResetButton_, &QPushButton::clicked, this, [this]() { resetSelectedBackgroundLayerOpacity(); });
     connect(mapBackgroundGammaResetButton_, &QPushButton::clicked, this, [this]() { resetSelectedBackgroundLayerGamma(); });
+    connect(mapBackgroundSetPivotButton_, &QPushButton::clicked, this, [this]() { beginSetSelectedBackgroundLayerPivot(); });
+    connect(mapBackgroundResetPivotButton_, &QPushButton::clicked, this, [this]() { resetSelectedBackgroundLayerPivot(); });
 }
 
 } // namespace TherionStudio

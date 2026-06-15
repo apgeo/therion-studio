@@ -13,8 +13,13 @@ MapEditorInspectorBackgroundContext MapEditorTab::inspectorBackgroundContext()
         .moveDownButton = mapBackgroundMoveDownButton_,
         .positionXSpin = mapBackgroundPosXSpin_,
         .positionYSpin = mapBackgroundPosYSpin_,
+        .scaleXSpin = mapBackgroundScaleXSpin_,
+        .scaleYSpin = mapBackgroundScaleYSpin_,
+        .rotationSpin = mapBackgroundRotationSpin_,
         .opacitySlider = mapBackgroundOpacitySlider_,
         .gammaSlider = mapBackgroundGammaSlider_,
+        .setPivotButton = mapBackgroundSetPivotButton_,
+        .resetPivotButton = mapBackgroundResetPivotButton_,
         .opacityResetButton = mapBackgroundOpacityResetButton_,
         .gammaResetButton = mapBackgroundGammaResetButton_,
         .updatingUi = &updatingMapInspectorBackgroundUi_,
@@ -36,8 +41,20 @@ MapEditorInspectorBackgroundContext MapEditorTab::inspectorBackgroundContext()
         .layerGamma = [this](int index) {
             return backgroundLayerGamma(index);
         },
+        .layerXScale = [this](int index) {
+            return backgroundLayerXScale(index);
+        },
+        .layerYScale = [this](int index) {
+            return backgroundLayerYScale(index);
+        },
+        .layerRotationDeg = [this](int index) {
+            return backgroundLayerRotationDeg(index);
+        },
         .layerSupportsGamma = [this](int index) {
             return backgroundLayerSupportsGamma(index);
+        },
+        .layerSupportsTransformEditing = [this](int index) {
+            return backgroundLayerSupportsTransformEditing(index);
         },
         .layerSupportsPositionEditing = [this](int index) {
             return backgroundLayerSupportsPositionEditing(index);

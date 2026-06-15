@@ -43,7 +43,8 @@ Therion Studio is an editor and early-feedback tool. The Therion compiler remain
 - `scrap ... endscrap` is a drawing namespace for map objects. Area border references resolve to `line -id` values in the same scrap unless Therion semantics provide a more specific scope.
 - `join` may reference line endpoints and marked line points. `:0` and `:end` identify the start and end of a resolved line; named suffixes such as `:k1` should resolve to a `mark k1` row inside that target line when the line reference itself is unambiguous.
 - `.th2` visual edits must serialize canonical Therion source. Map-editor conveniences must not invent alternate source syntax.
-- XTherion metadata comments such as `##XTHERION## ...` are source data and should be preserved unless a specific map operation intentionally updates them.
+- XTherion metadata comments such as `##XTHERION## ...` and Mapiah background metadata comments such as `##MAPIAH## image_insert_v1 ...` are source data and should be preserved unless a specific map operation intentionally updates them.
+- Simple background placement should keep XTherion-compatible `xth_me_image_insert` metadata. Advanced background transforms that XTherion cannot represent, such as rotation, non-uniform scale, or a custom pivot, should use Mapiah `image_insert_v1` metadata rather than duplicating placement in an editor-specific parallel record.
 
 ## Validation And Project Indexing
 

@@ -5426,7 +5426,7 @@ subtype blocks</source>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundUi.cpp" line="98" />
-            <source>Adjustments</source>
+            <source>Display</source>
             <translation type="unfinished" />
         </message>
         <message>

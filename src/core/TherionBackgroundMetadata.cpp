@@ -5,6 +5,8 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QHash>
+#include <QUrl>
 #include <cmath>
 
 namespace TherionStudio
@@ -149,6 +151,83 @@ QString normalizeStationToken(const QString &token)
     return normalized.trimmed();
 }
 
+bool parseStrictNumber(const QString &token, qreal *value)
+{
+    if (value == nullptr) {
+        return false;
+    }
+
+    bool ok = false;
+    const qreal parsed = token.trimmed().toDouble(&ok);
+    if (!ok) {
+        return false;
+    }
+
+    *value = parsed;
+    return true;
+}
+
+bool parseBooleanValue(const QString &token, bool defaultValue = false)
+{
+    const QString normalized = token.trimmed().toCaseFolded();
+    if (normalized == QStringLiteral("true") || normalized == QStringLiteral("1") || normalized == QStringLiteral("yes")) {
+        return true;
+    }
+    if (normalized == QStringLiteral("false") || normalized == QStringLiteral("0") || normalized == QStringLiteral("no")) {
+        return false;
+    }
+    return defaultValue;
+}
+
+QHash<QString, QString> parseMapiahKeyValuePayload(const QString &payload)
+{
+    QHash<QString, QString> values;
+    const QStringList entries = payload.split(QLatin1Char(';'), Qt::SkipEmptyParts);
+    for (const QString &entry : entries) {
+        const int separator = entry.indexOf(QLatin1Char('='));
+        if (separator <= 0) {
+            continue;
+        }
+        const QString key = entry.left(separator).trimmed();
+        if (key.isEmpty()) {
+            continue;
+        }
+        const QString encodedValue = entry.mid(separator + 1).trimmed();
+        values.insert(key, QUrl::fromPercentEncoding(encodedValue.toUtf8()));
+    }
+    return values;
+}
+
+TherionBackgroundLayerFormat mapiahLayerFormat(const QString &format, const QString &absolutePath)
+{
+    const QString normalized = format.trimmed().toCaseFolded();
+    if (normalized == QStringLiteral("xvi")) {
+        return TherionBackgroundLayerFormat::Xvi;
+    }
+    if (normalized == QStringLiteral("raster")) {
+        return TherionBackgroundLayerFormat::Raster;
+    }
+    if (normalized == QStringLiteral("svg")) {
+        return TherionBackgroundLayerFormat::Svg;
+    }
+    if (absolutePath.endsWith(QStringLiteral(".xvi"), Qt::CaseInsensitive)) {
+        return TherionBackgroundLayerFormat::Xvi;
+    }
+    return TherionBackgroundLayerFormat::Unsupported;
+}
+
+QString absoluteDecodedMapiahPath(const QString &filename, const QString &baseDirectory)
+{
+    QString decoded = filename.trimmed();
+    if (decoded.isEmpty()) {
+        return QString();
+    }
+    if (QDir::isRelativePath(decoded) && !baseDirectory.isEmpty()) {
+        decoded = QDir(baseDirectory).absoluteFilePath(decoded);
+    }
+    return QFileInfo(decoded).absoluteFilePath();
+}
+
 QString formatTherionMetadataNumber(qreal value)
 {
     if (std::fabs(value) < 1e-9) {
@@ -226,83 +305,144 @@ QVector<TherionBackgroundReference> parseTherionBackgroundReferences(const QStri
     const QStringList lines = splitLinesNormalizingLineEndings(documentText);
     for (int lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
         const QString trimmed = lines.at(lineIndex).trimmed();
-        if (!trimmed.contains(QStringLiteral("##XTHERION##")) || !trimmed.contains(QStringLiteral("xth_me_image_insert"))) {
-            continue;
-        }
+        if (trimmed.contains(QStringLiteral("##MAPIAH##")) && trimmed.contains(QStringLiteral("image_insert_v1"))) {
+            const int keywordIndex = trimmed.indexOf(QStringLiteral("image_insert_v1"));
+            if (keywordIndex < 0) {
+                continue;
+            }
 
-        int keywordIndex = trimmed.indexOf(QStringLiteral("xth_me_image_insert"));
-        if (keywordIndex < 0) {
-            continue;
-        }
+            int position = keywordIndex + QStringLiteral("image_insert_v1").size();
+            QString payload;
+            if (!readBracedGroup(trimmed, &position, &payload)) {
+                continue;
+            }
+            const QHash<QString, QString> values = parseMapiahKeyValuePayload(payload);
+            const QString absolutePath = absoluteDecodedMapiahPath(values.value(QStringLiteral("filename")), baseDirectory);
+            if (absolutePath.isEmpty()) {
+                continue;
+            }
 
-        int position = keywordIndex + QStringLiteral("xth_me_image_insert").size();
-        QString firstGroup;
-        QString secondGroup;
-        if (!readBracedGroup(trimmed, &position, &firstGroup)) {
-            continue;
-        }
-        if (!readBracedGroup(trimmed, &position, &secondGroup)) {
-            secondGroup = readSimpleToken(trimmed, &position);
-        }
-        if (secondGroup.isEmpty()) {
-            continue;
-        }
+            TherionBackgroundReference reference{};
+            reference.absolutePath = absolutePath;
+            reference.metadataFormat = TherionBackgroundMetadataFormat::Mapiah;
+            reference.layerFormat = mapiahLayerFormat(values.value(QStringLiteral("format")), absolutePath);
+            reference.xviReference = reference.layerFormat == TherionBackgroundLayerFormat::Xvi;
+            reference.metadataTopEdgeAnchor = reference.layerFormat == TherionBackgroundLayerFormat::Raster;
+            reference.lineNumber = lineIndex + 1;
 
-        const QString imageToken = readSimpleToken(trimmed, &position);
-        if (imageToken.isEmpty()) {
-            continue;
-        }
-
-        QString absolutePath = imageToken;
-        if (QDir::isRelativePath(absolutePath) && !baseDirectory.isEmpty()) {
-            absolutePath = QDir(baseDirectory).absoluteFilePath(absolutePath);
-        }
-        absolutePath = QFileInfo(absolutePath).absoluteFilePath();
-        if (absolutePath.isEmpty()) {
-            continue;
-        }
-
-        TherionBackgroundReference reference{};
-        reference.absolutePath = absolutePath;
-        reference.xviReference = reference.absolutePath.endsWith(QStringLiteral(".xvi"), Qt::CaseInsensitive);
-        reference.metadataTopEdgeAnchor = !reference.xviReference;
-        reference.lineNumber = lineIndex + 1;
-
-        const QStringList firstParts = tokenizeWhitespace(firstGroup);
-        const QStringList secondParts = tokenizeWhitespace(secondGroup);
-        if (!firstParts.isEmpty() && !secondParts.isEmpty()) {
             qreal baseX = 0.0;
             qreal baseY = 0.0;
-            if (tryParseLeadingNumber(firstParts.first(), &baseX)
-                && tryParseLeadingNumber(secondParts.first(), &baseY)) {
+            if (parseStrictNumber(values.value(QStringLiteral("xx")), &baseX)
+                && parseStrictNumber(values.value(QStringLiteral("yy")), &baseY)) {
                 reference.basePosition = QPointF(baseX, baseY);
                 reference.hasBasePosition = true;
             }
-        }
-
-        if (firstParts.size() >= 2) {
-            qreal visibility = 0.0;
-            if (tryParseLeadingNumber(firstParts.at(1), &visibility)) {
-                reference.visible = visibility > 0.0;
-                reference.hasVisibility = true;
+            qreal parsedValue = 0.0;
+            if (parseStrictNumber(values.value(QStringLiteral("xScale")), &parsedValue) && parsedValue > 0.0) {
+                reference.xScale = parsedValue;
             }
-        }
-
-        if (firstParts.size() >= 3) {
-            qreal imageScale = 0.0;
-            if (tryParseLeadingNumber(firstParts.at(2), &imageScale) && imageScale > 0.0) {
-                reference.imageScale = imageScale;
+            if (parseStrictNumber(values.value(QStringLiteral("yScale")), &parsedValue) && parsedValue > 0.0) {
+                reference.yScale = parsedValue;
+            }
+            if (parseStrictNumber(values.value(QStringLiteral("rotationCenterDx")), &parsedValue)) {
+                reference.rotationCenterDx = parsedValue;
+            }
+            if (parseStrictNumber(values.value(QStringLiteral("rotationCenterDy")), &parsedValue)) {
+                reference.rotationCenterDy = parsedValue;
+            }
+            if (parseStrictNumber(values.value(QStringLiteral("rotationDeg")), &parsedValue)) {
+                reference.rotationDeg = parsedValue;
+            }
+            reference.pivotSet = parseBooleanValue(values.value(QStringLiteral("pivotSet")), false);
+            if (parseStrictNumber(values.value(QStringLiteral("gamma")), &parsedValue) && parsedValue > 0.0) {
+                reference.imageScale = parsedValue;
                 reference.hasImageScale = true;
             }
+            const QString rootStationName = normalizeStationToken(values.value(QStringLiteral("xviRoot")));
+            if (!rootStationName.isEmpty() && rootStationName != QStringLiteral("0")) {
+                reference.rootStationName = rootStationName;
+            }
+            references.append(reference);
+            continue;
         }
 
-        if (secondParts.size() >= 2) {
-            const QString candidateRoot = normalizeStationToken(secondParts.at(1));
-            if (!candidateRoot.isEmpty() && candidateRoot != QStringLiteral("0")) {
-                reference.rootStationName = candidateRoot;
+        if (trimmed.contains(QStringLiteral("##XTHERION##")) && trimmed.contains(QStringLiteral("xth_me_image_insert"))) {
+            int keywordIndex = trimmed.indexOf(QStringLiteral("xth_me_image_insert"));
+            if (keywordIndex < 0) {
+                continue;
             }
+
+            int position = keywordIndex + QStringLiteral("xth_me_image_insert").size();
+            QString firstGroup;
+            QString secondGroup;
+            if (!readBracedGroup(trimmed, &position, &firstGroup)) {
+                continue;
+            }
+            if (!readBracedGroup(trimmed, &position, &secondGroup)) {
+                secondGroup = readSimpleToken(trimmed, &position);
+            }
+            if (secondGroup.isEmpty()) {
+                continue;
+            }
+
+            const QString imageToken = readSimpleToken(trimmed, &position);
+            if (imageToken.isEmpty()) {
+                continue;
+            }
+
+            QString absolutePath = imageToken;
+            if (QDir::isRelativePath(absolutePath) && !baseDirectory.isEmpty()) {
+                absolutePath = QDir(baseDirectory).absoluteFilePath(absolutePath);
+            }
+            absolutePath = QFileInfo(absolutePath).absoluteFilePath();
+            if (absolutePath.isEmpty()) {
+                continue;
+            }
+
+            TherionBackgroundReference reference{};
+            reference.absolutePath = absolutePath;
+            reference.metadataFormat = TherionBackgroundMetadataFormat::XTherion;
+            reference.xviReference = reference.absolutePath.endsWith(QStringLiteral(".xvi"), Qt::CaseInsensitive);
+            reference.layerFormat = reference.xviReference ? TherionBackgroundLayerFormat::Xvi : TherionBackgroundLayerFormat::Raster;
+            reference.metadataTopEdgeAnchor = !reference.xviReference;
+            reference.lineNumber = lineIndex + 1;
+
+            const QStringList firstParts = tokenizeWhitespace(firstGroup);
+            const QStringList secondParts = tokenizeWhitespace(secondGroup);
+            if (!firstParts.isEmpty() && !secondParts.isEmpty()) {
+                qreal baseX = 0.0;
+                qreal baseY = 0.0;
+                if (tryParseLeadingNumber(firstParts.first(), &baseX)
+                    && tryParseLeadingNumber(secondParts.first(), &baseY)) {
+                    reference.basePosition = QPointF(baseX, baseY);
+                    reference.hasBasePosition = true;
+                }
+            }
+
+            if (firstParts.size() >= 2) {
+                qreal visibility = 0.0;
+                if (tryParseLeadingNumber(firstParts.at(1), &visibility)) {
+                    reference.visible = visibility > 0.0;
+                    reference.hasVisibility = true;
+                }
+            }
+
+            if (firstParts.size() >= 3) {
+                qreal imageScale = 0.0;
+                if (tryParseLeadingNumber(firstParts.at(2), &imageScale) && imageScale > 0.0) {
+                    reference.imageScale = imageScale;
+                    reference.hasImageScale = true;
+                }
+            }
+
+            if (secondParts.size() >= 2) {
+                const QString candidateRoot = normalizeStationToken(secondParts.at(1));
+                if (!candidateRoot.isEmpty() && candidateRoot != QStringLiteral("0")) {
+                    reference.rootStationName = candidateRoot;
+                }
+            }
+            references.append(reference);
         }
-        references.append(reference);
     }
 
     return references;

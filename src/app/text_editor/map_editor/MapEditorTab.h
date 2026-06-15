@@ -180,7 +180,11 @@ public:
     bool isBackgroundLayerVisible(int index) const;
     qreal backgroundLayerOpacity(int index) const;
     qreal backgroundLayerGamma(int index) const;
+    qreal backgroundLayerXScale(int index) const;
+    qreal backgroundLayerYScale(int index) const;
+    qreal backgroundLayerRotationDeg(int index) const;
     bool backgroundLayerSupportsGamma(int index) const;
+    bool backgroundLayerSupportsTransformEditing(int index) const;
     bool backgroundLayerSupportsPositionEditing(int index) const;
     QPointF backgroundLayerPosition(int index) const;
     QRectF backgroundLayerSceneBounds(int index) const;
@@ -199,6 +203,11 @@ public:
     void setSelectedBackgroundLayerGamma(qreal gamma);
     void resetSelectedBackgroundLayerGamma();
     void setSelectedBackgroundLayerPosition(const QPointF &position);
+    void setSelectedBackgroundLayerXScale(qreal scale);
+    void setSelectedBackgroundLayerYScale(qreal scale);
+    void setSelectedBackgroundLayerRotationDeg(qreal rotationDeg);
+    void beginSetSelectedBackgroundLayerPivot();
+    void resetSelectedBackgroundLayerPivot();
     void nudgeSelectedBackgroundLayer(const QPointF &delta);
 
 public slots:
@@ -475,12 +484,28 @@ private:
     QRectF xtherionAutoAreaAdjustRect() const;
     void syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item, const QString &label, bool preserveExistingPlacement = false);
     bool syncBackgroundLayerXtherionGammaMetadata(QGraphicsPixmapItem *item, const QString &label);
+    void syncBackgroundLayerMapiahMetadata(QGraphicsPixmapItem *item,
+                                           const QString &label,
+                                           bool preserveExistingPlacement = false);
     void removeBackgroundLayerXtherionMetadata(const QString &layerPath, const QString &label);
     void invalidateBackgroundLayerRasterJobs(QGraphicsPixmapItem *item);
     void invalidateBackgroundRasterJobs();
     QGraphicsPixmapItem *backgroundLayerItemAt(int index) const;
     QGraphicsPixmapItem *selectedBackgroundLayerItem() const;
     qreal backgroundLayerGammaValue(const QGraphicsPixmapItem *item) const;
+    qreal backgroundLayerXScaleValue(const QGraphicsPixmapItem *item) const;
+    qreal backgroundLayerYScaleValue(const QGraphicsPixmapItem *item) const;
+    qreal backgroundLayerRotationDegValue(const QGraphicsPixmapItem *item) const;
+    QPointF backgroundLayerBaseModelPosition(QGraphicsPixmapItem *item) const;
+    QPointF backgroundLayerPivotScenePosition(QGraphicsPixmapItem *item) const;
+    void refreshBackgroundPivotMarkerVisibility();
+    void setSelectedBackgroundLayerPivotAtScenePosition(const QPointF &scenePosition);
+    void cancelBackgroundPivotPickMode();
+    bool handleBackgroundPivotPickViewportEvent(QEvent *event);
+    void ensureBackgroundPivotMarker();
+    void showBackgroundPivotMarkerAtScenePosition(const QPointF &scenePosition);
+    void hideBackgroundPivotMarker();
+    void applyBackgroundLayerTransform(QGraphicsPixmapItem *item);
     void applyBackgroundLayerGamma(QGraphicsPixmapItem *item, qreal gamma);
     void setSelectedBackgroundLayerIndexInternal(int index);
     QVector<QPointF> sourceVerticesForDraft(const QGraphicsRectItem *item) const;
@@ -622,6 +647,7 @@ private:
     QFrame *objectDetailsPanel_ = nullptr;
     DocumentFileInspector *mapFileInspector_ = nullptr;
     QTabWidget *mapInspectorTabs_ = nullptr;
+    int mapInspectorBackgroundTabIndex_ = -1;
     QFrame *mapInspectorLeftEdge_ = nullptr;
     QTreeView *mapObjectsTree_ = nullptr;
     QStandardItemModel *mapObjectsModel_ = nullptr;
@@ -632,11 +658,19 @@ private:
     QPushButton *mapBackgroundMoveDownButton_ = nullptr;
     QDoubleSpinBox *mapBackgroundPosXSpin_ = nullptr;
     QDoubleSpinBox *mapBackgroundPosYSpin_ = nullptr;
+    QDoubleSpinBox *mapBackgroundScaleXSpin_ = nullptr;
+    QDoubleSpinBox *mapBackgroundScaleYSpin_ = nullptr;
+    QDoubleSpinBox *mapBackgroundRotationSpin_ = nullptr;
+    QCheckBox *mapBackgroundLockScaleCheck_ = nullptr;
+    QPushButton *mapBackgroundSetPivotButton_ = nullptr;
+    QPushButton *mapBackgroundResetPivotButton_ = nullptr;
     QSlider *mapBackgroundOpacitySlider_ = nullptr;
     QSlider *mapBackgroundGammaSlider_ = nullptr;
     QPushButton *mapBackgroundOpacityResetButton_ = nullptr;
     QPushButton *mapBackgroundGammaResetButton_ = nullptr;
     bool updatingMapInspectorBackgroundUi_ = false;
+    bool backgroundPivotPickActive_ = false;
+    QGraphicsPathItem *backgroundPivotMarker_ = nullptr;
     bool updatingMapInspectorObjectSelection_ = false;
     QSet<int> hiddenInspectorObjectLines_;
     QPersistentModelIndex inspectorObjectPressedNameIndex_;
@@ -697,7 +731,8 @@ private:
     int lastMapUndoStackIndex_ = 0;
     MapEditorUndoOwner preferredUndoOwner_ = MapEditorUndoOwner::None;
     MapEditorUndoOwner preferredRedoOwner_ = MapEditorUndoOwner::None;
-    bool suppressSourceDrivenMapRefresh_ = false;
+    bool preserveNextSourceDrivenMapRefresh_ = false;
+    int preserveMapUndoForSourceRevision_ = 0;
     bool mapSceneRefreshPending_ = false;
     QTimer *sourceDrivenMapRefreshTimer_ = nullptr;
     DetachedPaneState detachedPaneState_;

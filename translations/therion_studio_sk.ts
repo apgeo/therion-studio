@@ -4961,6 +4961,57 @@ Napriek tomu bod zmazať?</translation>
             <translation>Presunúť obrázok pozadia</translation>
         </message>
         <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="1867" />
+            <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="1883" />
+            <source>Scale Background Image</source>
+            <translation>Zmeniť mierku obrázka pozadia</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="1902" />
+            <source>Rotate Background Image</source>
+            <translation>Otočiť obrázok pozadia</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="2172" />
+            <source>Set pivot: click in the map to choose the rotation center. Esc cancels.</source>
+            <translation>Nastavenie pivotu: kliknutím v mape vyberte stred otáčania. Esc zruší akciu.</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="2191" />
+            <source>Set pivot canceled.</source>
+            <translation>Nastavenie pivotu zrušené.</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="2209" />
+            <source>Set pivot failed: map bounds are not available.</source>
+            <translation>Nastavenie pivotu zlyhalo: nie sú dostupné hranice mapy.</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="2228" />
+            <source>Set Background Pivot</source>
+            <translation>Nastaviť pivot pozadia</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="2231" />
+            <source>Background pivot set.</source>
+            <translation>Pivot pozadia nastavený.</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="2253" />
+            <source>Reset Background Pivot</source>
+            <translation>Resetovať pivot pozadia</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="2256" />
+            <source>Background pivot reset.</source>
+            <translation>Pivot pozadia resetovaný.</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="2819" />
+            <source>Background transform metadata sync skipped: document changed.</source>
+            <translation>Synchronizácia metadát transformácie pozadia bola preskočená: dokument sa zmenil.</translation>
+        </message>
+        <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="1717" />
             <source>Fit + BG: no background layers loaded, fitting geometry only.</source>
             <translation>Prispôsobiť + pozadie: nie sú načítané žiadne vrstvy pozadia, prispôsobuje sa iba geometria.</translation>
@@ -5462,8 +5513,43 @@ subtype blocks</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundUi.cpp" line="98" />
-            <source>Adjustments</source>
-            <translation>Úpravy</translation>
+            <source>Transform</source>
+            <translation>Transformácia</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundUi.cpp" line="100" />
+            <source>Scale X</source>
+            <translation>Mierka X</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundUi.cpp" line="109" />
+            <source>Scale Y</source>
+            <translation>Mierka Y</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundUi.cpp" line="118" />
+            <source>Lock proportions</source>
+            <translation>Zamknúť proporcie</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundUi.cpp" line="118" />
+            <source>Rotation</source>
+            <translation>Rotácia</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundUi.cpp" line="133" />
+            <source>Set Pivot</source>
+            <translation>Nastaviť pivot</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundUi.cpp" line="134" />
+            <source>Reset Pivot</source>
+            <translation>Resetovať pivot</translation>
+        </message>
+        <message>
+            <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundUi.cpp" line="98" />
+            <source>Display</source>
+            <translation>Zobrazenie</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundUi.cpp" line="100" />

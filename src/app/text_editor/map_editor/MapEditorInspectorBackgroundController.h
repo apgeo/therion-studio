@@ -22,8 +22,13 @@ struct MapEditorInspectorBackgroundContext
     QPushButton *moveDownButton = nullptr;
     QDoubleSpinBox *positionXSpin = nullptr;
     QDoubleSpinBox *positionYSpin = nullptr;
+    QDoubleSpinBox *scaleXSpin = nullptr;
+    QDoubleSpinBox *scaleYSpin = nullptr;
+    QDoubleSpinBox *rotationSpin = nullptr;
     QSlider *opacitySlider = nullptr;
     QSlider *gammaSlider = nullptr;
+    QPushButton *setPivotButton = nullptr;
+    QPushButton *resetPivotButton = nullptr;
     QPushButton *opacityResetButton = nullptr;
     QPushButton *gammaResetButton = nullptr;
     bool *updatingUi = nullptr;
@@ -34,7 +39,11 @@ struct MapEditorInspectorBackgroundContext
     std::function<bool(int)> layerVisible;
     std::function<qreal(int)> layerOpacity;
     std::function<qreal(int)> layerGamma;
+    std::function<qreal(int)> layerXScale;
+    std::function<qreal(int)> layerYScale;
+    std::function<qreal(int)> layerRotationDeg;
     std::function<bool(int)> layerSupportsGamma;
+    std::function<bool(int)> layerSupportsTransformEditing;
     std::function<bool(int)> layerSupportsPositionEditing;
     std::function<QPointF(int)> layerPosition;
     std::function<int()> selectedLayerIndex;

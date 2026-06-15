@@ -265,6 +265,7 @@ TextEditorSourceTransactionController sourceTransactionController(const MapEdito
         .undoStack = context.undoStack,
         .commandApplyInProgress = context.commandApplyInProgress,
         .flushPendingRefresh = context.flushPendingSceneRefreshAfterCommand,
+        .markSourceChangeOriginatedFromTransaction = context.markSourceChangeOriginatedFromMapTransaction,
         .statusCallback = std::move(statusCallback),
     });
 }

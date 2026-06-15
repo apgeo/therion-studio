@@ -12,23 +12,30 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFutureWatcher>
+#include <QGraphicsPathItem>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsScene>
+#include <QGraphicsView>
 #include <QFormLayout>
 #include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QKeyEvent>
 #include <QLineF>
 #include <QMessageBox>
+#include <QMouseEvent>
 #include <QPainter>
+#include <QPainterPath>
+#include <QPen>
 #include <QPixmap>
 #include <QRadioButton>
 #include <QRegularExpression>
-#include <QScopedValueRollback>
 #include <QSet>
 #include <QSpinBox>
+#include <QTabWidget>
 #include <QTimer>
+#include <QUrl>
 #include <QVariant>
 #include <QVBoxLayout>
 #include <QtConcurrent>
@@ -323,6 +330,52 @@ QString xtherionImageInsertLine(const QString &absolutePath,
              formatXtherionNumber(basePosition.y()),
              xtherionMetadataToken(rootStationName),
              xtherionPathToken(absolutePath, documentPath));
+}
+
+QString mapiahMetadataValue(const QString &value)
+{
+    return QString::fromUtf8(QUrl::toPercentEncoding(value));
+}
+
+QString mapiahRelativeFilename(const QString &absolutePath, const QString &documentPath)
+{
+    QString path = absolutePath;
+    const QString baseDirectory = QFileInfo(documentPath).absolutePath();
+    if (!baseDirectory.isEmpty()) {
+        path = QDir(baseDirectory).relativeFilePath(absolutePath);
+    }
+    return QDir::fromNativeSeparators(path);
+}
+
+QString mapiahImageInsertLine(const QString &absolutePath,
+                              const QString &documentPath,
+                              TherionBackgroundLayerFormat layerFormat,
+                              const QPointF &basePosition,
+                              qreal xScale,
+                              qreal yScale,
+                              qreal rotationCenterDx,
+                              qreal rotationCenterDy,
+                              qreal rotationDeg,
+                              bool pivotSet,
+                              const QString &rootStationName = QString())
+{
+    QStringList parts;
+    parts.append(QStringLiteral("format=%1").arg(layerFormat == TherionBackgroundLayerFormat::Xvi
+                                                     ? QStringLiteral("xvi")
+                                                     : QStringLiteral("raster")));
+    parts.append(QStringLiteral("filename=%1").arg(mapiahMetadataValue(mapiahRelativeFilename(absolutePath, documentPath))));
+    parts.append(QStringLiteral("xx=%1").arg(mapiahMetadataValue(formatXtherionNumber(basePosition.x()))));
+    parts.append(QStringLiteral("yy=%1").arg(mapiahMetadataValue(formatXtherionNumber(basePosition.y()))));
+    parts.append(QStringLiteral("xScale=%1").arg(mapiahMetadataValue(formatXtherionNumber(qMax(0.01, xScale)))));
+    parts.append(QStringLiteral("yScale=%1").arg(mapiahMetadataValue(formatXtherionNumber(qMax(0.01, yScale)))));
+    parts.append(QStringLiteral("rotationCenterDx=%1").arg(mapiahMetadataValue(formatXtherionNumber(rotationCenterDx))));
+    parts.append(QStringLiteral("rotationCenterDy=%1").arg(mapiahMetadataValue(formatXtherionNumber(rotationCenterDy))));
+    parts.append(QStringLiteral("rotationDeg=%1").arg(mapiahMetadataValue(formatXtherionNumber(rotationDeg))));
+    parts.append(QStringLiteral("pivotSet=%1").arg(pivotSet ? QStringLiteral("true") : QStringLiteral("false")));
+    if (layerFormat == TherionBackgroundLayerFormat::Xvi) {
+        parts.append(QStringLiteral("xviRoot=%1").arg(mapiahMetadataValue(rootStationName)));
+    }
+    return QStringLiteral("##MAPIAH## image_insert_v1 {%1}").arg(parts.join(QLatin1Char(';')));
 }
 
 QString uniquePocketTopoXviPath(const QString &pocketTopoPath, PocketTopoProjection projection)
@@ -1349,6 +1402,85 @@ bool createAndAppendXviBackgroundItem(QGraphicsScene *scene,
     layers->append(backgroundItem);
     return true;
 }
+
+bool isSupportedBackgroundReference(const XtherionBackgroundReference &reference)
+{
+    return reference.layerFormat == TherionBackgroundLayerFormat::Xvi
+        || reference.layerFormat == TherionBackgroundLayerFormat::Raster;
+}
+
+bool itemUsesMapiahBackgroundMetadata(const QGraphicsPixmapItem *item)
+{
+    return item != nullptr
+        && item->data(kMapEditorBackgroundMetadataFormatRole).toInt()
+            == static_cast<int>(TherionBackgroundMetadataFormat::Mapiah);
+}
+
+qreal backgroundItemXScaleValue(const QGraphicsPixmapItem *item)
+{
+    return item != nullptr && item->data(kMapEditorBackgroundXScaleRole).isValid()
+        ? qMax(0.01, item->data(kMapEditorBackgroundXScaleRole).toDouble())
+        : 1.0;
+}
+
+qreal backgroundItemYScaleValue(const QGraphicsPixmapItem *item)
+{
+    return item != nullptr && item->data(kMapEditorBackgroundYScaleRole).isValid()
+        ? qMax(0.01, item->data(kMapEditorBackgroundYScaleRole).toDouble())
+        : 1.0;
+}
+
+qreal backgroundItemRotationDegValue(const QGraphicsPixmapItem *item)
+{
+    return item != nullptr && item->data(kMapEditorBackgroundRotationDegRole).isValid()
+        ? item->data(kMapEditorBackgroundRotationDegRole).toDouble()
+        : 0.0;
+}
+
+void applyXviBackgroundItemTransform(QGraphicsPixmapItem *item,
+                                     const QRectF &modelBounds,
+                                     const QRectF &previewBounds)
+{
+    if (item == nullptr || !modelBounds.isValid() || !previewBounds.isValid()) {
+        return;
+    }
+
+    const QVariant baseValue = item->data(kBackgroundLayerXviBasePositionRole);
+    const QPointF basePosition = baseValue.canConvert<QPointF>() ? baseValue.toPointF() : QPointF();
+    const qreal rotationCenterDx = item->data(kMapEditorBackgroundRotationCenterDxRole).toDouble();
+    const qreal rotationCenterDy = item->data(kMapEditorBackgroundRotationCenterDyRole).toDouble();
+    const qreal rotationDeg = backgroundItemRotationDegValue(item);
+    const bool pivotSet = item->data(kMapEditorBackgroundPivotSetRole).toBool();
+
+    const QPointF pivotModel = pivotSet
+        ? QPointF(basePosition.x() + rotationCenterDx, basePosition.y() + rotationCenterDy)
+        : basePosition;
+    const QPointF pivotPreview = mapEditorModelToPreviewPoint(pivotModel, modelBounds, previewBounds);
+    const QPointF pivotLocal = pivotPreview - item->pos();
+
+    QTransform transform;
+    transform.translate(pivotLocal.x(), pivotLocal.y());
+    transform.rotate(rotationDeg);
+    transform.scale(backgroundItemXScaleValue(item), backgroundItemYScaleValue(item));
+    transform.translate(-pivotLocal.x(), -pivotLocal.y());
+    item->setTransformOriginPoint(0.0, 0.0);
+    item->setScale(1.0);
+    item->setRotation(0.0);
+    item->setTransform(transform, false);
+}
+
+void applyMapiahTransformToXviBackgroundItem(QGraphicsPixmapItem *item,
+                                             const XtherionBackgroundReference &reference,
+                                             const QRectF &modelBounds,
+                                             const QRectF &previewBounds)
+{
+    if (item == nullptr || reference.metadataFormat != TherionBackgroundMetadataFormat::Mapiah) {
+        return;
+    }
+
+    storeMapEditorBackgroundTransformMetadata(item, reference);
+    applyXviBackgroundItemTransform(item, modelBounds, previewBounds);
+}
 }
 
 int MapEditorTab::backgroundLayerCount() const
@@ -1385,6 +1517,21 @@ qreal MapEditorTab::backgroundLayerGamma(int index) const
     return backgroundLayerGammaValue(backgroundLayerItemAt(index));
 }
 
+qreal MapEditorTab::backgroundLayerXScale(int index) const
+{
+    return backgroundLayerXScaleValue(backgroundLayerItemAt(index));
+}
+
+qreal MapEditorTab::backgroundLayerYScale(int index) const
+{
+    return backgroundLayerYScaleValue(backgroundLayerItemAt(index));
+}
+
+qreal MapEditorTab::backgroundLayerRotationDeg(int index) const
+{
+    return backgroundLayerRotationDegValue(backgroundLayerItemAt(index));
+}
+
 bool MapEditorTab::backgroundLayerSupportsGamma(int index) const
 {
     const QGraphicsPixmapItem *item = backgroundLayerItemAt(index);
@@ -1392,6 +1539,11 @@ bool MapEditorTab::backgroundLayerSupportsGamma(int index) const
         return false;
     }
     return !isMapEditorXviBackgroundPath(item->data(0).toString());
+}
+
+bool MapEditorTab::backgroundLayerSupportsTransformEditing(int index) const
+{
+    return backgroundLayerItemAt(index) != nullptr;
 }
 
 bool MapEditorTab::backgroundLayerSupportsPositionEditing(int index) const
@@ -1540,7 +1692,6 @@ void MapEditorTab::browseAndAddBackgroundImages()
                                                                           false);
                 if (afterText != beforeText) {
                     bool metadataApplied = false;
-                    const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
                     applySourceTextChangeWithSnapshot(tr("Import PocketTopo Background"),
                                                       beforeText,
                                                       afterText,
@@ -1698,7 +1849,62 @@ void MapEditorTab::setSelectedBackgroundLayerPosition(const QPointF &position)
     }
 
     item->setPos(position);
-    syncBackgroundLayerXtherionMetadata(item, tr("Move Background Image"));
+    if (itemUsesMapiahBackgroundMetadata(item)) {
+        syncBackgroundLayerMapiahMetadata(item, tr("Move Background Image"));
+    } else {
+        syncBackgroundLayerXtherionMetadata(item, tr("Move Background Image"));
+    }
+    saveBackgroundLayersToSession();
+    refreshBackgroundLayerPropertyControls();
+}
+
+void MapEditorTab::setSelectedBackgroundLayerXScale(qreal scale)
+{
+    QGraphicsPixmapItem *item = selectedBackgroundLayerItem();
+    if (item == nullptr) {
+        return;
+    }
+
+    item->setData(kMapEditorBackgroundXScaleRole, qBound(0.01, scale, 100.0));
+    item->setData(kMapEditorBackgroundMetadataFormatRole,
+                  static_cast<int>(TherionBackgroundMetadataFormat::Mapiah));
+    applyBackgroundLayerTransform(item);
+    syncBackgroundLayerMapiahMetadata(item, tr("Scale Background Image"), true);
+    saveBackgroundLayersToSession();
+    refreshBackgroundLayerPropertyControls();
+}
+
+void MapEditorTab::setSelectedBackgroundLayerYScale(qreal scale)
+{
+    QGraphicsPixmapItem *item = selectedBackgroundLayerItem();
+    if (item == nullptr) {
+        return;
+    }
+
+    item->setData(kMapEditorBackgroundYScaleRole, qBound(0.01, scale, 100.0));
+    item->setData(kMapEditorBackgroundMetadataFormatRole,
+                  static_cast<int>(TherionBackgroundMetadataFormat::Mapiah));
+    applyBackgroundLayerTransform(item);
+    syncBackgroundLayerMapiahMetadata(item, tr("Scale Background Image"), true);
+    saveBackgroundLayersToSession();
+    refreshBackgroundLayerPropertyControls();
+}
+
+void MapEditorTab::setSelectedBackgroundLayerRotationDeg(qreal rotationDeg)
+{
+    QGraphicsPixmapItem *item = selectedBackgroundLayerItem();
+    if (item == nullptr) {
+        return;
+    }
+
+    item->setData(kMapEditorBackgroundRotationDegRole, qBound(-360.0, rotationDeg, 360.0));
+    item->setData(kMapEditorBackgroundMetadataFormatRole,
+                  static_cast<int>(TherionBackgroundMetadataFormat::Mapiah));
+    if (!item->data(kMapEditorBackgroundPivotSetRole).isValid()) {
+        item->setData(kMapEditorBackgroundPivotSetRole, isMapEditorXviBackgroundPath(item->data(0).toString()));
+    }
+    applyBackgroundLayerTransform(item);
+    syncBackgroundLayerMapiahMetadata(item, tr("Rotate Background Image"), true);
     saveBackgroundLayersToSession();
     refreshBackgroundLayerPropertyControls();
 }
@@ -1711,7 +1917,11 @@ void MapEditorTab::nudgeSelectedBackgroundLayer(const QPointF &delta)
     }
 
     item->setPos(item->pos() + delta);
-    syncBackgroundLayerXtherionMetadata(item, tr("Move Background Image"));
+    if (itemUsesMapiahBackgroundMetadata(item)) {
+        syncBackgroundLayerMapiahMetadata(item, tr("Move Background Image"));
+    } else {
+        syncBackgroundLayerXtherionMetadata(item, tr("Move Background Image"));
+    }
     saveBackgroundLayersToSession();
     refreshBackgroundLayerPropertyControls();
 }
@@ -1814,14 +2024,356 @@ qreal MapEditorTab::backgroundLayerGammaValue(const QGraphicsPixmapItem *item) c
     return qBound(0.2, ok ? parsedGamma : 1.0, 2.5);
 }
 
+qreal MapEditorTab::backgroundLayerXScaleValue(const QGraphicsPixmapItem *item) const
+{
+    return backgroundItemXScaleValue(item);
+}
+
+qreal MapEditorTab::backgroundLayerYScaleValue(const QGraphicsPixmapItem *item) const
+{
+    return backgroundItemYScaleValue(item);
+}
+
+qreal MapEditorTab::backgroundLayerRotationDegValue(const QGraphicsPixmapItem *item) const
+{
+    return backgroundItemRotationDegValue(item);
+}
+
+QPointF MapEditorTab::backgroundLayerBaseModelPosition(QGraphicsPixmapItem *item) const
+{
+    if (item == nullptr) {
+        return QPointF();
+    }
+
+    const QString layerPath = item->data(0).toString();
+    if (textEditor_ != nullptr && !layerPath.isEmpty()) {
+        const QString layerPathKey = normalizedPathKey(layerPath);
+        for (const XtherionBackgroundReference &reference : parseXtherionBackgroundReferences(textEditor_->text(), filePath())) {
+            if (!layerPathKey.isEmpty()
+                && normalizedPathKey(reference.absolutePath) == layerPathKey
+                && reference.hasBasePosition) {
+                return reference.basePosition;
+            }
+        }
+    }
+
+    if (isMapEditorXviBackgroundPath(layerPath)) {
+        const QVariant baseValue = item->data(kBackgroundLayerXviBasePositionRole);
+        return baseValue.canConvert<QPointF>() ? baseValue.toPointF() : QPointF();
+    }
+
+    QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
+    if (!sourceBounds.isValid()) {
+        sourceBounds = xtherionAutoAreaAdjustRect();
+    }
+    const QRectF previewBounds = mapPreviewBounds();
+    if (!sourceBounds.isValid() || !previewBounds.isValid()) {
+        return QPointF();
+    }
+
+    const QSizeF modelSize = mapEditorRasterModelSize(layerPath, 1.0);
+    if (!modelSize.isValid() || modelSize.width() <= 0.0 || modelSize.height() <= 0.0) {
+        return QPointF();
+    }
+
+    const QPointF modelTopLeft = mapEditorPreviewToModelPoint(item->pos(), sourceBounds, previewBounds);
+    return QPointF(modelTopLeft.x(), modelTopLeft.y() + (modelSize.height() * backgroundLayerYScaleValue(item)));
+}
+
+QPointF MapEditorTab::backgroundLayerPivotScenePosition(QGraphicsPixmapItem *item) const
+{
+    if (item == nullptr) {
+        return QPointF();
+    }
+
+    QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
+    if (!sourceBounds.isValid()) {
+        sourceBounds = xtherionAutoAreaAdjustRect();
+    }
+    const QRectF previewBounds = mapPreviewBounds();
+    if (!sourceBounds.isValid() || !previewBounds.isValid()) {
+        return item->sceneBoundingRect().center();
+    }
+
+    const bool pivotSet = item->data(kMapEditorBackgroundPivotSetRole).isValid()
+        ? item->data(kMapEditorBackgroundPivotSetRole).toBool()
+        : isMapEditorXviBackgroundPath(item->data(0).toString());
+    if (!pivotSet) {
+        return item->sceneBoundingRect().center();
+    }
+
+    const QPointF basePosition = backgroundLayerBaseModelPosition(item);
+    const QPointF pivotModel(basePosition.x() + item->data(kMapEditorBackgroundRotationCenterDxRole).toDouble(),
+                             basePosition.y() + item->data(kMapEditorBackgroundRotationCenterDyRole).toDouble());
+    return mapEditorModelToPreviewPoint(pivotModel, sourceBounds, previewBounds);
+}
+
+void MapEditorTab::ensureBackgroundPivotMarker()
+{
+    if (backgroundPivotMarker_ != nullptr || mapScene_ == nullptr) {
+        return;
+    }
+
+    QPainterPath path;
+    path.moveTo(-8.0, 0.0);
+    path.lineTo(8.0, 0.0);
+    path.moveTo(0.0, -8.0);
+    path.lineTo(0.0, 8.0);
+    path.addEllipse(QPointF(0.0, 0.0), 4.0, 4.0);
+
+    backgroundPivotMarker_ = mapScene_->addPath(path, QPen(QColor(20, 120, 255), 2.0));
+    backgroundPivotMarker_->setBrush(Qt::NoBrush);
+    backgroundPivotMarker_->setZValue(100000.0);
+    backgroundPivotMarker_->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+    backgroundPivotMarker_->setAcceptedMouseButtons(Qt::NoButton);
+    backgroundPivotMarker_->setVisible(false);
+}
+
+void MapEditorTab::showBackgroundPivotMarkerAtScenePosition(const QPointF &scenePosition)
+{
+    ensureBackgroundPivotMarker();
+    if (backgroundPivotMarker_ == nullptr) {
+        return;
+    }
+
+    backgroundPivotMarker_->setPos(scenePosition);
+    backgroundPivotMarker_->setVisible(true);
+}
+
+void MapEditorTab::hideBackgroundPivotMarker()
+{
+    if (backgroundPivotMarker_ != nullptr) {
+        backgroundPivotMarker_->setVisible(false);
+    }
+}
+
+void MapEditorTab::refreshBackgroundPivotMarkerVisibility()
+{
+    if (backgroundPivotPickActive_) {
+        return;
+    }
+
+    if (mapInspectorTabs_ == nullptr
+        || mapInspectorBackgroundTabIndex_ < 0
+        || mapInspectorTabs_->currentIndex() != mapInspectorBackgroundTabIndex_) {
+        hideBackgroundPivotMarker();
+        return;
+    }
+
+    QGraphicsPixmapItem *item = selectedBackgroundLayerItem();
+    if (item == nullptr) {
+        hideBackgroundPivotMarker();
+        return;
+    }
+
+    showBackgroundPivotMarkerAtScenePosition(backgroundLayerPivotScenePosition(item));
+}
+
+void MapEditorTab::beginSetSelectedBackgroundLayerPivot()
+{
+    QGraphicsPixmapItem *item = selectedBackgroundLayerItem();
+    if (item == nullptr || !backgroundLayerSupportsTransformEditing(selectedBackgroundLayerIndex_)) {
+        toolbarStatusNote_ = tr("Select a background layer before setting its pivot.");
+        refreshToolbarSummary();
+        return;
+    }
+
+    backgroundPivotPickActive_ = true;
+    showBackgroundPivotMarkerAtScenePosition(backgroundLayerPivotScenePosition(item));
+    toolbarStatusNote_ = tr("Set pivot: click in the map to choose the rotation center. Esc cancels.");
+    refreshToolbarSummary();
+    if (mapView_ != nullptr && mapView_->viewport() != nullptr) {
+        mapView_->setFocus(Qt::OtherFocusReason);
+        mapView_->viewport()->setCursor(Qt::CrossCursor);
+    }
+}
+
+void MapEditorTab::cancelBackgroundPivotPickMode()
+{
+    if (!backgroundPivotPickActive_) {
+        return;
+    }
+
+    backgroundPivotPickActive_ = false;
+    hideBackgroundPivotMarker();
+    if (mapView_ != nullptr && mapView_->viewport() != nullptr) {
+        mapView_->viewport()->unsetCursor();
+    }
+    toolbarStatusNote_ = tr("Set pivot canceled.");
+    refreshToolbarSummary();
+}
+
+void MapEditorTab::setSelectedBackgroundLayerPivotAtScenePosition(const QPointF &scenePosition)
+{
+    QGraphicsPixmapItem *item = selectedBackgroundLayerItem();
+    if (item == nullptr) {
+        cancelBackgroundPivotPickMode();
+        return;
+    }
+
+    QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
+    if (!sourceBounds.isValid()) {
+        sourceBounds = xtherionAutoAreaAdjustRect();
+    }
+    const QRectF previewBounds = mapPreviewBounds();
+    if (!sourceBounds.isValid() || !previewBounds.isValid()) {
+        toolbarStatusNote_ = tr("Set pivot failed: map bounds are not available.");
+        refreshToolbarSummary();
+        return;
+    }
+
+    const QPointF pivotModel = mapEditorPreviewToModelPoint(scenePosition, sourceBounds, previewBounds);
+    const QPointF basePosition = backgroundLayerBaseModelPosition(item);
+    item->setData(kMapEditorBackgroundRotationCenterDxRole, pivotModel.x() - basePosition.x());
+    item->setData(kMapEditorBackgroundRotationCenterDyRole, pivotModel.y() - basePosition.y());
+    item->setData(kMapEditorBackgroundPivotSetRole, true);
+    item->setData(kMapEditorBackgroundMetadataFormatRole,
+                  static_cast<int>(TherionBackgroundMetadataFormat::Mapiah));
+
+    backgroundPivotPickActive_ = false;
+    if (mapView_ != nullptr && mapView_->viewport() != nullptr) {
+        mapView_->viewport()->unsetCursor();
+    }
+    showBackgroundPivotMarkerAtScenePosition(scenePosition);
+    applyBackgroundLayerTransform(item);
+    syncBackgroundLayerMapiahMetadata(item, tr("Set Background Pivot"), true);
+    saveBackgroundLayersToSession();
+    refreshBackgroundLayerPropertyControls();
+    toolbarStatusNote_ = tr("Background pivot set.");
+    refreshToolbarSummary();
+}
+
+void MapEditorTab::resetSelectedBackgroundLayerPivot()
+{
+    QGraphicsPixmapItem *item = selectedBackgroundLayerItem();
+    if (item == nullptr) {
+        return;
+    }
+
+    item->setData(kMapEditorBackgroundRotationCenterDxRole, 0.0);
+    item->setData(kMapEditorBackgroundRotationCenterDyRole, 0.0);
+    item->setData(kMapEditorBackgroundPivotSetRole, isMapEditorXviBackgroundPath(item->data(0).toString()));
+    item->setData(kMapEditorBackgroundMetadataFormatRole,
+                  static_cast<int>(TherionBackgroundMetadataFormat::Mapiah));
+    backgroundPivotPickActive_ = false;
+    hideBackgroundPivotMarker();
+    if (mapView_ != nullptr && mapView_->viewport() != nullptr) {
+        mapView_->viewport()->unsetCursor();
+    }
+    applyBackgroundLayerTransform(item);
+    syncBackgroundLayerMapiahMetadata(item, tr("Reset Background Pivot"), true);
+    saveBackgroundLayersToSession();
+    refreshBackgroundLayerPropertyControls();
+    toolbarStatusNote_ = tr("Background pivot reset.");
+    refreshToolbarSummary();
+}
+
+bool MapEditorTab::handleBackgroundPivotPickViewportEvent(QEvent *event)
+{
+    if (!backgroundPivotPickActive_ || event == nullptr || mapView_ == nullptr) {
+        return false;
+    }
+
+    switch (event->type()) {
+    case QEvent::KeyPress: {
+        auto *keyEvent = static_cast<QKeyEvent *>(event);
+        if (keyEvent->key() == Qt::Key_Escape) {
+            cancelBackgroundPivotPickMode();
+            event->accept();
+            return true;
+        }
+        break;
+    }
+    case QEvent::MouseMove: {
+        auto *mouseEvent = static_cast<QMouseEvent *>(event);
+        showBackgroundPivotMarkerAtScenePosition(mapView_->mapToScene(mouseEvent->pos()));
+        break;
+    }
+    case QEvent::MouseButtonPress: {
+        auto *mouseEvent = static_cast<QMouseEvent *>(event);
+        if (mouseEvent->button() == Qt::LeftButton) {
+            setSelectedBackgroundLayerPivotAtScenePosition(mapView_->mapToScene(mouseEvent->pos()));
+            event->accept();
+            return true;
+        }
+        if (mouseEvent->button() == Qt::RightButton) {
+            cancelBackgroundPivotPickMode();
+            event->accept();
+            return true;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    return false;
+}
+
+void MapEditorTab::applyBackgroundLayerTransform(QGraphicsPixmapItem *item)
+{
+    if (item == nullptr) {
+        return;
+    }
+
+    const QString layerPath = item->data(0).toString();
+    if (isMapEditorXviBackgroundPath(layerPath)) {
+        const XtherionAreaAdjust areaAdjust = textEditor_ != nullptr
+            ? parseXtherionAreaAdjust(textEditor_->text())
+            : XtherionAreaAdjust{};
+        const QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
+        const QRectF xviModelBounds = areaAdjust.valid && areaAdjust.modelRect.isValid()
+            ? areaAdjust.modelRect
+            : sourceBounds;
+        applyXviBackgroundItemTransform(item, xviModelBounds, mapPreviewBounds());
+        return;
+    }
+
+    const bool pivotSet = item->data(kMapEditorBackgroundPivotSetRole).toBool();
+    if (pivotSet) {
+        QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
+        if (!sourceBounds.isValid()) {
+            sourceBounds = xtherionAutoAreaAdjustRect();
+        }
+        const QRectF previewBounds = mapPreviewBounds();
+        const QRectF viewRect = item->data(kMapEditorRasterPreviewRectRole).toRectF();
+        const QSize pixmapSize = item->pixmap().size();
+        if (sourceBounds.isValid() && previewBounds.isValid() && viewRect.isValid() && !pixmapSize.isEmpty()) {
+            const QPointF basePosition = backgroundLayerBaseModelPosition(item);
+            const QPointF pivotModel(basePosition.x() + item->data(kMapEditorBackgroundRotationCenterDxRole).toDouble(),
+                                     basePosition.y() + item->data(kMapEditorBackgroundRotationCenterDyRole).toDouble());
+            const QPointF pivotPreview = mapEditorModelToPreviewPoint(pivotModel, sourceBounds, previewBounds);
+            const QPointF pivotLocal = pivotPreview - item->pos();
+            const qreal scaleX = viewRect.width() / static_cast<qreal>(pixmapSize.width());
+            const qreal scaleY = viewRect.height() / static_cast<qreal>(pixmapSize.height());
+
+            QTransform transform;
+            transform.translate(pivotLocal.x(), pivotLocal.y());
+            transform.rotate(backgroundLayerRotationDegValue(item));
+            transform.translate(-pivotLocal.x(), -pivotLocal.y());
+            transform.scale(scaleX * backgroundLayerXScaleValue(item), scaleY * backgroundLayerYScaleValue(item));
+            item->setTransformationMode(Qt::SmoothTransformation);
+            item->setTransformOriginPoint(0.0, 0.0);
+            item->setScale(1.0);
+            item->setRotation(0.0);
+            item->setTransform(transform, false);
+            return;
+        }
+    }
+
+    applyMapEditorRasterLayerTransform(item);
+}
+
 void MapEditorTab::setSelectedBackgroundLayerIndexInternal(int index)
 {
     if (backgroundImageItems_.isEmpty()) {
         selectedBackgroundLayerIndex_ = -1;
+        refreshBackgroundPivotMarkerVisibility();
         return;
     }
 
     selectedBackgroundLayerIndex_ = qBound(0, index, backgroundImageItems_.size() - 1);
+    refreshBackgroundPivotMarkerVisibility();
 }
 
 QString MapEditorTab::canonicalDocumentSessionKey() const
@@ -1882,6 +2434,9 @@ void MapEditorTab::saveBackgroundLayersToSession() const
         }
         layerObject.insert(QStringLiteral("opacity"), item->opacity());
         layerObject.insert(QStringLiteral("gamma"), backgroundLayerGammaValue(item));
+        layerObject.insert(QStringLiteral("x_scale"), backgroundLayerXScaleValue(item));
+        layerObject.insert(QStringLiteral("y_scale"), backgroundLayerYScaleValue(item));
+        layerObject.insert(QStringLiteral("rotation_deg"), backgroundLayerRotationDegValue(item));
         layerObject.insert(QStringLiteral("x"), item->pos().x());
         layerObject.insert(QStringLiteral("y"), item->pos().y());
         layersArray.append(layerObject);
@@ -1927,6 +2482,9 @@ void MapEditorTab::loadBackgroundLayersFromSession()
     QHash<QString, XtherionBackgroundReference> metadataByPath;
     QHash<QString, QVector<XtherionBackgroundReference>> metadataByFileName;
     for (const XtherionBackgroundReference &reference : metadataReferences) {
+        if (!isSupportedBackgroundReference(reference)) {
+            continue;
+        }
         const QString pathKey = normalizedPathKey(reference.absolutePath);
         if (!pathKey.isEmpty()) {
             metadataByPath.insert(pathKey, reference);
@@ -1974,6 +2532,12 @@ void MapEditorTab::loadBackgroundLayersFromSession()
                                                      previewBounds)) {
                 continue;
             }
+            if (hasMetadata) {
+                applyMapiahTransformToXviBackgroundItem(backgroundImageItems_.last(),
+                                                        *metadataReference,
+                                                        xviModelBounds,
+                                                        previewBounds);
+            }
         } else {
             if (addBackgroundImagePlaceholder(layerPath) == nullptr) {
                 continue;
@@ -2015,6 +2579,13 @@ void MapEditorTab::loadBackgroundLayersFromSession()
             const qreal layerX = layerObject.value(QStringLiteral("x")).toDouble(item->pos().x());
             const qreal layerY = layerObject.value(QStringLiteral("y")).toDouble(item->pos().y());
             item->setPos(layerX, layerY);
+            item->setData(kMapEditorBackgroundXScaleRole,
+                          qBound(0.01, layerObject.value(QStringLiteral("x_scale")).toDouble(1.0), 100.0));
+            item->setData(kMapEditorBackgroundYScaleRole,
+                          qBound(0.01, layerObject.value(QStringLiteral("y_scale")).toDouble(1.0), 100.0));
+            item->setData(kMapEditorBackgroundRotationDegRole,
+                          qBound(-360.0, layerObject.value(QStringLiteral("rotation_deg")).toDouble(0.0), 360.0));
+            applyBackgroundLayerTransform(item);
         }
         if (isMapEditorXviBackgroundPath(layerPath)) {
             item->setData(2, 1.0);
@@ -2056,6 +2627,9 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
     QHash<QString, XtherionBackgroundReference> metadataByPath;
     QHash<QString, QVector<XtherionBackgroundReference>> metadataByFileName;
     for (const XtherionBackgroundReference &reference : references) {
+        if (!isSupportedBackgroundReference(reference)) {
+            continue;
+        }
         const QString pathKey = normalizedPathKey(reference.absolutePath);
         if (!pathKey.isEmpty()) {
             metadataByPath.insert(pathKey, reference);
@@ -2108,6 +2682,9 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
 
     int addedCount = 0;
     for (const XtherionBackgroundReference &reference : references) {
+        if (!isSupportedBackgroundReference(reference)) {
+            continue;
+        }
         const QString referencePath = QFileInfo(reference.absolutePath).absoluteFilePath();
         const QString referencePathKey = normalizedPathKey(referencePath);
         if (referencePath.isEmpty() || !QFileInfo::exists(referencePath) || existingLayerPaths.contains(referencePathKey)) {
@@ -2135,6 +2712,7 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
                 continue;
             }
             QGraphicsPixmapItem *backgroundItem = backgroundImageItems_.last();
+            applyMapiahTransformToXviBackgroundItem(backgroundItem, reference, xviModelBounds, previewBounds);
             backgroundItem->setData(4, true);
             if (reference.hasVisibility) {
                 setBackgroundLayerVisibleFromMetadata(backgroundItem, reference.visible);
@@ -2206,6 +2784,9 @@ void MapEditorTab::reprojectMetadataBackgroundLayersForCurrentDocument()
     QHash<QString, XtherionBackgroundReference> metadataByPath;
     QHash<QString, QVector<XtherionBackgroundReference>> metadataByFileName;
     for (const XtherionBackgroundReference &reference : references) {
+        if (!isSupportedBackgroundReference(reference)) {
+            continue;
+        }
         const QString pathKey = normalizedPathKey(reference.absolutePath);
         if (!pathKey.isEmpty()) {
             metadataByPath.insert(pathKey, reference);
@@ -2249,6 +2830,10 @@ void MapEditorTab::reprojectMetadataBackgroundLayersForCurrentDocument()
                                                     previewBounds)) {
                 continue;
             }
+            applyMapiahTransformToXviBackgroundItem(existingLayer,
+                                                    *metadataReference,
+                                                    xviModelBounds,
+                                                    previewBounds);
             existingLayer->setData(4, true);
             if (metadataReference->hasVisibility) {
                 setBackgroundLayerVisibleFromMetadata(existingLayer, metadataReference->visible);
@@ -2340,6 +2925,9 @@ void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item
     if (item == nullptr || textEditor_ == nullptr) {
         return;
     }
+    if (itemUsesMapiahBackgroundMetadata(item)) {
+        return;
+    }
 
     const QString layerPath = QFileInfo(item->data(0).toString()).absoluteFilePath();
     if (layerPath.isEmpty() || layerPath.endsWith(QStringLiteral(".xvi"), Qt::CaseInsensitive)) {
@@ -2411,13 +2999,15 @@ void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item
     }
 
     bool metadataApplied = false;
-    const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
     applySourceTextChangeWithSnapshot(label,
                                       beforeText,
                                       afterText,
                                       0,
                                       [this, &metadataApplied]() {
                                           metadataApplied = true;
+                                          preferredUndoOwner_ = MapEditorUndoOwner::MapCommand;
+                                          preferredRedoOwner_ = MapEditorUndoOwner::None;
+                                          updateCommandSurfaceState();
                                           if (!toolbarStatusNote_.isEmpty()) {
                                               refreshToolbarSummary();
                                           }
@@ -2428,9 +3018,126 @@ void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item
     }
 }
 
+void MapEditorTab::syncBackgroundLayerMapiahMetadata(QGraphicsPixmapItem *item,
+                                                     const QString &label,
+                                                     bool preserveExistingPlacement)
+{
+    if (item == nullptr || textEditor_ == nullptr) {
+        return;
+    }
+
+    const QString layerPath = QFileInfo(item->data(0).toString()).absoluteFilePath();
+    if (layerPath.isEmpty()) {
+        return;
+    }
+
+    const bool xviLayer = isMapEditorXviBackgroundPath(layerPath);
+    const TherionBackgroundLayerFormat layerFormat = xviLayer
+        ? TherionBackgroundLayerFormat::Xvi
+        : TherionBackgroundLayerFormat::Raster;
+
+    const QString beforeText = textEditor_->text();
+    std::optional<XtherionBackgroundReference> existingReference;
+    if (preserveExistingPlacement) {
+        for (const XtherionBackgroundReference &reference : parseXtherionBackgroundReferences(beforeText, filePath())) {
+            if (QFileInfo(reference.absolutePath).absoluteFilePath() == layerPath && reference.hasBasePosition) {
+                existingReference = reference;
+                break;
+            }
+        }
+    }
+
+    QPointF basePosition;
+    if (xviLayer) {
+        const QVariant baseValue = item->data(kBackgroundLayerXviBasePositionRole);
+        basePosition = existingReference.has_value()
+            ? existingReference->basePosition
+            : (baseValue.canConvert<QPointF>() ? baseValue.toPointF() : QPointF());
+    } else {
+        QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
+        const QRectF previewBounds = mapPreviewBounds();
+        if (!sourceBounds.isValid()) {
+            sourceBounds = xtherionAutoAreaAdjustRect();
+        }
+        if (!sourceBounds.isValid() || !previewBounds.isValid()) {
+            return;
+        }
+
+        const QSizeF modelSize = mapEditorRasterModelSize(layerPath, 1.0);
+        if (!modelSize.isValid() || modelSize.width() <= 0.0 || modelSize.height() <= 0.0) {
+            return;
+        }
+
+        if (existingReference.has_value()) {
+            basePosition = existingReference->basePosition;
+        } else {
+            const QPointF modelTopLeft = mapEditorPreviewToModelPoint(item->pos(), sourceBounds, previewBounds);
+            basePosition = QPointF(modelTopLeft.x(),
+                                   modelTopLeft.y() + (modelSize.height() * backgroundLayerYScaleValue(item)));
+        }
+    }
+
+    const bool defaultPivotSet = xviLayer;
+    const bool pivotSet = item->data(kMapEditorBackgroundPivotSetRole).isValid()
+        ? item->data(kMapEditorBackgroundPivotSetRole).toBool()
+        : defaultPivotSet;
+    const QString metadataLine = mapiahImageInsertLine(layerPath,
+                                                       filePath(),
+                                                       layerFormat,
+                                                       basePosition,
+                                                       backgroundLayerXScaleValue(item),
+                                                       backgroundLayerYScaleValue(item),
+                                                       item->data(kMapEditorBackgroundRotationCenterDxRole).toDouble(),
+                                                       item->data(kMapEditorBackgroundRotationCenterDyRole).toDouble(),
+                                                       backgroundLayerRotationDegValue(item),
+                                                       pivotSet,
+                                                       item->data(kBackgroundLayerXviRootStationRole).toString());
+
+    QString afterMetadataText = beforeText;
+    const TherionAreaAdjust existingAreaAdjust = parseTherionAreaAdjust(beforeText);
+    if (!existingAreaAdjust.valid || !existingAreaAdjust.modelRect.isValid()) {
+        afterMetadataText = upsertXtherionSimpleCommandLine(afterMetadataText,
+                                                            QStringLiteral("xth_me_area_adjust"),
+                                                            therionAreaAdjustMetadataLine(xtherionAutoAreaAdjustRect()));
+        afterMetadataText = upsertXtherionSimpleCommandLine(afterMetadataText,
+                                                            QStringLiteral("xth_me_area_zoom_to"),
+                                                            therionAreaZoomToMetadataLine());
+    }
+    const QString afterText = upsertXtherionImageMetadataLine(afterMetadataText,
+                                                             filePath(),
+                                                             layerPath,
+                                                             metadataLine,
+                                                             false);
+    if (afterText == beforeText) {
+        return;
+    }
+
+    bool metadataApplied = false;
+    applySourceTextChangeWithSnapshot(label,
+                                      beforeText,
+                                      afterText,
+                                      0,
+                                      [this, &metadataApplied]() {
+                                          metadataApplied = true;
+                                          preferredUndoOwner_ = MapEditorUndoOwner::MapCommand;
+                                          preferredRedoOwner_ = MapEditorUndoOwner::None;
+                                          updateCommandSurfaceState();
+                                          if (!toolbarStatusNote_.isEmpty()) {
+                                              refreshToolbarSummary();
+                                          }
+                                      });
+    if (!metadataApplied) {
+        toolbarStatusNote_ = tr("Background transform metadata sync skipped: document changed.");
+        refreshToolbarSummary();
+    }
+}
+
 bool MapEditorTab::syncBackgroundLayerXtherionGammaMetadata(QGraphicsPixmapItem *item, const QString &label)
 {
     if (item == nullptr || textEditor_ == nullptr) {
+        return false;
+    }
+    if (itemUsesMapiahBackgroundMetadata(item)) {
         return false;
     }
 
@@ -2451,13 +3158,15 @@ bool MapEditorTab::syncBackgroundLayerXtherionGammaMetadata(QGraphicsPixmapItem 
     }
 
     bool metadataApplied = false;
-    const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
     applySourceTextChangeWithSnapshot(label,
                                       beforeText,
                                       afterText,
                                       0,
                                       [this, &metadataApplied]() {
                                           metadataApplied = true;
+                                          preferredUndoOwner_ = MapEditorUndoOwner::MapCommand;
+                                          preferredRedoOwner_ = MapEditorUndoOwner::None;
+                                          updateCommandSurfaceState();
                                           if (!toolbarStatusNote_.isEmpty()) {
                                               refreshToolbarSummary();
                                           }
@@ -2493,13 +3202,15 @@ void MapEditorTab::removeBackgroundLayerXtherionMetadata(const QString &layerPat
     }
 
     bool metadataApplied = false;
-    const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
     applySourceTextChangeWithSnapshot(label,
                                       beforeText,
                                       afterText,
                                       0,
                                       [this, &metadataApplied]() {
                                           metadataApplied = true;
+                                          preferredUndoOwner_ = MapEditorUndoOwner::MapCommand;
+                                          preferredRedoOwner_ = MapEditorUndoOwner::None;
+                                          updateCommandSurfaceState();
                                           if (!toolbarStatusNote_.isEmpty()) {
                                               refreshToolbarSummary();
                                           }
@@ -2762,7 +3473,7 @@ void MapEditorTab::applyBackgroundLayerGamma(QGraphicsPixmapItem *item, qreal ga
         }
 
         item->setPixmap(QPixmap::fromImage(adjustedImage));
-        applyMapEditorRasterLayerTransform(item);
+        applyBackgroundLayerTransform(item);
     });
     watcher->setFuture(QtConcurrent::run(gammaCorrectMapEditorRasterSourceImage,
                                          layerPath,

@@ -233,6 +233,7 @@ void MapEditorTab::buildUi()
     mapView_->setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
     mapView_->setCacheMode(QGraphicsView::CacheBackground);
     mapView_->setRenderHint(QPainter::Antialiasing, true);
+    mapView_->setRenderHint(QPainter::SmoothPixmapTransform, true);
     mapView_->setBackgroundBrush(mapEditorCanvasViewportBackgroundColor());
     mapView_->setFocusPolicy(Qt::StrongFocus);
     mapView_->installEventFilter(this);

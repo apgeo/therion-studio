@@ -60,6 +60,8 @@ Consumers should use shared source snapshots and logical command metadata where 
 
 Do not solve projection drift by copying parser logic into UI renderers, inspectors, sidebars, scene items, or completion code. Extend core parsing/token/range/catalog metadata instead.
 
+Map raster background layers hold a full-resolution (display-capped) pixmap and are sized into the preview canvas through an item-level transform, not by baking the source down to preview pixels. This keeps backgrounds sharp under view zoom and separates pixmap updates (source load, Gamma) from placement (position/scale), so repositioning and refit do not re-rasterize. `.xvi`/vector reference layers remain vector-painted projections and are unaffected.
+
 Therion namespace and reference semantics are compatibility-critical. In particular, qualified survey references use Therion's innermost-to-outermost order (`child.parent`), not filesystem-style `parent.child`; project-index and validation code should follow `docs/THERION_COMPATIBILITY.md` before adding or changing namespace logic.
 
 ## UI Surface Ownership

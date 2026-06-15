@@ -18,6 +18,24 @@ namespace
 {
 constexpr qsizetype kRasterSourceImageCacheLimit = 8;
 constexpr qsizetype kAdjustedRasterImageCacheLimit = 12;
+// Upper bound on the longest edge of a raster layer's display pixmap. Keeps the
+// image far crisper than the previous preview-resolution rasterization while
+// bounding texture memory for very large scans.
+constexpr int kMaxRasterDisplayEdge = 6000;
+
+QImage cappedRasterDisplayImage(const QImage &image)
+{
+    if (image.isNull()) {
+        return image;
+    }
+    const int longestEdge = qMax(image.width(), image.height());
+    if (longestEdge <= kMaxRasterDisplayEdge) {
+        return image;
+    }
+    return image.scaled(QSize(kMaxRasterDisplayEdge, kMaxRasterDisplayEdge),
+                        Qt::KeepAspectRatio,
+                        Qt::SmoothTransformation);
+}
 
 struct CachedRasterSourceImageEntry
 {
@@ -114,19 +132,16 @@ void touchRasterSourceImageCacheKey(const QString &cacheKey)
     }
 }
 
-QString adjustedRasterImageCacheKey(const QString &layerPath, const QSize &targetSize, qreal gamma)
+QString adjustedRasterImageCacheKey(const QString &layerPath, qreal gamma)
 {
     const QString sourceKey = rasterSourceImageCacheKey(layerPath);
-    if (sourceKey.isEmpty() || targetSize.width() <= 1 || targetSize.height() <= 1) {
+    if (sourceKey.isEmpty()) {
         return QString();
     }
 
     const qreal boundedGamma = qBound(0.2, gamma, 2.5);
-    return QStringLiteral("raster-adjusted-v1|%1|%2x%3|%4")
-        .arg(sourceKey,
-             QString::number(targetSize.width()),
-             QString::number(targetSize.height()),
-             QString::number(qRound(boundedGamma * 1000.0)));
+    return QStringLiteral("raster-adjusted-v2|%1|%2")
+        .arg(sourceKey, QString::number(qRound(boundedGamma * 1000.0)));
 }
 
 void touchAdjustedRasterImageCacheKey(const QString &cacheKey)
@@ -256,22 +271,32 @@ QSizeF mapEditorRasterModelSize(const QString &layerPath, qreal imageScale)
     return QSizeF(imageSize.width(), imageSize.height());
 }
 
-QImage gammaCorrectAndScaleMapEditorRasterSourceImage(const QString &layerPath,
-                                                      QImage sourceImage,
-                                                      const QSize &targetSize,
-                                                      qreal gamma)
+QImage mapEditorRasterDisplayImage(const QImage &sourceImage)
+{
+    return cappedRasterDisplayImage(sourceImage);
+}
+
+QImage gammaCorrectMapEditorRasterSourceImage(const QString &layerPath,
+                                              QImage sourceImage,
+                                              qreal gamma)
 {
     if (sourceImage.isNull()) {
         return QImage();
     }
 
-    const QString adjustedCacheKey = adjustedRasterImageCacheKey(layerPath, targetSize, gamma);
+    const QString adjustedCacheKey = adjustedRasterImageCacheKey(layerPath, gamma);
     if (const std::optional<QImage> cachedImage = cachedAdjustedRasterImage(adjustedCacheKey); cachedImage.has_value()) {
         return cachedImage.value();
     }
 
-    sourceImage = sourceImage.convertToFormat(QImage::Format_RGBA8888);
     const qreal boundedGamma = qBound(0.2, gamma, 2.5);
+    if (qFuzzyCompare(boundedGamma, 1.0)) {
+        const QImage displayImage = cappedRasterDisplayImage(sourceImage);
+        rememberAdjustedRasterImage(adjustedCacheKey, displayImage);
+        return displayImage;
+    }
+
+    QImage displayImage = cappedRasterDisplayImage(sourceImage).convertToFormat(QImage::Format_RGBA8888);
     unsigned char lookupTable[256];
     for (int value = 0; value < 256; ++value) {
         const qreal normalized = static_cast<qreal>(value) / 255.0;
@@ -279,9 +304,9 @@ QImage gammaCorrectAndScaleMapEditorRasterSourceImage(const QString &layerPath,
         lookupTable[value] = static_cast<unsigned char>(qBound(0, qRound(corrected * 255.0), 255));
     }
 
-    for (int y = 0; y < sourceImage.height(); ++y) {
-        uchar *scanLine = sourceImage.scanLine(y);
-        for (int x = 0; x < sourceImage.width(); ++x) {
+    for (int y = 0; y < displayImage.height(); ++y) {
+        uchar *scanLine = displayImage.scanLine(y);
+        for (int x = 0; x < displayImage.width(); ++x) {
             uchar *pixel = scanLine + (x * 4);
             pixel[0] = lookupTable[pixel[0]];
             pixel[1] = lookupTable[pixel[1]];
@@ -289,12 +314,8 @@ QImage gammaCorrectAndScaleMapEditorRasterSourceImage(const QString &layerPath,
         }
     }
 
-    if (targetSize.width() > 1 && targetSize.height() > 1) {
-        QImage scaledImage = sourceImage.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-        rememberAdjustedRasterImage(adjustedCacheKey, scaledImage);
-        return scaledImage;
-    }
-    return sourceImage;
+    rememberAdjustedRasterImage(adjustedCacheKey, displayImage);
+    return displayImage;
 }
 
 quint64 nextMapEditorRasterGammaRequestId()

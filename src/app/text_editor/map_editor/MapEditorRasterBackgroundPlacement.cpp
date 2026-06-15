@@ -29,38 +29,6 @@ QRectF previewRectForRasterModelRect(const QRectF &modelRect,
                   QPointF(qMax(viewA.x(), viewB.x()), qMax(viewA.y(), viewB.y())));
 }
 
-bool setRasterLayerPixmapForPreviewRect(QGraphicsPixmapItem *item,
-                                        const QImage &sourceImage,
-                                        const QRectF &viewRect)
-{
-    if (item == nullptr || sourceImage.isNull() || !viewRect.isValid() || viewRect.width() < 1.0 || viewRect.height() < 1.0) {
-        return false;
-    }
-
-    QImage scaled = sourceImage.scaled(qMax(2, qRound(viewRect.width())),
-                                       qMax(2, qRound(viewRect.height())),
-                                       Qt::IgnoreAspectRatio,
-                                       Qt::SmoothTransformation);
-    item->setPixmap(QPixmap::fromImage(scaled));
-    item->setPos(viewRect.topLeft());
-    return true;
-}
-
-bool setRasterLayerPlaceholderForPreviewRect(QGraphicsPixmapItem *item, const QRectF &viewRect)
-{
-    if (item == nullptr || !viewRect.isValid() || viewRect.width() < 1.0 || viewRect.height() < 1.0) {
-        return false;
-    }
-
-    QImage placeholder(qMax(2, qRound(viewRect.width())),
-                       qMax(2, qRound(viewRect.height())),
-                       QImage::Format_ARGB32_Premultiplied);
-    placeholder.fill(Qt::transparent);
-    item->setPixmap(QPixmap::fromImage(placeholder));
-    item->setPos(viewRect.topLeft());
-    return true;
-}
-
 QRectF rasterModelRectFromMetadata(const QString &layerPath,
                                    const TherionBackgroundReference &reference,
                                    const TherionAreaAdjust &areaAdjust)
@@ -153,15 +121,75 @@ QRectF mapEditorRasterModelRectForItem(const QGraphicsPixmapItem *item,
     return QRectF(modelTopLeft, modelSize);
 }
 
+QRectF fitAndCenterRasterSizeInPreview(const QSizeF &sourceSize, const QRectF &previewBounds)
+{
+    QSize fittedSize = sourceSize.toSize();
+    fittedSize.scale(previewBounds.size().toSize(), Qt::KeepAspectRatio);
+    fittedSize.setWidth(qMax(fittedSize.width(), 2));
+    fittedSize.setHeight(qMax(fittedSize.height(), 2));
+    return QRectF(QPointF(previewBounds.center().x() - (fittedSize.width() / 2.0),
+                          previewBounds.center().y() - (fittedSize.height() / 2.0)),
+                  QSizeF(fittedSize));
+}
+
+void applyMapEditorRasterLayerTransform(QGraphicsPixmapItem *item)
+{
+    if (item == nullptr) {
+        return;
+    }
+
+    const QRectF viewRect = item->data(kMapEditorRasterPreviewRectRole).toRectF();
+    const QSize pixmapSize = item->pixmap().size();
+    if (!viewRect.isValid() || pixmapSize.isEmpty()) {
+        return;
+    }
+
+    item->setTransformationMode(Qt::SmoothTransformation);
+    item->setTransformOriginPoint(0.0, 0.0);
+    item->setScale(viewRect.width() / static_cast<qreal>(pixmapSize.width()));
+}
+
+bool placeMapEditorRasterLayerInPreviewRect(QGraphicsPixmapItem *item,
+                                            const QImage &sourceImage,
+                                            const QRectF &viewRect)
+{
+    if (item == nullptr || sourceImage.isNull() || !viewRect.isValid() || viewRect.width() < 1.0 || viewRect.height() < 1.0) {
+        return false;
+    }
+
+    item->setPixmap(QPixmap::fromImage(mapEditorRasterDisplayImage(sourceImage)));
+    item->setData(kMapEditorRasterPreviewRectRole, viewRect);
+    item->setPos(viewRect.topLeft());
+    applyMapEditorRasterLayerTransform(item);
+    return true;
+}
+
+bool placeMapEditorRasterLayerPlaceholderInPreviewRect(QGraphicsPixmapItem *item, const QRectF &viewRect)
+{
+    if (item == nullptr || !viewRect.isValid() || viewRect.width() < 1.0 || viewRect.height() < 1.0) {
+        return false;
+    }
+
+    QImage placeholder(qMax(2, qRound(viewRect.width())),
+                       qMax(2, qRound(viewRect.height())),
+                       QImage::Format_ARGB32_Premultiplied);
+    placeholder.fill(Qt::transparent);
+    item->setPixmap(QPixmap::fromImage(placeholder));
+    item->setData(kMapEditorRasterPreviewRectRole, viewRect);
+    item->setPos(viewRect.topLeft());
+    applyMapEditorRasterLayerTransform(item);
+    return true;
+}
+
 bool placeMapEditorRasterLayerByModelRect(QGraphicsPixmapItem *item,
                                           const QImage &sourceImage,
                                           const QRectF &modelRect,
                                           const QRectF &modelBounds,
                                           const QRectF &previewBounds)
 {
-    return setRasterLayerPixmapForPreviewRect(item,
-                                             sourceImage,
-                                             previewRectForRasterModelRect(modelRect, modelBounds, previewBounds));
+    return placeMapEditorRasterLayerInPreviewRect(item,
+                                                  sourceImage,
+                                                  previewRectForRasterModelRect(modelRect, modelBounds, previewBounds));
 }
 
 bool placeMapEditorRasterLayerPlaceholderByModelRect(QGraphicsPixmapItem *item,
@@ -169,8 +197,8 @@ bool placeMapEditorRasterLayerPlaceholderByModelRect(QGraphicsPixmapItem *item,
                                                      const QRectF &modelBounds,
                                                      const QRectF &previewBounds)
 {
-    return setRasterLayerPlaceholderForPreviewRect(item,
-                                                  previewRectForRasterModelRect(modelRect, modelBounds, previewBounds));
+    return placeMapEditorRasterLayerPlaceholderInPreviewRect(item,
+                                                             previewRectForRasterModelRect(modelRect, modelBounds, previewBounds));
 }
 
 bool placeMapEditorRasterLayerFromMetadata(QGraphicsPixmapItem *item,

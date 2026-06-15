@@ -330,6 +330,8 @@ In `Inspector -> Backgrounds`, you can:
 - edit layer position and opacity
 - adjust `Gamma` for raster layers (`.xvi` uses fixed Gamma)
 
+Raster background layers keep their full image resolution, so they stay sharp as you zoom into the map instead of becoming blurry. Very large scans are bounded to a high internal display size to limit memory use.
+
 When you add a PocketTopo Therion export (`.txt`) as a map background, Therion Studio asks for XVI scale, resolution, grid spacing, and plan or extended-elevation projection. It writes a generated `_p.xvi` or `_e.xvi` file next to the PocketTopo export, adds that `.xvi` as the background layer, and stores XTherion-compatible image metadata in the `.th2` source.
 
 Therion Studio does not generate a separate metric grid. Use background layers, especially `.xvi`, for reference grid content.
@@ -439,6 +441,7 @@ Fix:
 - select the layer in `Backgrounds`
 - check layer visibility, position, opacity, and Gamma
 - for `.xvi`, verify the `.xvi` file and referenced `.th2` are from the same coordinate context
+- a raster layer that still looks soft when zoomed in has reached the resolution of its source image; use a higher-resolution scan for more detail
 
 ### 11.5 I can zoom but cannot pan the map
 

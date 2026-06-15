@@ -249,6 +249,13 @@ function(therion_add_app_unit_test target_name)
     target_link_libraries(${target_name} PRIVATE therion_app)
 endfunction()
 
+set(THERION_APP_UI_STYLE_SOURCES
+    src/app/ui/ApplicationStyleSheets.cpp
+    src/app/ui/ApplicationStyleSheets.h
+    src/app/ui/ApplicationStyleTokens.cpp
+    src/app/ui/ApplicationStyleTokens.h
+)
+
 set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindow.cpp
     src/app/MainWindow.h
@@ -288,10 +295,7 @@ set(THERION_MAIN_WINDOW_SOURCES
     src/app/WorkspaceCommandBarStyle.h
     src/app/ui/ApplicationControlMetrics.h
     src/app/ui/ApplicationSegmentedControlStyle.h
-    src/app/ui/ApplicationStyleSheets.cpp
-    src/app/ui/ApplicationStyleSheets.h
-    src/app/ui/ApplicationStyleTokens.cpp
-    src/app/ui/ApplicationStyleTokens.h
+    ${THERION_APP_UI_STYLE_SOURCES}
 )
 
 set(THERION_TEXT_EDITOR_SHARED_SOURCES
@@ -1248,6 +1252,7 @@ qt_add_executable(BlockEditorToolboxControllerTest
 target_link_libraries(BlockEditorToolboxControllerTest PRIVATE therion_core Qt6::Widgets Qt6::Svg)
 
 set(THERION_EDITOR_UI_TEST_BASE_SOURCES
+    ${THERION_APP_UI_STYLE_SOURCES}
     ${THERION_TEXT_EDITOR_SHARED_SOURCES})
 
 set(THERION_TEXT_EDITOR_UI_TEST_SOURCES

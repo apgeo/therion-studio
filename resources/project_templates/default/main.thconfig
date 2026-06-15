@@ -1,4 +1,4 @@
-source index.th
+source main.th
 
 select cave
 
@@ -6,5 +6,5 @@ export map -projection plan -layout local -o output/cave.pdf
 export model -o output/cave.lox
 
 layout local
-  scale 1 500
+  scale 1 200
 endlayout

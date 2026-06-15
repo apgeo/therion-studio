@@ -287,6 +287,8 @@ set(THERION_MAIN_WINDOW_SOURCES
     src/app/WorkspaceCommandBarStyle.h
     src/app/ui/ApplicationControlMetrics.h
     src/app/ui/ApplicationSegmentedControlStyle.h
+    src/app/ui/ApplicationStyleSheets.cpp
+    src/app/ui/ApplicationStyleSheets.h
     src/app/ui/ApplicationStyleTokens.cpp
     src/app/ui/ApplicationStyleTokens.h
 )

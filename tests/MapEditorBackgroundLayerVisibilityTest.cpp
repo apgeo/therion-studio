@@ -153,6 +153,99 @@ int runBackgroundVisibilityDoesNotDirtyDocumentTest()
     return 0;
 }
 
+int runRasterBackgroundKeepsFullResolutionTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory for raster resolution test.")) {
+        return 1;
+    }
+
+    // A scan far larger than the preview canvas. Before the refactor the layer
+    // pixmap was baked down to preview resolution; it must now stay full size.
+    const int sourceWidth = 2000;
+    const int sourceHeight = 1500;
+    const QString imagePath = tempDir.filePath(QStringLiteral("scan.png"));
+    QImage image(sourceWidth, sourceHeight, QImage::Format_ARGB32);
+    image.fill(QColor(90, 130, 170, 255));
+    if (!expect(image.save(imagePath), "Failed to create large temporary background image.")) {
+        return 1;
+    }
+
+    const QString filePath = tempDir.filePath(QStringLiteral("background_resolution.th2"));
+    const QString th2Contents = QStringLiteral(
+        "encoding utf-8\n"
+        "##XTHERION## xth_me_area_adjust 0 -1500 2000 0\n"
+        "##XTHERION## xth_me_area_zoom_to 100\n"
+        "##XTHERION## xth_me_image_insert {0 1 1} {0 {}} scan.png 0 {}\n"
+        "\n"
+        "scrap resolution-smoke -projection plan\n"
+        "point 0 0 station -name A\n"
+        "endscrap\n");
+    if (!expect(writeTextFile(filePath, th2Contents.toUtf8()),
+                "Failed to create temporary TH2 file for raster resolution test.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    FakeSessionStore sessionStore;
+    QMainWindow hostWindow;
+    hostWindow.resize(960, 720);
+    auto *central = new QWidget(&hostWindow);
+    auto *layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), central);
+    layout->addWidget(mapTab);
+    hostWindow.setCentralWidget(central);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                "MapEditorTab failed to load TH2 file for raster resolution test.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+    pumpEvents();
+
+    if (!expect(mapTab->backgroundLayerCount() == 1,
+                "Expected one raster background layer auto-loaded for resolution test.")) {
+        return 1;
+    }
+
+    // The source image loads asynchronously; wait for the full-resolution pixmap.
+    const QSize expectedSize(sourceWidth, sourceHeight);
+    for (int attempt = 0; attempt < 200 && mapTab->backgroundLayerSourcePixelSize(0) != expectedSize; ++attempt) {
+        pumpEvents();
+    }
+
+    if (!expect(mapTab->backgroundLayerSourcePixelSize(0) == expectedSize,
+                "Raster layer should keep the full source resolution instead of baking to preview size.")) {
+        return 1;
+    }
+
+    // Geometry must still project correctly: scene bounds keep the source aspect.
+    const QRectF bounds = mapTab->backgroundLayerSceneBounds(0);
+    if (!expect(bounds.isValid() && bounds.height() > 0.0, "Expected valid raster scene bounds.")) {
+        return 1;
+    }
+    const qreal sourceAspect = static_cast<qreal>(sourceWidth) / static_cast<qreal>(sourceHeight);
+    if (!expect(nearlyEqual(bounds.width() / bounds.height(), sourceAspect, 0.02),
+                "Raster scene bounds should preserve the source aspect ratio after the transform refactor.")) {
+        return 1;
+    }
+    // The on-screen footprint must be the fitted preview size, not the source pixel size.
+    if (!expect(bounds.width() < static_cast<qreal>(sourceWidth),
+                "Raster scene footprint should be the projected preview size, not raw source pixels.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runBackgroundGammaPreservesPlacementTest()
 {
     QTemporaryDir tempDir;
@@ -636,6 +729,9 @@ int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
     if (const int rc = runBackgroundVisibilityDoesNotDirtyDocumentTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runRasterBackgroundKeepsFullResolutionTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runBackgroundGammaPreservesPlacementTest(); rc != 0) {

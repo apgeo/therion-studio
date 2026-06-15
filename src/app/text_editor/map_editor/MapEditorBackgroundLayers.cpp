@@ -1424,6 +1424,12 @@ QRectF MapEditorTab::backgroundLayerSceneBounds(int index) const
     return item != nullptr ? item->sceneBoundingRect() : QRectF();
 }
 
+QSize MapEditorTab::backgroundLayerSourcePixelSize(int index) const
+{
+    const QGraphicsPixmapItem *item = backgroundLayerItemAt(index);
+    return item != nullptr ? item->pixmap().size() : QSize();
+}
+
 int MapEditorTab::selectedBackgroundLayerIndex() const
 {
     return selectedBackgroundLayerIndex_;
@@ -2584,23 +2590,14 @@ QGraphicsPixmapItem *MapEditorTab::addBackgroundImagePlaceholder(const QString &
         return nullptr;
     }
 
-    QSize targetSize = modelSize.toSize();
-    targetSize.scale(previewBounds.size().toSize(), Qt::KeepAspectRatio);
-    targetSize.setWidth(qMax(targetSize.width(), 2));
-    targetSize.setHeight(qMax(targetSize.height(), 2));
+    const QRectF viewRect = fitAndCenterRasterSizeInPreview(modelSize, previewBounds);
 
-    QImage placeholder(targetSize, QImage::Format_ARGB32_Premultiplied);
-    placeholder.fill(Qt::transparent);
-
-    auto *backgroundItem = new QGraphicsPixmapItem(QPixmap::fromImage(placeholder));
+    auto *backgroundItem = new QGraphicsPixmapItem();
     backgroundItem->setTransformationMode(Qt::SmoothTransformation);
     backgroundItem->setOpacity(kDefaultRasterLayerOpacity);
     backgroundItem->setData(0, QFileInfo(imagePath).absoluteFilePath());
     backgroundItem->setData(2, 1.0);
-
-    const QPointF topLeft(previewBounds.center().x() - (targetSize.width() / 2.0),
-                          previewBounds.center().y() - (targetSize.height() / 2.0));
-    backgroundItem->setPos(topLeft);
+    placeMapEditorRasterLayerPlaceholderInPreviewRect(backgroundItem, viewRect);
 
     mapScene_->addItem(backgroundItem);
     backgroundImageItems_.append(backgroundItem);
@@ -2676,32 +2673,36 @@ bool MapEditorTab::addBackgroundImageFromSourceImage(const QString &imagePath,
         return false;
     }
 
-    QPixmap pixmap = QPixmap::fromImage(image);
-    if (pixmap.isNull()) {
-        return false;
-    }
-
-    QSize targetSize = previewBounds.size().toSize();
-    targetSize.setWidth(qMax(targetSize.width(), 2));
-    targetSize.setHeight(qMax(targetSize.height(), 2));
-    pixmap = pixmap.scaled(targetSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-
-    auto *backgroundItem = new QGraphicsPixmapItem(pixmap);
+    auto *backgroundItem = new QGraphicsPixmapItem();
     backgroundItem->setTransformationMode(Qt::SmoothTransformation);
     backgroundItem->setOpacity(kDefaultRasterLayerOpacity);
     backgroundItem->setData(0, QFileInfo(imagePath).absoluteFilePath());
     backgroundItem->setData(2, 1.0);
     cacheRasterSourceImage(backgroundItem, image);
 
-    const QPointF topLeft(previewBounds.center().x() - (pixmap.width() / 2.0),
-                          previewBounds.center().y() - (pixmap.height() / 2.0));
-    backgroundItem->setPos(topLeft);
+    bool placed = false;
     if (writeXtherionMetadata && !mapSourceBoundsForCurrentDocument().isValid()) {
         const QSizeF modelSize = mapEditorRasterModelSize(imagePath, 1.0);
         const QRectF modelRect(QPointF(0.0, -modelSize.height()), modelSize);
         const QRectF modelBounds = modelRect.adjusted(-128.0, -128.0, 128.0, 128.0);
-        placeMapEditorRasterLayerByModelRect(backgroundItem, image, modelRect, modelBounds, previewBounds);
+        placed = placeMapEditorRasterLayerByModelRect(backgroundItem, image, modelRect, modelBounds, previewBounds);
     }
+    if (!placed) {
+        const QSizeF modelSize = mapEditorRasterModelSize(imagePath, 1.0);
+        const QSizeF sourceSize = modelSize.isValid() ? modelSize : QSizeF(image.size());
+        const QRectF viewRect = fitAndCenterRasterSizeInPreview(sourceSize, previewBounds);
+        placed = placeMapEditorRasterLayerInPreviewRect(backgroundItem, image, viewRect);
+    }
+
+    // Both placement paths derive a valid preview rectangle from the already
+    // validated image and bounds, so this should not trigger in practice. Guard
+    // against ever adding an invisible, pixmap-less layer if that invariant ever
+    // breaks (e.g. a future placement helper change).
+    if (!placed) {
+        delete backgroundItem;
+        return false;
+    }
+
     mapScene_->addItem(backgroundItem);
     backgroundImageItems_.append(backgroundItem);
     applyBackgroundLayerStackingOrder();
@@ -2741,8 +2742,6 @@ void MapEditorTab::applyBackgroundLayerGamma(QGraphicsPixmapItem *item, qreal ga
         return;
     }
 
-    const QRectF currentBounds = item->boundingRect();
-    const QSize targetSize = currentBounds.size().toSize();
     const quint64 requestId = nextMapEditorRasterGammaRequestId();
     item->setData(kBackgroundLayerRasterGammaRequestRole, QVariant::fromValue<qulonglong>(requestId));
     item->setData(2, boundedGamma);
@@ -2763,11 +2762,11 @@ void MapEditorTab::applyBackgroundLayerGamma(QGraphicsPixmapItem *item, qreal ga
         }
 
         item->setPixmap(QPixmap::fromImage(adjustedImage));
+        applyMapEditorRasterLayerTransform(item);
     });
-    watcher->setFuture(QtConcurrent::run(gammaCorrectAndScaleMapEditorRasterSourceImage,
+    watcher->setFuture(QtConcurrent::run(gammaCorrectMapEditorRasterSourceImage,
                                          layerPath,
                                          sourceImage,
-                                         targetSize,
                                          boundedGamma));
 }
 

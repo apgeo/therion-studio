@@ -8,6 +8,7 @@
 #include <QPoint>
 #include <QPointF>
 #include <QRectF>
+#include <QSize>
 #include <QDateTime>
 #include <QElapsedTimer>
 #include <QSet>
@@ -183,6 +184,9 @@ public:
     bool backgroundLayerSupportsPositionEditing(int index) const;
     QPointF backgroundLayerPosition(int index) const;
     QRectF backgroundLayerSceneBounds(int index) const;
+    // Pixel size of the displayed pixmap for a raster layer. Reflects the full
+    // source resolution (bounded by the display cap), independent of zoom.
+    QSize backgroundLayerSourcePixelSize(int index) const;
     int selectedBackgroundLayerIndex() const;
     void setSelectedBackgroundLayerIndex(int index);
     void browseAndAddBackgroundImages();

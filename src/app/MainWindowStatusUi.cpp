@@ -1,6 +1,6 @@
 #include "MainWindow.h"
 
-#include "ApplicationStylePolicy.h"
+#include "ui/ApplicationStyleSheets.h"
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
 

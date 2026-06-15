@@ -70,7 +70,7 @@
 #include "MainWindowWelcomeWidget.h"
 #include "MainWindowSessionStateService.h"
 #include "MainWindowStructureNameOverridesService.h"
-#include "ApplicationStylePolicy.h"
+#include "ui/ApplicationStyleSheets.h"
 #include "LucideIconFactory.h"
 #include "../core/PocketTopoImport.h"
 #include "../core/SessionStore.h"

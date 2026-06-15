@@ -1,6 +1,6 @@
 #include "MainWindow.h"
 
-#include "ApplicationStylePolicy.h"
+#include "ui/ApplicationStyleSheets.h"
 #include "MainWindowDocumentOpenController.h"
 #include "MainWindowDocumentHelpers.h"
 #include "LucideIconFactory.h"

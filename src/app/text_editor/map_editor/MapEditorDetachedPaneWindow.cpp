@@ -1,8 +1,8 @@
 #include "MapEditorDetachedPaneWindow.h"
 
 #include "MapEditorTab.h"
-#include "../../ApplicationStylePolicy.h"
 #include "../../LucideIconFactory.h"
+#include "../../ui/ApplicationStyleSheets.h"
 
 #include <QCloseEvent>
 #include <QFrame>

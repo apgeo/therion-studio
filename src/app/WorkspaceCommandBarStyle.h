@@ -1,3 +1,3 @@
 #pragma once
 
-#include "ApplicationStylePolicy.h"
+#include "ui/ApplicationStyleSheets.h"

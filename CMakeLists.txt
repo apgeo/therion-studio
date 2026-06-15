@@ -282,7 +282,6 @@ set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindowWelcomeWidget.h
     src/app/MainWindowTherionConsoleController.h
     src/app/MainWindowTherionRunner.cpp
-    src/app/ApplicationStylePolicy.h
     src/app/LucideIconFactory.h
     src/app/WorkspaceCommandBarStyle.h
     src/app/ui/ApplicationControlMetrics.h

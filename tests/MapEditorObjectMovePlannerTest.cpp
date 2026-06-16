@@ -1,22 +1,26 @@
 #include "../src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h"
 
-#include <QString>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class MapEditorObjectMovePlannerTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
 
-int runMovePointAfterLineBlockTest()
+private slots:
+    void movesPointAfterLineBlock();
+    void movesLineBlockBeforePoint();
+    void movesAreaBetweenScraps();
+    void movesPointIntoScrap();
+    void preservesCrLfLineEndings();
+    void rejectsNoOpAndInvalidTargets();
+    void treatsAdjacentBoundaryMovesAsNoOps();
+};
+
+void MapEditorObjectMovePlannerTest::movesPointAfterLineBlock()
 {
     const QString text = QStringLiteral(
         "encoding utf-8\n"
@@ -47,27 +51,16 @@ int runMovePointAfterLineBlockTest()
                                                                               3,
                                                                               4,
                                                                               MapEditorObjectMovePosition::AfterTarget);
-    if (!expect(plan.resolved, "Moving a point after a line block should resolve.")) {
-        return 1;
-    }
-    if (!expect(plan.changed, "Moving a point after a later line block should report a changed plan.")) {
-        return 1;
-    }
-    if (!expect(plan.sourceStartLine == 3 && plan.sourceEndLine == 3,
-                "Point move source span should contain only the point line.")) {
-        return 1;
-    }
-    if (!expect(plan.insertBeforeLineOriginal == 8 && plan.insertBeforeLineAfterRemoval == 7,
-                "Point move insertion lines should be tracked before and after source removal.")) {
-        return 1;
-    }
-    return expect(plan.movedText == expected,
-                  "Moving a point after a line block should preserve source text and place the point after endline.")
-        ? 0
-        : 1;
+    QVERIFY2(plan.resolved, "Moving a point after a line block should resolve.");
+    QVERIFY2(plan.changed, "Moving a point after a later line block should report a changed plan.");
+    QCOMPARE(plan.sourceStartLine, 3);
+    QCOMPARE(plan.sourceEndLine, 3);
+    QCOMPARE(plan.insertBeforeLineOriginal, 8);
+    QCOMPARE(plan.insertBeforeLineAfterRemoval, 7);
+    QCOMPARE(plan.movedText, expected);
 }
 
-int runMoveLineBlockBeforePointTest()
+void MapEditorObjectMovePlannerTest::movesLineBlockBeforePoint()
 {
     QString text = QStringLiteral(
         "encoding utf-8\n"
@@ -91,24 +84,16 @@ int runMoveLineBlockBeforePointTest()
         "endscrap\n");
 
     QString errorMessage;
-    if (!expect(MapEditorObjectMovePlanner::applyMove(&text,
-                                                       4,
-                                                       3,
-                                                       MapEditorObjectMovePosition::BeforeTarget,
-                                                       &errorMessage),
-                "Moving a line block before a point should apply.")) {
-        if (!errorMessage.isEmpty()) {
-            std::cerr << errorMessage.toStdString() << '\n';
-        }
-        return 1;
-    }
-    return expect(text == expected,
-                  "Moving a line block before a point should preserve all line block rows.")
-        ? 0
-        : 1;
+    QVERIFY2(MapEditorObjectMovePlanner::applyMove(&text,
+                                                   4,
+                                                   3,
+                                                   MapEditorObjectMovePosition::BeforeTarget,
+                                                   &errorMessage),
+             qPrintable(errorMessage));
+    QCOMPARE(text, expected);
 }
 
-int runMoveAreaBetweenScrapsTest()
+void MapEditorObjectMovePlannerTest::movesAreaBetweenScraps()
 {
     const QString text = QStringLiteral(
         "encoding utf-8\n"
@@ -135,17 +120,12 @@ int runMoveAreaBetweenScrapsTest()
                                                                               3,
                                                                               8,
                                                                               MapEditorObjectMovePosition::BeforeTarget);
-    if (!expect(plan.resolved && plan.changed,
-                "Moving an area before an object in another scrap should resolve and change text.")) {
-        return 1;
-    }
-    return expect(plan.movedText == expected,
-                  "Moving an area before a target in another scrap should place the whole area block inside the target scrap.")
-        ? 0
-        : 1;
+    QVERIFY2(plan.resolved && plan.changed,
+             "Moving an area before an object in another scrap should resolve and change text.");
+    QCOMPARE(plan.movedText, expected);
 }
 
-int runMovePointIntoScrapTest()
+void MapEditorObjectMovePlannerTest::movesPointIntoScrap()
 {
     const QString text = QStringLiteral(
         "encoding utf-8\n"
@@ -168,21 +148,14 @@ int runMovePointIntoScrapTest()
                                                                               3,
                                                                               5,
                                                                               MapEditorObjectMovePosition::IntoTargetScrap);
-    if (!expect(plan.resolved && plan.changed,
-                "Moving a point into a target scrap should resolve and change text.")) {
-        return 1;
-    }
-    if (!expect(plan.insertBeforeLineOriginal == 7 && plan.insertBeforeLineAfterRemoval == 6,
-                "Moving into a target scrap should insert before endscrap after source removal.")) {
-        return 1;
-    }
-    return expect(plan.movedText == expected,
-                  "Moving a point into a target scrap should append the point before the target endscrap.")
-        ? 0
-        : 1;
+    QVERIFY2(plan.resolved && plan.changed,
+             "Moving a point into a target scrap should resolve and change text.");
+    QCOMPARE(plan.insertBeforeLineOriginal, 7);
+    QCOMPARE(plan.insertBeforeLineAfterRemoval, 6);
+    QCOMPARE(plan.movedText, expected);
 }
 
-int runCrLfPreservationTest()
+void MapEditorObjectMovePlannerTest::preservesCrLfLineEndings()
 {
     const QString text = QString::fromLatin1(
         "encoding utf-8\r\n"
@@ -201,17 +174,12 @@ int runCrLfPreservationTest()
                                                                               3,
                                                                               4,
                                                                               MapEditorObjectMovePosition::AfterTarget);
-    if (!expect(plan.resolved && plan.changed,
-                "Moving CRLF point rows should resolve and change text.")) {
-        return 1;
-    }
-    return expect(plan.movedText == expected,
-                  "Moving point rows should preserve CRLF line endings.")
-        ? 0
-        : 1;
+    QVERIFY2(plan.resolved && plan.changed,
+             "Moving CRLF point rows should resolve and change text.");
+    QCOMPARE(plan.movedText, expected);
 }
 
-int runNoOpAndInvalidTargetTest()
+void MapEditorObjectMovePlannerTest::rejectsNoOpAndInvalidTargets()
 {
     const QString text = QStringLiteral(
         "encoding utf-8\n"
@@ -220,30 +188,25 @@ int runNoOpAndInvalidTargetTest()
         "point 3 4 station -name P2\n"
         "endscrap\n");
 
-    const MapEditorObjectMovePlan noOpPlan = MapEditorObjectMovePlanner::planMove(text,
-                                                                                  3,
-                                                                                  3,
-                                                                                  MapEditorObjectMovePosition::AfterTarget);
-    if (!expect(noOpPlan.resolved && !noOpPlan.changed,
-                "Moving an object after itself should resolve as a no-op.")) {
-        return 1;
-    }
-    if (!expect(noOpPlan.movedText == text,
-                "No-op move should preserve the original text exactly.")) {
-        return 1;
-    }
+    const MapEditorObjectMovePlan noOpPlan = MapEditorObjectMovePlanner::planMove(
+        text,
+        3,
+        3,
+        MapEditorObjectMovePosition::AfterTarget);
+    QVERIFY2(noOpPlan.resolved && !noOpPlan.changed,
+             "Moving an object after itself should resolve as a no-op.");
+    QCOMPARE(noOpPlan.movedText, text);
 
-    const MapEditorObjectMovePlan invalidPlan = MapEditorObjectMovePlanner::planMove(text,
-                                                                                    2,
-                                                                                    3,
-                                                                                    MapEditorObjectMovePosition::BeforeTarget);
-    return expect(!invalidPlan.resolved && !invalidPlan.errorMessage.isEmpty(),
-                  "Moving a non-object source line should fail with an error message.")
-        ? 0
-        : 1;
+    const MapEditorObjectMovePlan invalidPlan = MapEditorObjectMovePlanner::planMove(
+        text,
+        2,
+        3,
+        MapEditorObjectMovePosition::BeforeTarget);
+    QVERIFY2(!invalidPlan.resolved && !invalidPlan.errorMessage.isEmpty(),
+             "Moving a non-object source line should fail with an error message.");
 }
 
-int runAdjacentBoundaryNoOpTest()
+void MapEditorObjectMovePlannerTest::treatsAdjacentBoundaryMovesAsNoOps()
 {
     const QString text = QStringLiteral(
         "encoding utf-8\n"
@@ -261,53 +224,25 @@ int runAdjacentBoundaryNoOpTest()
         3,
         4,
         MapEditorObjectMovePosition::BeforeTarget);
-    if (!expect(beforeNextPlan.resolved && !beforeNextPlan.changed,
-                "Moving an object before its immediate next sibling should resolve as a no-op.")) {
-        return 1;
-    }
-    if (!expect(beforeNextPlan.movedText == text,
-                "Immediate-next no-op move should preserve the original text exactly.")) {
-        return 1;
-    }
+    QVERIFY2(beforeNextPlan.resolved && !beforeNextPlan.changed,
+             "Moving an object before its immediate next sibling should resolve as a no-op.");
+    QCOMPARE(beforeNextPlan.movedText, text);
 
     const MapEditorObjectMovePlan afterPreviousPlan = MapEditorObjectMovePlanner::planMove(
         text,
         5,
         4,
         MapEditorObjectMovePosition::AfterTarget);
-    if (!expect(afterPreviousPlan.resolved && !afterPreviousPlan.changed,
-                "Moving an object after its immediate previous sibling should resolve as a no-op.")) {
-        return 1;
-    }
-    return expect(afterPreviousPlan.movedText == text,
-                  "Immediate-previous no-op move should preserve the original text exactly.")
-        ? 0
-        : 1;
+    QVERIFY2(afterPreviousPlan.resolved && !afterPreviousPlan.changed,
+             "Moving an object after its immediate previous sibling should resolve as a no-op.");
+    QCOMPARE(afterPreviousPlan.movedText, text);
 }
 }
 
-int main()
+int runMapEditorObjectMovePlannerTest(int argc, char **argv)
 {
-    if (const int rc = runMovePointAfterLineBlockTest(); rc != 0) {
-        return rc;
-    }
-    if (const int rc = runMoveLineBlockBeforePointTest(); rc != 0) {
-        return rc;
-    }
-    if (const int rc = runMoveAreaBetweenScrapsTest(); rc != 0) {
-        return rc;
-    }
-    if (const int rc = runMovePointIntoScrapTest(); rc != 0) {
-        return rc;
-    }
-    if (const int rc = runCrLfPreservationTest(); rc != 0) {
-        return rc;
-    }
-    if (const int rc = runNoOpAndInvalidTargetTest(); rc != 0) {
-        return rc;
-    }
-    if (const int rc = runAdjacentBoundaryNoOpTest(); rc != 0) {
-        return rc;
-    }
-    return 0;
+    MapEditorObjectMovePlannerTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "MapEditorObjectMovePlannerTest.moc"

@@ -1,149 +1,104 @@
 #include "../src/app/text_editor/map_editor/MapEditorUndoArbitrationService.h"
 
-#include <QCoreApplication>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class MapEditorUndoArbitrationServiceTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
 
-int runCanUndoCanRedoTest()
+private slots:
+    void reportsUndoRedoAvailability();
+    void resolvesDefaultOwners();
+    void honorsPreferredOwners();
+    void prioritizesInteractiveUndo();
+    void fallsBackThroughUndoOwners();
+    void resolvesRedoOwners();
+    void executesPreferredOwners();
+    void updatesOwnershipState();
+};
+
+void MapEditorUndoArbitrationServiceTest::reportsUndoRedoAvailability()
 {
     MapEditorUndoAvailability availability;
-    if (!expect(!MapEditorUndoArbitrationService::canUndo(availability),
-                "Undo arbitration should report canUndo=false when no source can undo.")) {
-        return 1;
-    }
-    if (!expect(!MapEditorUndoArbitrationService::canRedo(availability),
-                "Undo arbitration should report canRedo=false when no source can redo.")) {
-        return 1;
-    }
+    QVERIFY2(!MapEditorUndoArbitrationService::canUndo(availability),
+             "Undo arbitration should report canUndo=false when no source can undo.");
+    QVERIFY2(!MapEditorUndoArbitrationService::canRedo(availability),
+             "Undo arbitration should report canRedo=false when no source can redo.");
 
     availability.hasInteractiveDrawUndo = true;
-    if (!expect(MapEditorUndoArbitrationService::canUndo(availability),
-                "Undo arbitration should report canUndo when interactive draw undo is available.")) {
-        return 1;
-    }
+    QVERIFY2(MapEditorUndoArbitrationService::canUndo(availability),
+             "Undo arbitration should report canUndo when interactive draw undo is available.");
 
     availability = {};
     availability.hasMapRedo = true;
-    if (!expect(MapEditorUndoArbitrationService::canRedo(availability),
-                "Undo arbitration should report canRedo when map redo is available.")) {
-        return 1;
-    }
+    QVERIFY2(MapEditorUndoArbitrationService::canRedo(availability),
+             "Undo arbitration should report canRedo when map redo is available.");
 
     availability = {};
     availability.hasTextUndo = true;
     availability.hasTextRedo = true;
-    if (!expect(MapEditorUndoArbitrationService::canUndo(availability)
-                && MapEditorUndoArbitrationService::canRedo(availability),
-                "Undo arbitration should report canUndo/canRedo when text editor supports both.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY2(MapEditorUndoArbitrationService::canUndo(availability)
+                 && MapEditorUndoArbitrationService::canRedo(availability),
+             "Undo arbitration should report canUndo/canRedo when text editor supports both.");
 }
 
-int runOwnerResolutionTest()
+void MapEditorUndoArbitrationServiceTest::resolvesDefaultOwners()
 {
     MapEditorUndoAvailability availability;
-    if (!expect(MapEditorUndoArbitrationService::nextUndoOwner(availability) == MapEditorUndoOwner::None,
-                "Undo owner should resolve to None when no undo source is available.")) {
-        return 1;
-    }
-    if (!expect(MapEditorUndoArbitrationService::nextRedoOwner(availability) == MapEditorUndoOwner::None,
-                "Redo owner should resolve to None when no redo source is available.")) {
-        return 1;
-    }
+    QCOMPARE(MapEditorUndoArbitrationService::nextUndoOwner(availability), MapEditorUndoOwner::None);
+    QCOMPARE(MapEditorUndoArbitrationService::nextRedoOwner(availability), MapEditorUndoOwner::None);
 
     availability.hasTextUndo = true;
-    if (!expect(MapEditorUndoArbitrationService::nextUndoOwner(availability) == MapEditorUndoOwner::TextEdit,
-                "Undo owner should resolve to text when only text undo is available.")) {
-        return 1;
-    }
+    QCOMPARE(MapEditorUndoArbitrationService::nextUndoOwner(availability), MapEditorUndoOwner::TextEdit);
 
     availability.hasMapUndo = true;
-    if (!expect(MapEditorUndoArbitrationService::nextUndoOwner(availability) == MapEditorUndoOwner::MapCommand,
-                "Undo owner should prefer map command over text undo.")) {
-        return 1;
-    }
+    QCOMPARE(MapEditorUndoArbitrationService::nextUndoOwner(availability), MapEditorUndoOwner::MapCommand);
 
     availability.hasInteractiveDrawUndo = true;
-    if (!expect(MapEditorUndoArbitrationService::nextUndoOwner(availability) == MapEditorUndoOwner::InteractiveDraw,
-                "Undo owner should prefer interactive draw over map/text undo.")) {
-        return 1;
-    }
+    QCOMPARE(MapEditorUndoArbitrationService::nextUndoOwner(availability),
+             MapEditorUndoOwner::InteractiveDraw);
 
     availability = {};
     availability.hasTextRedo = true;
-    if (!expect(MapEditorUndoArbitrationService::nextRedoOwner(availability) == MapEditorUndoOwner::TextEdit,
-                "Redo owner should resolve to text when only text redo is available.")) {
-        return 1;
-    }
+    QCOMPARE(MapEditorUndoArbitrationService::nextRedoOwner(availability), MapEditorUndoOwner::TextEdit);
 
     availability.hasMapRedo = true;
-    if (!expect(MapEditorUndoArbitrationService::nextRedoOwner(availability) == MapEditorUndoOwner::MapCommand,
-                "Redo owner should prefer map command over text redo.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(MapEditorUndoArbitrationService::nextRedoOwner(availability), MapEditorUndoOwner::MapCommand);
 }
 
-int runPreferredOwnerResolutionTest()
+void MapEditorUndoArbitrationServiceTest::honorsPreferredOwners()
 {
     MapEditorUndoAvailability availability{
         .hasInteractiveDrawUndo = true,
         .hasMapUndo = true,
         .hasTextUndo = true,
         .preferredUndoOwner = MapEditorUndoOwner::TextEdit};
-    if (!expect(MapEditorUndoArbitrationService::nextUndoOwner(availability) == MapEditorUndoOwner::InteractiveDraw,
-                "Undo owner should keep interactive draw ahead of preferred map/text owners.")) {
-        return 1;
-    }
+    QCOMPARE(MapEditorUndoArbitrationService::nextUndoOwner(availability),
+             MapEditorUndoOwner::InteractiveDraw);
 
     availability.hasInteractiveDrawUndo = false;
-    if (!expect(MapEditorUndoArbitrationService::nextUndoOwner(availability) == MapEditorUndoOwner::TextEdit,
-                "Undo owner should honor available preferred text owner over map fallback.")) {
-        return 1;
-    }
+    QCOMPARE(MapEditorUndoArbitrationService::nextUndoOwner(availability), MapEditorUndoOwner::TextEdit);
 
     availability.preferredUndoOwner = MapEditorUndoOwner::TextEdit;
     availability.hasTextUndo = false;
-    if (!expect(MapEditorUndoArbitrationService::nextUndoOwner(availability) == MapEditorUndoOwner::MapCommand,
-                "Undo owner should fall back when preferred text owner is unavailable.")) {
-        return 1;
-    }
+    QCOMPARE(MapEditorUndoArbitrationService::nextUndoOwner(availability), MapEditorUndoOwner::MapCommand);
 
     availability = {
         .hasMapRedo = true,
         .hasTextRedo = true,
         .preferredRedoOwner = MapEditorUndoOwner::TextEdit};
-    if (!expect(MapEditorUndoArbitrationService::nextRedoOwner(availability) == MapEditorUndoOwner::TextEdit,
-                "Redo owner should honor available preferred text owner over map fallback.")) {
-        return 1;
-    }
+    QCOMPARE(MapEditorUndoArbitrationService::nextRedoOwner(availability), MapEditorUndoOwner::TextEdit);
 
     availability.preferredRedoOwner = MapEditorUndoOwner::TextEdit;
     availability.hasTextRedo = false;
-    if (!expect(MapEditorUndoArbitrationService::nextRedoOwner(availability) == MapEditorUndoOwner::MapCommand,
-                "Redo owner should fall back when preferred text redo owner is unavailable.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(MapEditorUndoArbitrationService::nextRedoOwner(availability), MapEditorUndoOwner::MapCommand);
 }
 
-int runUndoPriorityTest()
+void MapEditorUndoArbitrationServiceTest::prioritizesInteractiveUndo()
 {
     int interactiveCalls = 0;
     int mapCalls = 0;
@@ -164,19 +119,14 @@ int runUndoPriorityTest()
         .canTextRedo = {},
         .redoTextEdit = {}};
 
-    if (!expect(MapEditorUndoArbitrationService::triggerUndo(context),
-                "Undo arbitration should perform undo when interactive draw undo succeeds.")) {
-        return 1;
-    }
-    if (!expect(interactiveCalls == 1 && mapCalls == 0 && textCalls == 0,
-                "Undo arbitration should prioritize interactive draw undo over map/text undo.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY2(MapEditorUndoArbitrationService::triggerUndo(context),
+             "Undo arbitration should perform undo when interactive draw undo succeeds.");
+    QCOMPARE(interactiveCalls, 1);
+    QCOMPARE(mapCalls, 0);
+    QCOMPARE(textCalls, 0);
 }
 
-int runUndoFallbackOrderTest()
+void MapEditorUndoArbitrationServiceTest::fallsBackThroughUndoOwners()
 {
     int interactiveCalls = 0;
     int mapCalls = 0;
@@ -196,14 +146,11 @@ int runUndoFallbackOrderTest()
         .canTextRedo = {},
         .redoTextEdit = {}};
 
-    if (!expect(MapEditorUndoArbitrationService::triggerUndo(context),
-                "Undo arbitration should fall back to map undo when interactive draw undo is unavailable.")) {
-        return 1;
-    }
-    if (!expect(interactiveCalls == 1 && mapCalls == 1 && textCalls == 0,
-                "Undo arbitration should run map undo before text undo fallback.")) {
-        return 1;
-    }
+    QVERIFY2(MapEditorUndoArbitrationService::triggerUndo(context),
+             "Undo arbitration should fall back to map undo when interactive draw undo is unavailable.");
+    QCOMPARE(interactiveCalls, 1);
+    QCOMPARE(mapCalls, 1);
+    QCOMPARE(textCalls, 0);
 
     mapCalls = 0;
     textCalls = 0;
@@ -218,19 +165,13 @@ int runUndoFallbackOrderTest()
         .canTextRedo = {},
         .redoTextEdit = {}};
 
-    if (!expect(MapEditorUndoArbitrationService::triggerUndo(textFallbackContext),
-                "Undo arbitration should fall back to text undo when map undo is unavailable.")) {
-        return 1;
-    }
-    if (!expect(mapCalls == 0 && textCalls == 1,
-                "Undo arbitration should execute text undo only after map undo is rejected.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY2(MapEditorUndoArbitrationService::triggerUndo(textFallbackContext),
+             "Undo arbitration should fall back to text undo when map undo is unavailable.");
+    QCOMPARE(mapCalls, 0);
+    QCOMPARE(textCalls, 1);
 }
 
-int runRedoOrderTest()
+void MapEditorUndoArbitrationServiceTest::resolvesRedoOwners()
 {
     int mapCalls = 0;
     int textCalls = 0;
@@ -246,14 +187,10 @@ int runRedoOrderTest()
         .canTextRedo = []() { return true; },
         .redoTextEdit = [&textCalls]() { ++textCalls; }};
 
-    if (!expect(MapEditorUndoArbitrationService::triggerRedo(mapRedoContext),
-                "Undo arbitration should perform redo when map redo is available.")) {
-        return 1;
-    }
-    if (!expect(mapCalls == 1 && textCalls == 0,
-                "Undo arbitration should prioritize map redo over text redo.")) {
-        return 1;
-    }
+    QVERIFY2(MapEditorUndoArbitrationService::triggerRedo(mapRedoContext),
+             "Undo arbitration should perform redo when map redo is available.");
+    QCOMPARE(mapCalls, 1);
+    QCOMPARE(textCalls, 0);
 
     mapCalls = 0;
     textCalls = 0;
@@ -268,19 +205,13 @@ int runRedoOrderTest()
         .canTextRedo = []() { return true; },
         .redoTextEdit = [&textCalls]() { ++textCalls; }};
 
-    if (!expect(MapEditorUndoArbitrationService::triggerRedo(textRedoContext),
-                "Undo arbitration should fall back to text redo when map redo is unavailable.")) {
-        return 1;
-    }
-    if (!expect(mapCalls == 0 && textCalls == 1,
-                "Undo arbitration should execute text redo when map redo is unavailable.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY2(MapEditorUndoArbitrationService::triggerRedo(textRedoContext),
+             "Undo arbitration should fall back to text redo when map redo is unavailable.");
+    QCOMPARE(mapCalls, 0);
+    QCOMPARE(textCalls, 1);
 }
 
-int runPreferredExecutionOwnerTest()
+void MapEditorUndoArbitrationServiceTest::executesPreferredOwners()
 {
     int mapCalls = 0;
     int textCalls = 0;
@@ -297,14 +228,10 @@ int runPreferredExecutionOwnerTest()
         .canTextRedo = {},
         .redoTextEdit = {}};
 
-    if (!expect(MapEditorUndoArbitrationService::triggerUndo(undoContext),
-                "Undo arbitration should execute preferred text undo when available.")) {
-        return 1;
-    }
-    if (!expect(mapCalls == 0 && textCalls == 1,
-                "Undo arbitration should not execute map undo before preferred text undo.")) {
-        return 1;
-    }
+    QVERIFY2(MapEditorUndoArbitrationService::triggerUndo(undoContext),
+             "Undo arbitration should execute preferred text undo when available.");
+    QCOMPARE(mapCalls, 0);
+    QCOMPARE(textCalls, 1);
 
     mapCalls = 0;
     textCalls = 0;
@@ -320,106 +247,53 @@ int runPreferredExecutionOwnerTest()
         .canTextRedo = []() { return true; },
         .redoTextEdit = [&textCalls]() { ++textCalls; }};
 
-    if (!expect(MapEditorUndoArbitrationService::triggerRedo(redoContext),
-                "Undo arbitration should execute preferred text redo when available.")) {
-        return 1;
-    }
-    if (!expect(mapCalls == 0 && textCalls == 1,
-                "Undo arbitration should not execute map redo before preferred text redo.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY2(MapEditorUndoArbitrationService::triggerRedo(redoContext),
+             "Undo arbitration should execute preferred text redo when available.");
+    QCOMPARE(mapCalls, 0);
+    QCOMPARE(textCalls, 1);
 }
 
-int runOwnershipStateTransitionsTest()
+void MapEditorUndoArbitrationServiceTest::updatesOwnershipState()
 {
     MapEditorUndoOwnershipState state;
 
     MapEditorUndoArbitrationService::resetOwnership(state, 3);
-    if (!expect(state.lastMapUndoStackIndex == 3
-                && state.preferredUndoOwner == MapEditorUndoOwner::None
-                && state.preferredRedoOwner == MapEditorUndoOwner::None,
-                "Ownership reset should clear preferred owners and keep the current map undo index.")) {
-        return 1;
-    }
+    QCOMPARE(state.lastMapUndoStackIndex, 3);
+    QCOMPARE(state.preferredUndoOwner, MapEditorUndoOwner::None);
+    QCOMPARE(state.preferredRedoOwner, MapEditorUndoOwner::None);
 
     MapEditorUndoArbitrationService::markTextEdited(state);
-    if (!expect(state.preferredUndoOwner == MapEditorUndoOwner::TextEdit
-                && state.preferredRedoOwner == MapEditorUndoOwner::None,
-                "Text edits should make text the preferred undo owner and clear redo preference.")) {
-        return 1;
-    }
+    QCOMPARE(state.preferredUndoOwner, MapEditorUndoOwner::TextEdit);
+    QCOMPARE(state.preferredRedoOwner, MapEditorUndoOwner::None);
 
     MapEditorUndoArbitrationService::markTextUndoApplied(state);
-    if (!expect(state.preferredUndoOwner == MapEditorUndoOwner::None
-                && state.preferredRedoOwner == MapEditorUndoOwner::TextEdit,
-                "Text undo should make text the preferred redo owner.")) {
-        return 1;
-    }
+    QCOMPARE(state.preferredUndoOwner, MapEditorUndoOwner::None);
+    QCOMPARE(state.preferredRedoOwner, MapEditorUndoOwner::TextEdit);
 
     MapEditorUndoArbitrationService::markTextRedoApplied(state);
-    if (!expect(state.preferredUndoOwner == MapEditorUndoOwner::TextEdit
-                && state.preferredRedoOwner == MapEditorUndoOwner::None,
-                "Text redo should make text the preferred undo owner.")) {
-        return 1;
-    }
+    QCOMPARE(state.preferredUndoOwner, MapEditorUndoOwner::TextEdit);
+    QCOMPARE(state.preferredRedoOwner, MapEditorUndoOwner::None);
 
     MapEditorUndoArbitrationService::updateMapStackIndex(state, 4);
-    if (!expect(state.lastMapUndoStackIndex == 4
-                && state.preferredUndoOwner == MapEditorUndoOwner::MapCommand
-                && state.preferredRedoOwner == MapEditorUndoOwner::None,
-                "Advancing the map undo stack should prefer map command undo.")) {
-        return 1;
-    }
+    QCOMPARE(state.lastMapUndoStackIndex, 4);
+    QCOMPARE(state.preferredUndoOwner, MapEditorUndoOwner::MapCommand);
+    QCOMPARE(state.preferredRedoOwner, MapEditorUndoOwner::None);
 
     MapEditorUndoArbitrationService::updateMapStackIndex(state, 3);
-    if (!expect(state.lastMapUndoStackIndex == 3
-                && state.preferredUndoOwner == MapEditorUndoOwner::None
-                && state.preferredRedoOwner == MapEditorUndoOwner::MapCommand,
-                "Rewinding the map undo stack should prefer map command redo.")) {
-        return 1;
-    }
+    QCOMPARE(state.lastMapUndoStackIndex, 3);
+    QCOMPARE(state.preferredUndoOwner, MapEditorUndoOwner::None);
+    QCOMPARE(state.preferredRedoOwner, MapEditorUndoOwner::MapCommand);
 
     MapEditorUndoArbitrationService::markMapCommandApplied(state);
-    if (!expect(state.preferredUndoOwner == MapEditorUndoOwner::MapCommand
-                && state.preferredRedoOwner == MapEditorUndoOwner::None,
-                "Applied map commands should make map command the preferred undo owner.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(state.preferredUndoOwner, MapEditorUndoOwner::MapCommand);
+    QCOMPARE(state.preferredRedoOwner, MapEditorUndoOwner::None);
 }
 }
 
-int main(int argc, char **argv)
+int runMapEditorUndoArbitrationServiceTest(int argc, char **argv)
 {
-    QCoreApplication app(argc, argv);
-
-    if (runCanUndoCanRedoTest() != 0) {
-        return 1;
-    }
-    if (runOwnerResolutionTest() != 0) {
-        return 1;
-    }
-    if (runPreferredOwnerResolutionTest() != 0) {
-        return 1;
-    }
-    if (runUndoPriorityTest() != 0) {
-        return 1;
-    }
-    if (runUndoFallbackOrderTest() != 0) {
-        return 1;
-    }
-    if (runRedoOrderTest() != 0) {
-        return 1;
-    }
-    if (runPreferredExecutionOwnerTest() != 0) {
-        return 1;
-    }
-    if (runOwnershipStateTransitionsTest() != 0) {
-        return 1;
-    }
-
-    return 0;
+    MapEditorUndoArbitrationServiceTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "MapEditorUndoArbitrationServiceTest.moc"

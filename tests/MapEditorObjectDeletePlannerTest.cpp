@@ -1,22 +1,24 @@
 #include "../src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.h"
 
-#include <QString>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class MapEditorObjectDeletePlannerTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
 
-int runReferencedLineDeleteRejectedTest()
+private slots:
+    void rejectsReferencedLineDelete();
+    void keepsReferencedBorderLineWhenDeletingArea();
+    void keepsSharedBorderLineWhenDeletingArea();
+    void deletesStandaloneLineBlock();
+    void preservesCrLfLineEndings();
+};
+
+void MapEditorObjectDeletePlannerTest::rejectsReferencedLineDelete()
 {
     const QString text = QStringLiteral(
         "encoding utf-8\n"
@@ -31,16 +33,12 @@ int runReferencedLineDeleteRejectedTest()
         "endscrap\n");
 
     const MapEditorObjectDeletePlan plan = planMapEditorObjectDelete(text, 3);
-    if (!expect(!plan.resolved, "Deleting an area-referenced line should be rejected.")) {
-        return 1;
-    }
-    return expect(!plan.errorMessage.isEmpty(),
-                  "Rejected line deletion should explain why the object was not removed.")
-        ? 0
-        : 1;
+    QVERIFY2(!plan.resolved, "Deleting an area-referenced line should be rejected.");
+    QVERIFY2(!plan.errorMessage.isEmpty(),
+             "Rejected line deletion should explain why the object was not removed.");
 }
 
-int runAreaDeleteKeepsReferencedBorderLineTest()
+void MapEditorObjectDeletePlannerTest::keepsReferencedBorderLineWhenDeletingArea()
 {
     const QString text = QStringLiteral(
         "encoding utf-8\n"
@@ -63,25 +61,14 @@ int runAreaDeleteKeepsReferencedBorderLineTest()
         "endscrap\n");
 
     const MapEditorObjectDeletePlan plan = planMapEditorObjectDelete(text, 7);
-    if (!expect(plan.resolved && plan.changed,
-                "Deleting an area with a referenced border line should resolve and change the source.")) {
-        return 1;
-    }
-    if (!expect(plan.updatedText == expected,
-                "Deleting an area should preserve referenced border line blocks.")) {
-        return 1;
-    }
-    if (!expect(plan.focusLineAfterDelete == 7,
-                "Deleting an area should focus the removed area start line.")) {
-        return 1;
-    }
-    return expect(plan.removedLineNumbers.size() == 3,
-                  "Area delete should report only the removed area block source lines for hidden-row cleanup.")
-        ? 0
-        : 1;
+    QVERIFY2(plan.resolved && plan.changed,
+             "Deleting an area with a referenced border line should resolve and change the source.");
+    QCOMPARE(plan.updatedText, expected);
+    QCOMPARE(plan.focusLineAfterDelete, 7);
+    QCOMPARE(plan.removedLineNumbers.size(), 3);
 }
 
-int runAreaDeleteKeepsSharedBorderLineTest()
+void MapEditorObjectDeletePlannerTest::keepsSharedBorderLineWhenDeletingArea()
 {
     const QString text = QStringLiteral(
         "encoding utf-8\n"
@@ -110,17 +97,12 @@ int runAreaDeleteKeepsSharedBorderLineTest()
         "endscrap\n");
 
     const MapEditorObjectDeletePlan plan = planMapEditorObjectDelete(text, 7);
-    if (!expect(plan.resolved && plan.changed,
-                "Deleting one of two areas sharing a border line should resolve and change the source.")) {
-        return 1;
-    }
-    return expect(plan.updatedText == expected,
-                  "Deleting one area should preserve a border line still referenced by another area.")
-        ? 0
-        : 1;
+    QVERIFY2(plan.resolved && plan.changed,
+             "Deleting one of two areas sharing a border line should resolve and change the source.");
+    QCOMPARE(plan.updatedText, expected);
 }
 
-int runStandaloneLineDeleteTest()
+void MapEditorObjectDeletePlannerTest::deletesStandaloneLineBlock()
 {
     const QString text = QStringLiteral(
         "encoding utf-8\n"
@@ -138,17 +120,12 @@ int runStandaloneLineDeleteTest()
         "endscrap\n");
 
     const MapEditorObjectDeletePlan plan = planMapEditorObjectDelete(text, 3);
-    if (!expect(plan.resolved && plan.changed,
-                "Deleting a standalone line should resolve and change the source.")) {
-        return 1;
-    }
-    return expect(plan.updatedText == expected,
-                  "Deleting a standalone line should remove the full line/endline block.")
-        ? 0
-        : 1;
+    QVERIFY2(plan.resolved && plan.changed,
+             "Deleting a standalone line should resolve and change the source.");
+    QCOMPARE(plan.updatedText, expected);
 }
 
-int runCrLfPreservationTest()
+void MapEditorObjectDeletePlannerTest::preservesCrLfLineEndings()
 {
     const QString text = QString::fromLatin1(
         "encoding utf-8\r\n"
@@ -165,33 +142,16 @@ int runCrLfPreservationTest()
         "endscrap\r\n");
 
     const MapEditorObjectDeletePlan plan = planMapEditorObjectDelete(text, 4);
-    if (!expect(plan.resolved && plan.changed,
-                "Deleting a CRLF line block should resolve and change the source.")) {
-        return 1;
-    }
-    return expect(plan.updatedText == expected,
-                  "Object deletion should preserve CRLF line endings in the remaining text.")
-        ? 0
-        : 1;
+    QVERIFY2(plan.resolved && plan.changed,
+             "Deleting a CRLF line block should resolve and change the source.");
+    QCOMPARE(plan.updatedText, expected);
 }
 }
 
-int main()
+int runMapEditorObjectDeletePlannerTest(int argc, char **argv)
 {
-    if (const int rc = runReferencedLineDeleteRejectedTest(); rc != 0) {
-        return rc;
-    }
-    if (const int rc = runAreaDeleteKeepsReferencedBorderLineTest(); rc != 0) {
-        return rc;
-    }
-    if (const int rc = runAreaDeleteKeepsSharedBorderLineTest(); rc != 0) {
-        return rc;
-    }
-    if (const int rc = runStandaloneLineDeleteTest(); rc != 0) {
-        return rc;
-    }
-    if (const int rc = runCrLfPreservationTest(); rc != 0) {
-        return rc;
-    }
-    return 0;
+    MapEditorObjectDeletePlannerTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "MapEditorObjectDeletePlannerTest.moc"

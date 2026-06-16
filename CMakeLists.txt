@@ -1017,26 +1017,22 @@ qt_add_executable(MapEditorInputPolicyTest
 
 target_link_libraries(MapEditorInputPolicyTest PRIVATE Qt6::Widgets)
 
-qt_add_executable(MapEditorUndoArbitrationServiceTest
+qt_add_executable(MapEditorLogicQTests
+    tests/MapEditorLogicQTestMain.cpp
+    tests/MapEditorAreaReferenceResolverTest.cpp
+    tests/MapEditorObjectDeletePlannerTest.cpp
+    tests/MapEditorObjectMovePlannerTest.cpp
     tests/MapEditorUndoArbitrationServiceTest.cpp
+    src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
+    src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.h
+    src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.h
+    src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
+    src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
     src/app/text_editor/map_editor/MapEditorUndoArbitrationService.cpp
     src/app/text_editor/map_editor/MapEditorUndoArbitrationService.h)
 
-target_link_libraries(MapEditorUndoArbitrationServiceTest PRIVATE Qt6::Core)
-
-qt_add_executable(MapEditorAreaReferenceResolverTest
-    tests/MapEditorAreaReferenceResolverTest.cpp
-    src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
-    src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.h)
-
-target_link_libraries(MapEditorAreaReferenceResolverTest PRIVATE therion_core Qt6::Core)
-
-qt_add_executable(MapEditorObjectMovePlannerTest
-    tests/MapEditorObjectMovePlannerTest.cpp
-    src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
-    src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h)
-
-target_link_libraries(MapEditorObjectMovePlannerTest PRIVATE therion_core Qt6::Core)
+target_link_libraries(MapEditorLogicQTests PRIVATE therion_core Qt6::Core Qt6::Test)
 
 qt_add_executable(MapEditorObjectStyleCatalogTest
     tests/MapEditorObjectStyleCatalogTest.cpp
@@ -1063,13 +1059,6 @@ qt_add_resources(MapEditorInspectorDataTest MapEditorInspectorDataResources
     PREFIX "/"
     FILES
         resources/therion_command_catalog.json)
-
-qt_add_executable(MapEditorObjectDeletePlannerTest
-    tests/MapEditorObjectDeletePlannerTest.cpp
-    src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.cpp
-    src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.h)
-
-target_link_libraries(MapEditorObjectDeletePlannerTest PRIVATE therion_core Qt6::Core)
 
 qt_add_executable(MapEditorObjectDetailsLogicTest
     tests/MapEditorObjectDetailsLogicTest.cpp
@@ -1451,16 +1440,13 @@ set(THERION_UNIT_TEST_TARGETS
     MapGeometryFeatureParsingTest
     MapEditorSourceReferenceResolverTest
     DocumentFileEncodingTest
-    MapEditorAreaReferenceResolverTest
     MapEditorInputPolicyTest
-    MapEditorUndoArbitrationServiceTest
+    MapEditorLogicQTests
     MapEditorInspectorDataTest
     MapEditorObjectStyleCatalogTest
-    MapEditorObjectDeletePlannerTest
     MapEditorObjectDetailsLogicTest
     MapEditorLineExtensionPlannerTest
     MapEditorLineSplitPlannerTest
-    MapEditorObjectMovePlannerTest
     TextEditorDocumentControllerTest
     TextEditorDocumentIoServiceTest
     TextEditorDocumentPreconditionsServiceTest

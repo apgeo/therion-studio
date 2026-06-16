@@ -137,7 +137,7 @@ Therion command, option, help, style, and symbol metadata should be data-driven.
 
 ## UI Shell Reduction
 
-`MainWindow`, `TextEditorTab`, and `MapEditorTab` are orchestration shells under active reduction.
+`MainWindow`, `TextEditorTab`, `MapEditorTab`, and `ThreeDViewerTab` are orchestration shells under active reduction.
 
 When touching these classes:
 
@@ -155,6 +155,7 @@ The editor-mode layout is stable:
 - `src/app/text_editor/raw_editor/` for Raw-specific components (`RawEditor*`)
 - `src/app/text_editor/block_editor/` for Blocks-specific components (`BlockEditor*`)
 - `src/app/text_editor/map_editor/` for Map/Visual-specific components (`MapEditor*`)
+- `src/app/three_d_viewer/` for the read-only 3D viewer shell and viewport host
 
 Do not add new editor-mode implementation files back into legacy top-level `src/app/` paths when they belong to this layout.
 

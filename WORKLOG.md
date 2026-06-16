@@ -55,8 +55,11 @@ Active planning only. Completed history belongs in archive files. Stable archite
 
 ### 3D Viewer
 
-- Continue the `.lox` loader and neutral scene-model slice in `src/core/` with QTest coverage on `TherionCoreQTests`.
-- Keep Qt Quick/QML viewport work deferred until the loader/model contract is stable.
+- The `.lox` loader and neutral scene model are implemented in `src/core/` and covered by `TherionCoreQTests`.
+- The `ThreeDViewerTab` host is integrated into the main window as a read-only `.lox` viewer tab with basic layer toggles, scene summary, and a first interactive viewport slice.
+- Viewer fit/reset controls now live in the shared workspace command bar instead of a tab-local toolbar.
+- The 3D viewer layer list now blocks internal item-change recursion during tab construction and refresh.
+- Continue the renderer/camera refinement and then the Qt Quick/QML host once the widget viewport proves out the document-open workflow.
 
 ## Blocked / Needs Input
 

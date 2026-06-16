@@ -99,7 +99,7 @@ Deliverable: loadable scene data without a production viewport.
 
 ### Phase 3 - Minimal GPU Viewport
 
-- Add the Qt Quick/QML viewport host in a narrow widgets integration surface.
+- Add the viewport host in a narrow widgets integration surface, then move the rendering surface toward Qt Quick/QML once the shell is stable.
 - Render centerline and station points first.
 - Add orbit, pan, zoom, fit, and reset controls.
 - Keep UI controls minimal and consistent with existing Therion Studio tool surfaces.
@@ -146,13 +146,14 @@ Deliverable: incremental 3D-viewer capabilities, still behind stable model and r
 
 ## Next Implementation Slice
 
-Add a `.lox` loader and neutral scene model under a core or app-service boundary, without UI integration:
+Add the next viewport slice on top of the existing widget shell:
 
-- `ThreeDViewerSceneModel`: surveys, stations, shots, optional mesh groups, flags, labels, and bounds.
-- `ThreeDViewerLoxLoader`: reads `.lox` data using a Studio-owned API and reports structured errors.
-- QTest coverage for a tiny generated or checked-in `.lox` fixture, malformed input, empty files, and bounds calculation.
-- No Qt Quick, Qt Quick 3D, QML, menu action, or viewport dependency in this slice.
+- refine the current widget viewport into a more durable renderer/camera layer
+- keep `ThreeDViewerSceneModel` as the shared scene contract for surveys, stations, shots, mesh groups, surfaces, and bounds
+- keep `ThreeDViewerLoxLoader` as the `.lox` loader and structured error reporter
+- keep `ThreeDViewerTab` as the read-only shell with toolbar, inspector, and layer toggles
+- add QTest coverage for loader behavior, malformed input, empty files, and bounds calculation if a future renderer refactor needs it
 
 ## Release Position
 
-This is post-`v2026.6.5` planning work. The next valuable step is the Phase 1 discovery spike, not a visible UI implementation.
+This is post-`v2026.6.5` planning work. The next valuable step is the viewport/rendering slice on top of the existing shell.

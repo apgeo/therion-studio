@@ -52,7 +52,7 @@ These instructions apply to the whole repository.
   - infrastructure/platform adapters may use Qt/platform APIs, but should expose narrow interfaces upward
 - Do not add new business rules, persistence rules, parser/serializer logic, process orchestration, command-catalog loading, settings access, or platform-path decisions directly into widgets, dialogs, QGraphicsItems, or scene items.
 - Do not add new direct `DocumentFile` calls from widgets. Route document loading, saving, and encoding decisions through focused document workflow/IO services.
-- Treat `MainWindow`, `TextEditorTab`, and `MapEditorTab` as orchestration shells under active reduction. When touching them, prefer extracting focused non-widget collaborators over adding more unrelated private state, slots, static helper functions, or workflow branches.
+- Treat `MainWindow`, `TextEditorTab`, `MapEditorTab`, and `ThreeDViewerTab` as orchestration shells under active reduction. When touching them, prefer extracting focused non-widget collaborators over adding more unrelated private state, slots, static helper functions, or workflow branches.
 - Do not add convenience constructors to UI shells or controllers that silently instantiate real infrastructure adapters such as filesystem, settings/session stores, resource/catalog loaders, process runners, or platform services.
 - Compose production infrastructure at an explicit composition boundary such as `main.cpp`, `MainWindow` bootstrap code, or a future composition-root class. Tests shall pass fakes or explicit test adapters rather than relying on hidden production defaults.
 - Do not introduce static/global service access for dependencies that perform IO, read bundled/user resources, access settings, launch processes, cache mutable state, or depend on platform APIs. Static functions are acceptable only for deterministic, stateless transformations with no hidden external dependency.
@@ -132,6 +132,7 @@ These instructions apply to the whole repository.
   - `src/app/text_editor/raw_editor/` for raw-mode specific components (`RawEditor*`)
   - `src/app/text_editor/block_editor/` for block-mode specific components (`BlockEditor*`)
   - `src/app/text_editor/map_editor/` for map/visual-mode specific components (`MapEditor*`)
+  - `src/app/three_d_viewer/` for read-only 3D viewer components (`ThreeDViewer*`)
 - Do not introduce new editor-mode implementation files back into legacy top-level `src/app/` paths when they belong to the stable layout above.
 - Do not move or rename these stable directories unless explicitly requested; such a change shall be handled as an intentional architecture migration.
 - Any approved migration of this layout shall update in the same change:

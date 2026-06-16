@@ -1,6 +1,6 @@
 # Therion Studio User Manual
 
-Last updated: 2026-06-13
+Last updated: 2026-06-16
 
 This guide covers everyday workflows in Therion Studio. It intentionally focuses on using the application, not on the full Therion language reference. Therion source syntax, command names, options, and serialized document content stay in canonical Therion form.
 
@@ -26,6 +26,7 @@ Therion Studio is a desktop editor for Therion cave-mapping projects. It provide
 
 - project file browsing
 - text editing for `.th`, `.th2`, and Therion config files
+- a read-only 3D viewer for compiled `.lox` artifacts
 - structure navigation for `survey`, `centerline`, `map`, and `scrap` objects
 - visual map editing for `.th2` files
 - an integrated Therion run console
@@ -100,8 +101,11 @@ When a project is open, the welcome tab shows the active project name and path. 
 
 - Double-click a file in `Files`.
 - `.th2` files open in the map editor.
+- `.lox` files open in the 3D viewer.
 - `.th`, `thconfig`, `*.thconfig`, `thconfig.*`, `.log`, `.txt`, and ordinary text files open in the text editor.
 - Unsupported files, such as images or PDF, show an `Unsupported file` message with `Open in External App`.
+
+The 3D viewer is read-only. Its toolbar provides `Fit` and `Reset` controls, left-drag orbit navigation, right- or middle-drag pan navigation, and mouse-wheel zoom.
 
 ### 3.4 Create and Manage Files
 

@@ -2,6 +2,8 @@
 
 #include "MainWindowDocumentHelpers.h"
 #include "MainWindowStructureRoles.h"
+#include "three_d_viewer/ThreeDViewerTab.h"
+#include "../core/TherionFileTypes.h"
 
 #include <QAbstractItemModel>
 #include <QAbstractItemView>
@@ -1157,9 +1159,14 @@ void MainWindow::openStructureSourceIndex(const QModelIndex &current, QTreeView 
         return;
     }
 
-    QWidget *tabWidget = QFileInfo(sourceFile).suffix().toLower() == QStringLiteral("th2")
-        ? static_cast<QWidget *>(openMapEditorTab(sourceFile))
-        : static_cast<QWidget *>(openTextTab(sourceFile));
+    QWidget *tabWidget = nullptr;
+    if (TherionStudio::isThreeDViewerArtifactFilePath(sourceFile)) {
+        tabWidget = openThreeDViewerTab(sourceFile);
+    } else if (QFileInfo(sourceFile).suffix().toLower() == QStringLiteral("th2")) {
+        tabWidget = static_cast<QWidget *>(openMapEditorTab(sourceFile));
+    } else {
+        tabWidget = static_cast<QWidget *>(openTextTab(sourceFile));
+    }
     if (tabWidget != nullptr && lineNumber > 0) {
         documentGoToLineForWidget(tabWidget, lineNumber);
     }

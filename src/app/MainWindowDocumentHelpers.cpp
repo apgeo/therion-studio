@@ -6,6 +6,7 @@
 
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
+#include "three_d_viewer/ThreeDViewerTab.h"
 
 QString documentPathForWidget(QWidget *widget)
 {
@@ -15,6 +16,10 @@ QString documentPathForWidget(QWidget *widget)
 
     if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(widget)) {
         return mapTab->filePath();
+    }
+
+    if (auto *viewerTab = qobject_cast<TherionStudio::ThreeDViewerTab *>(widget)) {
+        return viewerTab->filePath();
     }
 
     return QString();
@@ -30,6 +35,10 @@ QString documentDisplayNameForWidget(QWidget *widget)
         return mapTab->displayName();
     }
 
+    if (auto *viewerTab = qobject_cast<TherionStudio::ThreeDViewerTab *>(widget)) {
+        return viewerTab->displayName();
+    }
+
     return QString();
 }
 
@@ -42,6 +51,11 @@ void documentGoToLineForWidget(QWidget *widget, int lineNumber)
 
     if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(widget)) {
         mapTab->goToLine(lineNumber);
+        return;
+    }
+
+    if (auto *viewerTab = qobject_cast<TherionStudio::ThreeDViewerTab *>(widget)) {
+        viewerTab->goToLine(lineNumber);
     }
 }
 
@@ -53,6 +67,10 @@ int documentCurrentLineNumberForWidget(QWidget *widget)
 
     if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(widget)) {
         return mapTab->currentLineNumber();
+    }
+
+    if (auto *viewerTab = qobject_cast<TherionStudio::ThreeDViewerTab *>(widget)) {
+        return viewerTab->currentLineNumber();
     }
 
     return 0;
@@ -68,6 +86,10 @@ bool documentIsDirtyForWidget(QWidget *widget)
         return mapTab->isDirty();
     }
 
+    if (auto *viewerTab = qobject_cast<TherionStudio::ThreeDViewerTab *>(widget)) {
+        return viewerTab->isDirty();
+    }
+
     return false;
 }
 
@@ -79,6 +101,10 @@ bool documentSaveForWidget(QWidget *widget, QString *errorMessage)
 
     if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(widget)) {
         return mapTab->save(errorMessage);
+    }
+
+    if (auto *viewerTab = qobject_cast<TherionStudio::ThreeDViewerTab *>(widget)) {
+        return viewerTab->save(errorMessage);
     }
 
     if (errorMessage != nullptr) {
@@ -97,6 +123,11 @@ void documentSetProjectRootPathForWidget(QWidget *widget, const QString &project
 
     if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(widget)) {
         mapTab->setProjectRootPath(projectRootPath);
+        return;
+    }
+
+    if (auto *viewerTab = qobject_cast<TherionStudio::ThreeDViewerTab *>(widget)) {
+        viewerTab->setProjectRootPath(projectRootPath);
     }
 }
 
@@ -109,6 +140,11 @@ void documentShowFindBarForWidget(QWidget *widget, bool replaceMode)
 
     if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(widget)) {
         mapTab->showFindBar(replaceMode);
+        return;
+    }
+
+    if (auto *viewerTab = qobject_cast<TherionStudio::ThreeDViewerTab *>(widget)) {
+        viewerTab->showFindBar(replaceMode);
     }
 }
 

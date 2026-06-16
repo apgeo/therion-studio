@@ -238,7 +238,11 @@ set(THERION_APP_SOURCES
     src/app/TherionRunnerStartResultPresenter.cpp
     src/app/TherionRunnerStartResultPresenter.h
     src/app/TherionRunnerStartSuccessPresenter.cpp
-    src/app/TherionRunnerStartSuccessPresenter.h)
+    src/app/TherionRunnerStartSuccessPresenter.h
+    src/app/three_d_viewer/ThreeDViewerTab.cpp
+    src/app/three_d_viewer/ThreeDViewerTab.h
+    src/app/three_d_viewer/ThreeDViewerViewportWidget.cpp
+    src/app/three_d_viewer/ThreeDViewerViewportWidget.h)
 
 add_library(therion_app STATIC
     ${THERION_APP_SOURCES})
@@ -247,6 +251,8 @@ target_link_libraries(therion_app
     PUBLIC
         therion_core
         Qt6::Core
+        Qt6::Widgets
+        Qt6::Svg
     PRIVATE
         therion_platform
         Qt6::Concurrent)
@@ -270,6 +276,7 @@ set(THERION_APP_UI_STYLE_SOURCES
 set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindow.cpp
     src/app/MainWindow.h
+    src/app/MainWindowFileOpen.cpp
     src/app/MainWindowUntitledDocumentWorkflow.cpp
     src/app/MainWindowTherionConsoleBootstrapper.cpp
     src/app/MainWindowTherionConsoleBootstrapper.h
@@ -942,6 +949,7 @@ therion_add_core_unit_test(TherionDocumentParserTest
 
 therion_add_core_qtest_runner(TherionCoreQTests
     tests/core/CoreQTestMain.cpp
+    tests/core/TherionFileTypesTest.cpp
     tests/core/ThreeDViewerLoxLoaderTest.cpp
     tests/core/TherionSourceTextTest.cpp
     tests/core/TherionTokenRulesTest.cpp)

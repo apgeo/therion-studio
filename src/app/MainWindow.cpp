@@ -56,6 +56,7 @@
 
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
+#include "three_d_viewer/ThreeDViewerTab.h"
 #include "MainWindowDocumentHelpers.h"
 #include "MainWindowDocumentController.h"
 #include "MainWindowDocumentOpenController.h"
@@ -1075,17 +1076,6 @@ void MainWindow::refreshRecentFilesUi()
     }
 }
 
-void MainWindow::openProjectFilePath(const QString &filePath)
-{
-    if (QFileInfo(filePath).suffix().toLower() == QStringLiteral("th2")) {
-        openMapEditorTab(filePath);
-    } else if (isSupportedTextEditorFilePath(filePath)) {
-        openTextTab(filePath);
-    } else {
-        showUnsupportedFilePrompt(this, filePath);
-    }
-}
-
 void MainWindow::recordRecentFilePath(const QString &filePath)
 {
     if (sessionStore_ == nullptr || projectRootPath_.trimmed().isEmpty()) {
@@ -1197,26 +1187,6 @@ void MainWindow::createNewTherionConfigDocument()
 {
     const QString fileName = tr("untitled.thconfig");
     createUntitledTextTab(fileName, QString::fromUtf8(TherionStudio::initialTherionProjectFileContents(fileName)));
-}
-
-void MainWindow::handleProjectTreeActivated(const QModelIndex &index)
-{
-    if (projectModel_ == nullptr || !index.isValid() || projectModel_->isDir(index)) {
-        return;
-    }
-
-    const QString filePath = projectModel_->filePath(index);
-    if (filePath.isEmpty()) {
-        return;
-    }
-
-    if (QFileInfo(filePath).suffix().toLower() == QStringLiteral("th2")) {
-        openMapEditorTab(filePath);
-    } else if (isSupportedTextEditorFilePath(filePath)) {
-        openTextTab(filePath);
-    } else {
-        showUnsupportedFilePrompt(this, filePath);
-    }
 }
 
 void MainWindow::handleTextEditorCurrentLineChanged(const QString &filePath, int lineNumber)
@@ -1867,6 +1837,8 @@ bool MainWindow::reloadDocumentWidgetFromDisk(QWidget *documentWidget, QString *
         loaded = textTab->loadFile(documentPath, errorMessage);
     } else if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(documentWidget)) {
         loaded = mapTab->loadFile(documentPath, errorMessage);
+    } else if (auto *viewerTab = qobject_cast<TherionStudio::ThreeDViewerTab *>(documentWidget)) {
+        loaded = viewerTab->loadFile(documentPath, errorMessage);
     }
 
     if (loaded) {
@@ -2125,6 +2097,11 @@ QList<TherionStudio::MapEditorTab *> MainWindow::detachedMapEditorTabs() const
 TherionStudio::TextEditorTab *MainWindow::currentTextTab() const
 {
     return qobject_cast<TherionStudio::TextEditorTab *>(currentDocumentWidget());
+}
+
+TherionStudio::ThreeDViewerTab *MainWindow::currentThreeDViewerTab() const
+{
+    return qobject_cast<TherionStudio::ThreeDViewerTab *>(currentDocumentWidget());
 }
 
 QWidget *MainWindow::currentDocumentWidget() const

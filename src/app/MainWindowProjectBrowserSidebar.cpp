@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include "MainWindowDocumentHelpers.h"
+#include "LucideIconFactory.h"
 #include "../core/TherionFileTypes.h"
 
 #include <QAbstractItemDelegate>
@@ -27,6 +28,7 @@
 #include <QModelIndex>
 #include <QPainter>
 #include <QPen>
+#include <QPalette>
 #include <QPixmap>
 #include <QPoint>
 #include <QPushButton>
@@ -108,12 +110,18 @@ protected:
             return;
         }
 
-        if (!QFileInfo(filePath).isFile() || !TherionStudio::isTherionProjectFilePath(filePath)) {
+        if (!QFileInfo(filePath).isFile() || !(TherionStudio::isTherionProjectFilePath(filePath)
+                                               || TherionStudio::isThreeDViewerArtifactFilePath(filePath))) {
             return;
         }
 
-        ensureTherionIcon(option->widget);
-        option->icon = therionFileIcon_;
+        if (TherionStudio::isThreeDViewerArtifactFilePath(filePath)) {
+            ensureThreeDViewerIcon(option->widget);
+            option->icon = threeDViewerFileIcon_;
+        } else {
+            ensureTherionIcon(option->widget);
+            option->icon = therionFileIcon_;
+        }
     }
 
 private:
@@ -129,9 +137,23 @@ private:
         therionIconInitialized_ = true;
     }
 
+    void ensureThreeDViewerIcon(const QWidget *widget) const
+    {
+        if (threeDViewerIconInitialized_) {
+            return;
+        }
+
+        const QPalette palette = widget != nullptr ? widget->palette() : QApplication::palette();
+        const qreal devicePixelRatio = widget != nullptr ? widget->devicePixelRatioF() : 1.0;
+        threeDViewerFileIcon_ = TherionStudio::themedLucideIcon(QStringLiteral("blender"), palette, 16, devicePixelRatio);
+        threeDViewerIconInitialized_ = true;
+    }
+
     const QFileSystemModel *model_ = nullptr;
     mutable bool therionIconInitialized_ = false;
     mutable QIcon therionFileIcon_;
+    mutable bool threeDViewerIconInitialized_ = false;
+    mutable QIcon threeDViewerFileIcon_;
 };
 
 QString duplicateFilePath(const QString &sourcePath)
@@ -507,7 +529,9 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
             });
         }
 
-        if (!itemInfo.isFile() || !TherionStudio::isTherionProjectFilePath(itemPath)) {
+        if (!itemInfo.isFile()
+            || !(TherionStudio::isTherionProjectFilePath(itemPath)
+                 || TherionStudio::isThreeDViewerArtifactFilePath(itemPath))) {
             menu.addAction(tr("Open Externally"), this, [this, itemPath]() {
                 if (!QDesktopServices::openUrl(QUrl::fromLocalFile(itemPath))) {
                     QMessageBox::warning(this,

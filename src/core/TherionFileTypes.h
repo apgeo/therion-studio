@@ -38,6 +38,16 @@ inline bool isTherionProjectFilePath(const QString &filePath)
     return isTherionProjectFileName(QFileInfo(filePath).fileName());
 }
 
+inline bool isThreeDViewerArtifactFileName(const QString &fileName)
+{
+    return QFileInfo(fileName).suffix().toLower() == QStringLiteral("lox");
+}
+
+inline bool isThreeDViewerArtifactFilePath(const QString &filePath)
+{
+    return isThreeDViewerArtifactFileName(QFileInfo(filePath).fileName());
+}
+
 inline TherionSourceDocumentType therionSourceDocumentTypeForFileName(const QString &fileName)
 {
     if (isTherionConfigFileName(fileName)) {

@@ -33,6 +33,7 @@ The application is primarily used to:
 - browse Therion project files and folders
 - edit Therion source files with syntax highlighting and assistance
 - visually inspect and edit TH2 map data
+- inspect compiled 3D `.lox` artifacts in a read-only viewer tab
 - review survey structure and map object relationships
 - run the Therion command-line tool and inspect its output
 
@@ -57,8 +58,9 @@ Required capabilities:
 - create a new empty project folder from `File -> New Project -> Empty Project...`
 - create a new project from a bundled template when no project exists or from `File -> New Project -> Project from Template...`
 - display project files and subfolders
-- recognize common Therion-related file types such as `.th`, `.th2`, `thconfig`, `*.thconfig`, and `thconfig.*`
+- recognize common Therion-related file types such as `.th`, `.th2`, `thconfig`, `*.thconfig`, and `thconfig.*`, plus compiled 3D `.lox` artifacts
 - open files in editor tabs
+- opening a `.lox` file shall create a read-only 3D viewer tab with Fit/Reset controls and orbit, pan, and zoom navigation
 - support file selection, multi-tab workflows, and recent project reopening
 - preserve folder expansion state where practical
 
@@ -290,6 +292,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The project root context menu shall offer creation actions for new folders, `.th` files, `.th2` files, and `thconfig` files.
 - A supported Therion file row shall be shown with a Therion document icon; an unsupported file shall use a generic document icon.
 - A `.th2` file shall offer an explicit "Open in Map Editor" action.
+- A `.lox` file shall open in a read-only 3D viewer tab and shall not be offered for map editing.
 - Unsupported files shall offer an "Open Externally" action.
 - File rows shall offer duplicate, rename, and delete actions; deleting an open file shall ask for confirmation, close the corresponding open document after any unsaved-change close prompt is resolved, and then delete the file.
 - Folder rows shall offer rename and delete actions.

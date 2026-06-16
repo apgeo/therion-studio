@@ -53,6 +53,7 @@ namespace TherionStudio
 {
 class TextEditorTab;
 class MapEditorTab;
+class ThreeDViewerTab;
 class TherionRunnerService;
 }
 
@@ -148,6 +149,7 @@ private:
     void refreshFileImportActions();
     TherionStudio::TextEditorTab *createUntitledTextTab(const QString &suggestedFileName, const QString &contents);
     TherionStudio::MapEditorTab *createUntitledMapEditorTab(const QString &suggestedFileName, const QString &contents);
+    TherionStudio::ThreeDViewerTab *openThreeDViewerTab(const QString &filePath, bool recordRecentFile = true);
     bool saveDocumentWidget(QWidget *documentWidget, QString *errorMessage = nullptr);
     QString requestSavePathForDocument(QWidget *documentWidget) const;
     void restoreSessionState();
@@ -282,6 +284,7 @@ private:
     bool currentDocumentRightPanelCollapsed() const;
     QString currentDocumentRightPanelLabel() const;
     void setCurrentDocumentRightPanelCollapsed(bool collapsed);
+    TherionStudio::ThreeDViewerTab *currentThreeDViewerTab() const;
     TherionStudio::MapEditorTab *currentDetachedMapTabWithContextHelp() const;
     bool currentDetachedMapContextHelpCollapsed() const;
     void setCurrentDetachedMapContextHelpCollapsed(bool collapsed);
@@ -295,6 +298,8 @@ private:
     void triggerZoomOutForActiveDocument();
     void triggerFitForActiveDocument();
     void triggerFitWithBackgroundForActiveDocument();
+    void triggerThreeDViewerFitForActiveDocument();
+    void triggerThreeDViewerResetForActiveDocument();
     void triggerSelectForActiveDocument();
     void triggerCompleteDraftForActiveDocument();
     void triggerInsertScrapForActiveDocument();
@@ -419,6 +424,7 @@ private:
     QWidget *workspaceMapModeSwitcher_ = nullptr;
     QWidget *workspaceTextModeSwitcher_ = nullptr;
     QWidget *workspaceZoomGroup_ = nullptr;
+    QWidget *workspaceThreeDViewerGroup_ = nullptr;
     QWidget *workspaceMapToolsGroup_ = nullptr;
     QToolButton *workspaceNewDocumentButton_ = nullptr;
     QToolButton *workspaceSaveButton_ = nullptr;
@@ -429,6 +435,8 @@ private:
     QToolButton *workspaceZoomOutButton_ = nullptr;
     QToolButton *workspaceFitButton_ = nullptr;
     QToolButton *workspaceFitBackgroundButton_ = nullptr;
+    QToolButton *workspaceThreeDViewerFitButton_ = nullptr;
+    QToolButton *workspaceThreeDViewerResetButton_ = nullptr;
     QToolButton *workspaceSelectButton_ = nullptr;
     QToolButton *workspaceCompleteDraftButton_ = nullptr;
     QToolButton *workspaceInsertScrapButton_ = nullptr;

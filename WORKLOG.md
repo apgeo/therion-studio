@@ -12,7 +12,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 
 ### Release Readiness
 
-- Run local validation before tagging or packaging handoff.
+- Run local validation before tagging or packaging handoff, including focused map inspector regressions touched during release stabilization.
 - Keep release notes, package metadata, and CI artifact workflow aligned with `v2026.6.5`.
 
 ### Unified Source DOM / Transactions

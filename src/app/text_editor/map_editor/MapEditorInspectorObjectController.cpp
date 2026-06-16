@@ -336,6 +336,8 @@ void MapEditorInspectorObjectController::handleInspectorObjectSelectionChanged(c
     const int lineNumber = objectIndex.data(kInspectorSourceLineRole).toInt();
     if (lineNumber > 0) {
         context_.textEditor->goToLine(lineNumber);
+        context_.syncMapSelectionFromTextCursor(lineNumber, context_.textEditor->currentColumnNumber());
+        *context_.lastClickedLineNumber = lineNumber;
     }
 }
 

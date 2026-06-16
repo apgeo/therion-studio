@@ -453,7 +453,10 @@ void MapEditorTab::buildInspectorPanelUi()
 
     buildInspectorBackgroundTab(inspectorPanel);
     if (mapInspectorTabs_ != nullptr) {
-        connect(mapInspectorTabs_, &QTabWidget::currentChanged, this, [this]() {
+        connect(mapInspectorTabs_, &QTabWidget::currentChanged, this, [this](int index) {
+            if (index == 0) {
+                refreshObjectDetailsPanel();
+            }
             refreshBackgroundPivotMarkerVisibility();
         });
     }

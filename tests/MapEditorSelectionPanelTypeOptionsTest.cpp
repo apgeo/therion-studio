@@ -12,6 +12,7 @@
 #include <QFormLayout>
 #include <QGraphicsScene>
 #include <QGraphicsView>
+#include <QItemSelectionModel>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMainWindow>
@@ -105,6 +106,47 @@ int formRowForLabelText(QWidget *root, const QString &labelText)
             if (label != nullptr && label->text() == labelText) {
                 return row;
             }
+        }
+    }
+
+    return -1;
+}
+
+QModelIndex treeIndexForSourceLine(QAbstractItemModel *model, int lineNumber, const QModelIndex &parent = QModelIndex())
+{
+    if (model == nullptr || lineNumber <= 0) {
+        return QModelIndex();
+    }
+
+    constexpr int kInspectorSourceLineRoleForTest = Qt::UserRole + 700;
+    const int rowCount = model->rowCount(parent);
+    for (int row = 0; row < rowCount; ++row) {
+        const QModelIndex index = model->index(row, 0, parent);
+        if (!index.isValid()) {
+            continue;
+        }
+        if (index.data(kInspectorSourceLineRoleForTest).toInt() == lineNumber) {
+            return index;
+        }
+        const QModelIndex childMatch = treeIndexForSourceLine(model, lineNumber, index);
+        if (childMatch.isValid()) {
+            return childMatch;
+        }
+    }
+
+    return QModelIndex();
+}
+
+int tabIndexForChild(QTabWidget *tabs, QWidget *child)
+{
+    if (tabs == nullptr || child == nullptr) {
+        return -1;
+    }
+
+    for (int index = 0; index < tabs->count(); ++index) {
+        QWidget *tab = tabs->widget(index);
+        if (tab != nullptr && (tab == child || tab->isAncestorOf(child))) {
+            return index;
         }
     }
 
@@ -232,6 +274,35 @@ int runSelectionPanelTypeValuesTest()
         return 1;
     }
 
+    auto *objectsTree = mapTab->findChild<QTreeView *>(QStringLiteral("mapObjectsTree"));
+    if (!expect(objectsTree != nullptr && objectsTree->selectionModel() != nullptr,
+                "Objects inspector tree was not found before testing Selection tab refresh.")) {
+        return 1;
+    }
+    const int objectsTabIndex = tabIndexForChild(inspectorTabs, objectsTree);
+    if (!expect(objectsTabIndex > 0,
+                "Objects inspector tab should be available after the Selection tab.")) {
+        return 1;
+    }
+    const QModelIndex lineObjectIndex = treeIndexForSourceLine(objectsTree->model(), 4);
+    if (!expect(lineObjectIndex.isValid(),
+                "Objects inspector tree should contain the line object from the TH2 fixture.")) {
+        return 1;
+    }
+    inspectorTabs->setCurrentIndex(objectsTabIndex);
+    pumpEvents();
+    objectsTree->selectionModel()->setCurrentIndex(lineObjectIndex,
+                                                   QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    pumpEvents();
+    inspectorTabs->setCurrentIndex(0);
+    pumpEvents();
+    if (!expect(stylePreview->isVisible(),
+                "Selection panel should show the style preview after selecting an object in Objects and switching back.")) {
+        return 1;
+    }
+    mapView->scene()->clearSelection();
+    pumpEvents();
+
     mapTab->triggerAddLine();
     pumpEvents();
     if (!expect(inspectorTabs->currentIndex() == 0,
@@ -324,7 +395,6 @@ int runSelectionPanelTypeValuesTest()
                 "Insert Scrap should not leave the Selection panel in a pending New Scrap state.")) {
         return 1;
     }
-    auto *objectsTree = mapTab->findChild<QTreeView *>(QStringLiteral("mapObjectsTree"));
     if (!expect(objectsTree != nullptr && objectsTree->currentIndex().data(Qt::UserRole + 700).toInt() == currentLine,
                 "Insert Scrap should select the newly created scrap in the Objects tree.")) {
         return 1;

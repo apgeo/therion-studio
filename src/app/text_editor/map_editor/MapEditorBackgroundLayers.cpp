@@ -3327,6 +3327,9 @@ void MapEditorTab::loadBackgroundImageSourceAsync(QGraphicsPixmapItem *item)
 
     if (const std::optional<QImage> cachedImage = cachedMapEditorRasterSourceImage(imagePath); cachedImage.has_value()) {
         cacheRasterSourceImage(item, cachedImage.value());
+        if (item->data(4).toBool()) {
+            reprojectMetadataBackgroundLayersForCurrentDocument();
+        }
         applyBackgroundLayerGamma(item, backgroundLayerGammaValue(item));
         return;
     }
@@ -3360,6 +3363,9 @@ void MapEditorTab::loadBackgroundImageSourceAsync(QGraphicsPixmapItem *item)
 
         rememberMapEditorRasterSourceImage(result.imagePath, result.image);
         cacheRasterSourceImage(item, result.image);
+        if (item->data(4).toBool()) {
+            reprojectMetadataBackgroundLayersForCurrentDocument();
+        }
         applyBackgroundLayerGamma(item, backgroundLayerGammaValue(item));
     });
     watcher->setFuture(QtConcurrent::run(readMapEditorRasterSourceImageUncached, imagePath));

@@ -6,6 +6,7 @@
 
 #include <QApplication>
 #include <QDateTime>
+#include <QDir>
 #include <QFile>
 #include <QGraphicsView>
 #include <QImage>
@@ -20,6 +21,7 @@
 #include <QtMath>
 
 #include <iostream>
+#include <optional>
 
 using namespace TherionStudio;
 
@@ -398,6 +400,227 @@ int runMapiahRasterBackgroundTransformTest()
     const qreal transformedAspect = bounds.width() / bounds.height();
     if (!expect(!nearlyEqual(transformedAspect, static_cast<qreal>(sourceWidth) / static_cast<qreal>(sourceHeight), 0.10),
                 "Expected Mapiah raster rotation to affect the scene bounds aspect ratio.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runMapiahRasterTransformIgnoresStaleSessionTransformTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory for Mapiah stale session transform test.")) {
+        return 1;
+    }
+
+    struct FixturePaths
+    {
+        QString imagePath;
+        QString filePath;
+    };
+
+    const auto writeFixture = [&tempDir](const QString &name) -> std::optional<FixturePaths> {
+        const QString fixtureRoot = tempDir.filePath(name);
+        if (!QDir().mkpath(fixtureRoot)) {
+            return std::nullopt;
+        }
+
+        const QString imagePath = QDir(fixtureRoot).filePath(QStringLiteral("scan.png"));
+        QImage image(80, 40, QImage::Format_ARGB32);
+        image.fill(QColor(64, 128, 192, 255));
+        if (!image.save(imagePath)) {
+            return std::nullopt;
+        }
+
+        const QString filePath = QDir(fixtureRoot).filePath(QStringLiteral("mapiah_stale_session_transform.th2"));
+        const QByteArray th2Contents =
+            "encoding utf-8\n"
+            "##XTHERION## xth_me_area_adjust -100 -100 500 500\n"
+            "##XTHERION## xth_me_area_zoom_to 100\n"
+            "##MAPIAH## image_insert_v1 {format=raster;filename=scan.png;xx=10;yy=20;xScale=1.4;yScale=0.7;rotationCenterDx=5;rotationCenterDy=-3;rotationDeg=37;pivotSet=true}\n"
+            "\n"
+            "scrap stale-session-transform -projection plan\n"
+            "line wall\n"
+            "  0 0\n"
+            "  100 0\n"
+            "endline\n"
+            "endscrap\n";
+        if (!writeTextFile(filePath, th2Contents)) {
+            return std::nullopt;
+        }
+
+        return FixturePaths{imagePath, filePath};
+    };
+
+    const std::optional<FixturePaths> cleanFixture = writeFixture(QStringLiteral("clean"));
+    if (!expect(cleanFixture.has_value(), "Failed to write clean Mapiah stale session fixture.")) {
+        return 1;
+    }
+    const std::optional<FixturePaths> restoredFixture = writeFixture(QStringLiteral("restored"));
+    if (!expect(restoredFixture.has_value(), "Failed to write restored Mapiah stale session fixture.")) {
+        return 1;
+    }
+
+    const auto boundsMatch = [](const QRectF &a, const QRectF &b) {
+        return nearlyEqual(a.left(), b.left())
+            && nearlyEqual(a.top(), b.top())
+            && nearlyEqual(a.width(), b.width())
+            && nearlyEqual(a.height(), b.height());
+    };
+    const auto waitForRasterLayerReady = [](MapEditorTab *mapTab) {
+        const QSize expectedSize(80, 40);
+        QRectF lastBounds;
+        int stableBoundsCount = 0;
+        for (int attempt = 0; attempt < 300; ++attempt) {
+            if (mapTab->backgroundLayerCount() == 1
+                && mapTab->backgroundLayerSourcePixelSize(0) == expectedSize) {
+                const QRectF bounds = mapTab->backgroundLayerSceneBounds(0);
+                if (bounds.isValid()) {
+                    if (nearlyEqual(bounds.left(), lastBounds.left())
+                        && nearlyEqual(bounds.top(), lastBounds.top())
+                        && nearlyEqual(bounds.width(), lastBounds.width())
+                        && nearlyEqual(bounds.height(), lastBounds.height())) {
+                        ++stableBoundsCount;
+                        if (stableBoundsCount >= 3) {
+                            return true;
+                        }
+                    } else {
+                        stableBoundsCount = 0;
+                        lastBounds = bounds;
+                    }
+                }
+            }
+            pumpEventsFor(10);
+        }
+        return mapTab->backgroundLayerCount() == 1
+            && mapTab->backgroundLayerSourcePixelSize(0) == expectedSize
+            && mapTab->backgroundLayerSceneBounds(0).isValid();
+    };
+
+    QtFileSystem fileSystem;
+    QRectF cleanBounds;
+    QPointF cleanPosition;
+    {
+        FakeSessionStore cleanSessionStore;
+        QMainWindow hostWindow;
+        hostWindow.resize(960, 720);
+        auto *central = new QWidget(&hostWindow);
+        auto *layout = new QVBoxLayout(central);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(0);
+
+        auto *mapTab = new MapEditorTab(fileSystem, cleanSessionStore, CommandCatalogStore(), central);
+        layout->addWidget(mapTab);
+        hostWindow.setCentralWidget(central);
+        hostWindow.show();
+        pumpEvents();
+
+        QString errorMessage;
+        if (!expect(mapTab->loadFile(cleanFixture->filePath, &errorMessage),
+                    "MapEditorTab failed to load clean Mapiah raster transform fixture.")) {
+            if (!errorMessage.isEmpty()) {
+                std::cerr << errorMessage.toStdString() << '\n';
+            }
+            return 1;
+        }
+
+        if (!expect(waitForRasterLayerReady(mapTab),
+                    "Clean Mapiah raster layer did not finish loading a stable source image.")) {
+            return 1;
+        }
+
+        if (!expect(mapTab->backgroundLayerCount() == 1,
+                    "Expected one clean Mapiah raster background layer.")) {
+            return 1;
+        }
+        if (!expect(nearlyEqual(mapTab->backgroundLayerXScale(0), 1.4)
+                        && nearlyEqual(mapTab->backgroundLayerYScale(0), 0.7)
+                        && nearlyEqual(mapTab->backgroundLayerRotationDeg(0), 37.0),
+                    "Clean Mapiah raster transform should come from metadata.")) {
+            return 1;
+        }
+
+        cleanBounds = mapTab->backgroundLayerSceneBounds(0);
+        cleanPosition = mapTab->backgroundLayerPosition(0);
+        if (!expect(cleanBounds.isValid(), "Clean Mapiah raster layer should have valid transformed bounds.")) {
+            return 1;
+        }
+    }
+
+    FakeSessionStore staleSessionStore;
+    const QString documentKey = QFileInfo(restoredFixture->filePath).canonicalFilePath();
+    QJsonObject staleLayer;
+    staleLayer.insert(QStringLiteral("path"), QFileInfo(restoredFixture->imagePath).absoluteFilePath());
+    staleLayer.insert(QStringLiteral("visible"), true);
+    staleLayer.insert(QStringLiteral("opacity"), 0.6);
+    staleLayer.insert(QStringLiteral("gamma"), 1.0);
+    staleLayer.insert(QStringLiteral("x_scale"), 0.25);
+    staleLayer.insert(QStringLiteral("y_scale"), 2.5);
+    staleLayer.insert(QStringLiteral("rotation_deg"), 180.0);
+    staleLayer.insert(QStringLiteral("x"), cleanPosition.x() + 300.0);
+    staleLayer.insert(QStringLiteral("y"), cleanPosition.y() - 200.0);
+    QJsonArray layers;
+    layers.append(staleLayer);
+    QJsonObject root;
+    root.insert(documentKey, layers);
+    staleSessionStore.setTherionMapBackgroundLayers(QString::fromUtf8(QJsonDocument(root).toJson(QJsonDocument::Compact)));
+
+    QMainWindow hostWindow;
+    hostWindow.resize(960, 720);
+    auto *central = new QWidget(&hostWindow);
+    auto *layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    auto *mapTab = new MapEditorTab(fileSystem, staleSessionStore, CommandCatalogStore(), central);
+    layout->addWidget(mapTab);
+    hostWindow.setCentralWidget(central);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(restoredFixture->filePath, &errorMessage),
+                "MapEditorTab failed to load stale-session Mapiah raster transform fixture.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+
+    if (!expect(waitForRasterLayerReady(mapTab),
+                "Restored Mapiah raster layer did not finish loading a stable source image.")) {
+        return 1;
+    }
+
+    if (!expect(mapTab->backgroundLayerCount() == 1,
+                "Expected one Mapiah raster background layer restored from stale session.")) {
+        return 1;
+    }
+    if (!expect(nearlyEqual(mapTab->backgroundLayerXScale(0), 1.4)
+                    && nearlyEqual(mapTab->backgroundLayerYScale(0), 0.7)
+                    && nearlyEqual(mapTab->backgroundLayerRotationDeg(0), 37.0),
+                "Metadata-backed Mapiah raster layer should ignore stale session transform values.")) {
+        return 1;
+    }
+    const QPointF restoredPosition = mapTab->backgroundLayerPosition(0);
+    if (!expect(nearlyEqual(restoredPosition.x(), cleanPosition.x())
+                    && nearlyEqual(restoredPosition.y(), cleanPosition.y()),
+                "Metadata-backed Mapiah raster layer should ignore stale session scene position.")) {
+        return 1;
+    }
+
+    const QRectF restoredBounds = mapTab->backgroundLayerSceneBounds(0);
+    const bool restoredBoundsMatch = boundsMatch(restoredBounds, cleanBounds);
+    if (!restoredBoundsMatch) {
+        std::cerr << "Clean bounds: "
+                  << cleanBounds.left() << ", " << cleanBounds.top() << ", "
+                  << cleanBounds.width() << " x " << cleanBounds.height() << '\n';
+        std::cerr << "Restored bounds: "
+                  << restoredBounds.left() << ", " << restoredBounds.top() << ", "
+                  << restoredBounds.width() << " x " << restoredBounds.height() << '\n';
+    }
+    if (!expect(restoredBoundsMatch,
+                "Metadata-backed Mapiah raster layer should restore the same transformed bounds despite stale session data.")) {
         return 1;
     }
 
@@ -1105,6 +1328,9 @@ int main(int argc, char **argv)
         return rc;
     }
     if (const int rc = runMapiahRasterBackgroundTransformTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runMapiahRasterTransformIgnoresStaleSessionTransformTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runBackgroundTransformWritesMapiahMetadataTest(); rc != 0) {

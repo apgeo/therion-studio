@@ -26,7 +26,7 @@ Use a C++ data/model backend first, then add a Qt Quick-based viewport once the 
 
 The first viewer should be a preview surface, not a full Loch replacement. It should open compiled 3D output or a well-defined Therion 3D artifact, render the main cave geometry, and provide predictable navigation.
 
-The first implementation slice should avoid adding Qt Quick dependencies. The current application links Qt Core, Widgets, Svg, Concurrent, and Test, but not Qt Quick or Qt Quick 3D. A `.lox` loader and neutral scene model can be implemented and tested before making packaging and runtime decisions for the viewport.
+The first implementation slice should keep Qt Quick scoped to the inspector host until the loader and scene contract are stable. The current application links Qt Core, Widgets, Svg, Concurrent, and Test, but not Qt Quick or Qt Quick 3D. A `.lox` loader and neutral scene model can be implemented and tested before making packaging and runtime decisions for the viewport.
 
 ## Discovery Findings
 
@@ -60,7 +60,7 @@ Ownership rules:
 - `ThreeDViewerLoadService` owns loading compiled 3D artifacts and converting them into neutral scene data.
 - `ThreeDViewerSceneModel` exposes renderable points, lines, labels, meshes, visibility flags, extents, and metadata.
 - `ThreeDViewerCamera` owns orbit, pan, zoom, fit, reset, projection mode, and view state.
-- QML owns viewport presentation, input gestures, small overlay controls, and bindings to the C++ model.
+- QML owns the inspector surface first, then later viewport presentation, input gestures, small overlay controls, and bindings to the C++ model.
 - Production dependencies should be passed through explicit composition boundaries.
 - No viewer class should mutate `.th`, `.th2`, or `thconfig` source in the MVP.
 
@@ -99,7 +99,7 @@ Deliverable: loadable scene data without a production viewport.
 
 ### Phase 3 - Minimal GPU Viewport
 
-- Add the viewport host in a narrow widgets integration surface, then move the rendering surface toward Qt Quick/QML once the shell is stable.
+- Add the inspector host in a narrow Qt Quick/QML surface first, then move the rendering surface toward Qt Quick/QML once the shell is stable.
 - Render centerline and station points first.
 - Add orbit, pan, zoom, fit, and reset controls.
 - Keep UI controls minimal and consistent with existing Therion Studio tool surfaces.

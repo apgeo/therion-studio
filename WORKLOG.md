@@ -7,6 +7,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 1. Release readiness for `v2026.6.5`.
 2. Unified Source DOM and source transaction ownership.
 3. Test infrastructure hygiene and structure guardrails.
+4. 3D viewer polish and future QML shell migration.
 
 ## Active Work
 
@@ -60,12 +61,13 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - The viewer projection helper now lives in `src/app/three_d_viewer/` and is covered by a dedicated `ThreeDViewerQTests` runner.
 - The 3D viewer toolbar now exposes top-view, side-view, and rotate-left/rotate-right controls alongside fit/reset controls, with rotation around the world blue axis.
 - The `ThreeDViewerTab` host is integrated into the main window as a read-only `.lox` viewer tab with basic layer toggles, scene summary, and a first interactive viewport slice.
+- The 3D viewer inspector now uses a Qt Quick/QML host embedded through `QQuickWidget`, with the inspector content rendered from a shared QML surface while the viewport remains QWidget-based for the current slice.
 - The viewport painter is now split out from the widget shell so scene rendering can be reused by future render surfaces.
 - The viewport controller is now split out from the widget shell so camera interaction and camera-change signaling can be reused by future render surfaces.
 - The layer inspector is now backed by a shared list model so the QWidget view and future QML UI can use the same visibility/count state.
 - Viewer fit/reset controls now live in the shared workspace command bar instead of a tab-local toolbar.
 - The 3D viewer layer list now blocks internal item-change recursion during tab construction and refresh.
-- Continue the renderer refinement and then the Qt Quick/QML host once the widget viewport proves out the document-open workflow.
+- Continue the renderer refinement and the broader Qt Quick/QML shell migration once the widget viewport proves out the document-open workflow.
 
 ## Blocked / Needs Input
 

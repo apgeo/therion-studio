@@ -48,7 +48,9 @@ public:
     const ThreeDViewerSceneModel &sceneModel() const;
 
     bool layerVisible(Layer layer) const;
+    Q_INVOKABLE bool layerVisible(int layerIndex) const;
     void setLayerVisible(Layer layer, bool visible);
+    Q_INVOKABLE void setLayerVisible(int layerIndex, bool visible);
     std::array<bool, static_cast<int>(Layer::Count)> layerVisibility() const;
 
 signals:

@@ -79,9 +79,9 @@ QHash<int, QByteArray> ThreeDViewerLayerListModel::roleNames() const
     return {
         {Qt::DisplayRole, "display"},
         {Qt::DecorationRole, "decoration"},
-        {Qt::CheckStateRole, "checkState"},
+        {Qt::CheckStateRole, "layerChecked"},
         {IconNameRole, "iconName"},
-        {LayerRole, "layer"},
+        {LayerRole, "layerIndex"},
         {VisibleRole, "visible"},
         {CountRole, "count"},
         {LabelRole, "label"},
@@ -107,6 +107,14 @@ bool ThreeDViewerLayerListModel::layerVisible(Layer layer) const
     return index >= 0 && index < layerCount() ? layerVisibility_[index] : false;
 }
 
+bool ThreeDViewerLayerListModel::layerVisible(int layerIndex) const
+{
+    if (layerIndex < 0 || layerIndex >= layerCount()) {
+        return false;
+    }
+    return layerVisible(static_cast<Layer>(layerIndex));
+}
+
 void ThreeDViewerLayerListModel::setLayerVisible(Layer layer, bool visible)
 {
     const int index = layerIndex(layer);
@@ -118,6 +126,14 @@ void ThreeDViewerLayerListModel::setLayerVisible(Layer layer, bool visible)
     const QModelIndex modelIndex = layerModelIndex(layer);
     emit dataChanged(modelIndex, modelIndex, {Qt::DisplayRole, Qt::DecorationRole, Qt::CheckStateRole, VisibleRole});
     emit layerVisibilityChanged(index, visible);
+}
+
+void ThreeDViewerLayerListModel::setLayerVisible(int layerIndex, bool visible)
+{
+    if (layerIndex < 0 || layerIndex >= layerCount()) {
+        return;
+    }
+    setLayerVisible(static_cast<Layer>(layerIndex), visible);
 }
 
 std::array<bool, static_cast<int>(ThreeDViewerLayerListModel::Layer::Count)> ThreeDViewerLayerListModel::layerVisibility() const

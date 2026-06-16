@@ -31,11 +31,15 @@ void ThreeDViewerLayerListModelTest::exposesLayerCountsAndVisibility()
     const QModelIndex centerlineIndex = model.index(0, 0);
     QCOMPARE(model.data(centerlineIndex, Qt::DisplayRole).toString(), QStringLiteral("Centerline (2)"));
     QCOMPARE(model.data(centerlineIndex, Qt::CheckStateRole).toInt(), int(Qt::Checked));
+    QCOMPARE(model.layerVisible(0), true);
 
     QSignalSpy spy(&model, &ThreeDViewerLayerListModel::layerVisibilityChanged);
     QVERIFY(model.setData(centerlineIndex, Qt::Unchecked, Qt::CheckStateRole));
     QCOMPARE(model.data(centerlineIndex, Qt::CheckStateRole).toInt(), int(Qt::Unchecked));
-    QCOMPARE(spy.count(), 1);
+    QCOMPARE(model.layerVisible(0), false);
+    model.setLayerVisible(0, true);
+    QCOMPARE(model.layerVisible(0), true);
+    QCOMPARE(spy.count(), 2);
 }
 
 int runThreeDViewerLayerListModelTest(int argc, char **argv)

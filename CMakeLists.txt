@@ -46,7 +46,7 @@ option(THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL
     "Run Qt's Linux runtime deployment script during install; intended for AppDir/AppImage builds"
     OFF)
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Core Widgets Svg Concurrent Test)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Widgets Svg Concurrent Test Quick QuickWidgets Qml QuickControls2)
 find_package(Qt6LinguistTools 6.4 QUIET)
 
 qt_standard_project_setup()
@@ -243,6 +243,10 @@ set(THERION_APP_SOURCES
     src/app/TherionRunnerStartSuccessPresenter.h
     src/app/three_d_viewer/ThreeDViewerTab.cpp
     src/app/three_d_viewer/ThreeDViewerTab.h
+    src/app/three_d_viewer/ThreeDViewerInspectorState.cpp
+    src/app/three_d_viewer/ThreeDViewerInspectorState.h
+    src/app/three_d_viewer/ThreeDViewerInspectorWidget.cpp
+    src/app/three_d_viewer/ThreeDViewerInspectorWidget.h
     src/app/three_d_viewer/ThreeDViewerLayerListModel.cpp
     src/app/three_d_viewer/ThreeDViewerLayerListModel.h
     src/app/three_d_viewer/ThreeDViewerViewportController.cpp
@@ -263,6 +267,10 @@ target_link_libraries(therion_app
         Qt6::Core
         Qt6::Widgets
         Qt6::Svg
+        Qt6::Quick
+        Qt6::QuickWidgets
+        Qt6::Qml
+        Qt6::QuickControls2
     PRIVATE
         therion_platform
         Qt6::Concurrent)
@@ -716,7 +724,8 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/view-roll-left.svg
     resources/icons/lucide/view-roll-right.svg
     resources/icons/lucide/zoom-in.svg
-    resources/icons/lucide/zoom-out.svg)
+    resources/icons/lucide/zoom-out.svg
+    resources/qml/three_d_viewer/ThreeDViewerInspector.qml)
 
 qt_add_resources(TherionStudio "TherionStudioResources"
     PREFIX "/"
@@ -1068,15 +1077,26 @@ qt_add_executable(ThreeDViewerQTests
     tests/ThreeDViewerQTestMain.cpp
     tests/ThreeDViewerProjectionTest.cpp
     tests/ThreeDViewerLayerListModelTest.cpp
+    tests/ThreeDViewerInspectorStateTest.cpp
+    tests/ThreeDViewerInspectorWidgetTest.cpp
     tests/ThreeDViewerViewportControllerTest.cpp
     src/app/three_d_viewer/ThreeDViewerLayerListModel.cpp
     src/app/three_d_viewer/ThreeDViewerLayerListModel.h
+    src/app/three_d_viewer/ThreeDViewerInspectorState.cpp
+    src/app/three_d_viewer/ThreeDViewerInspectorState.h
+    src/app/three_d_viewer/ThreeDViewerInspectorWidget.cpp
+    src/app/three_d_viewer/ThreeDViewerInspectorWidget.h
     src/app/three_d_viewer/ThreeDViewerViewportController.cpp
     src/app/three_d_viewer/ThreeDViewerViewportController.h
     src/app/three_d_viewer/ThreeDViewerProjection.cpp
     src/app/three_d_viewer/ThreeDViewerProjection.h)
 
-target_link_libraries(ThreeDViewerQTests PRIVATE therion_core Qt6::Gui Qt6::Svg Qt6::Widgets Qt6::Test)
+target_link_libraries(ThreeDViewerQTests PRIVATE therion_core Qt6::Gui Qt6::Svg Qt6::Widgets Qt6::Quick Qt6::QuickWidgets Qt6::Qml Qt6::QuickControls2 Qt6::Test)
+
+qt_add_resources(ThreeDViewerQTests ThreeDViewerQTestsResources
+    PREFIX "/"
+    FILES
+        resources/qml/three_d_viewer/ThreeDViewerInspector.qml)
 
 qt_add_executable(MapEditorObjectStyleCatalogTest
     tests/MapEditorObjectStyleCatalogTest.cpp

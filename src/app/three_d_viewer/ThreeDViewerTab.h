@@ -5,13 +5,13 @@
 
 #include <QWidget>
 
-class QLabel;
-class QListView;
 class QSplitter;
 
 namespace TherionStudio
 {
 
+class ThreeDViewerInspectorState;
+class ThreeDViewerInspectorWidget;
 class ThreeDViewerViewportWidget;
 
 class ThreeDViewerTab final : public QWidget
@@ -54,13 +54,8 @@ private:
     QString projectRootPath_;
     QSplitter *splitter_ = nullptr;
     ThreeDViewerViewportWidget *viewport_ = nullptr;
-    QLabel *filePathValue_ = nullptr;
-    QLabel *surveyCountValue_ = nullptr;
-    QLabel *stationCountValue_ = nullptr;
-    QLabel *shotCountValue_ = nullptr;
-    QLabel *meshCountValue_ = nullptr;
-    QLabel *surfaceCountValue_ = nullptr;
-    QListView *layerList_ = nullptr;
+    ThreeDViewerInspectorState *inspectorState_ = nullptr;
+    ThreeDViewerInspectorWidget *inspectorWidget_ = nullptr;
     ThreeDViewerLayerListModel *layerModel_ = nullptr;
 };
 

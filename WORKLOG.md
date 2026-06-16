@@ -50,6 +50,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 
 - Continue `plans/GUI_CLEANUP.md` in independently shippable slices.
 - Keep style policy, UI construction, presentation contracts, and source/model logic separated.
+- Keep `plans/3D_VIEWER_PLAN.md` as the planning reference for any post-release 3D viewer work before implementation starts.
 
 ## Blocked / Needs Input
 

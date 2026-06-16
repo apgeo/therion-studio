@@ -62,6 +62,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - The `ThreeDViewerTab` host is integrated into the main window as a read-only `.lox` viewer tab with basic layer toggles, scene summary, and a first interactive viewport slice.
 - The viewport painter is now split out from the widget shell so scene rendering can be reused by future render surfaces.
 - The viewport controller is now split out from the widget shell so camera interaction and camera-change signaling can be reused by future render surfaces.
+- The layer inspector is now backed by a shared list model so the QWidget view and future QML UI can use the same visibility/count state.
 - Viewer fit/reset controls now live in the shared workspace command bar instead of a tab-local toolbar.
 - The 3D viewer layer list now blocks internal item-change recursion during tab construction and refresh.
 - Continue the renderer refinement and then the Qt Quick/QML host once the widget viewport proves out the document-open workflow.

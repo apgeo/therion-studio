@@ -157,6 +157,7 @@ The editor-mode layout is stable:
 - `src/app/text_editor/map_editor/` for Map/Visual-specific components (`MapEditor*`)
 - `src/app/three_d_viewer/` for the read-only 3D viewer shell and viewport host
 - `src/core/ThreeDViewerSceneModel.*` and `src/core/ThreeDViewerCamera.*` for the shared 3D viewer scene contract and camera state, including orbit, pan, zoom, fit, reset, preset views, and world-blue-axis rotation
+- `src/app/three_d_viewer/ThreeDViewerLayerListModel.*` for shared layer visibility and counts data that can drive both the QWidget inspector and future QML surfaces
 - `src/app/three_d_viewer/ThreeDViewerProjection.*` for viewer-space projection math shared by the widget host and future render surfaces
 - `src/app/three_d_viewer/ThreeDViewerViewportRenderer.*` for shared widget/QML-ready scene painting over the model and projection helpers
 - `src/app/three_d_viewer/ThreeDViewerViewportController.*` for widget/QML-ready camera interaction, viewport command handling, and camera-change signaling

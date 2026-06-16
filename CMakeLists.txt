@@ -243,6 +243,8 @@ set(THERION_APP_SOURCES
     src/app/TherionRunnerStartSuccessPresenter.h
     src/app/three_d_viewer/ThreeDViewerTab.cpp
     src/app/three_d_viewer/ThreeDViewerTab.h
+    src/app/three_d_viewer/ThreeDViewerLayerListModel.cpp
+    src/app/three_d_viewer/ThreeDViewerLayerListModel.h
     src/app/three_d_viewer/ThreeDViewerViewportController.cpp
     src/app/three_d_viewer/ThreeDViewerViewportController.h
     src/app/three_d_viewer/ThreeDViewerViewportRenderer.cpp
@@ -1065,13 +1067,16 @@ target_link_libraries(MapEditorLogicQTests PRIVATE therion_core Qt6::Core Qt6::G
 qt_add_executable(ThreeDViewerQTests
     tests/ThreeDViewerQTestMain.cpp
     tests/ThreeDViewerProjectionTest.cpp
+    tests/ThreeDViewerLayerListModelTest.cpp
     tests/ThreeDViewerViewportControllerTest.cpp
+    src/app/three_d_viewer/ThreeDViewerLayerListModel.cpp
+    src/app/three_d_viewer/ThreeDViewerLayerListModel.h
     src/app/three_d_viewer/ThreeDViewerViewportController.cpp
     src/app/three_d_viewer/ThreeDViewerViewportController.h
     src/app/three_d_viewer/ThreeDViewerProjection.cpp
     src/app/three_d_viewer/ThreeDViewerProjection.h)
 
-target_link_libraries(ThreeDViewerQTests PRIVATE therion_core Qt6::Gui Qt6::Test)
+target_link_libraries(ThreeDViewerQTests PRIVATE therion_core Qt6::Gui Qt6::Svg Qt6::Widgets Qt6::Test)
 
 qt_add_executable(MapEditorObjectStyleCatalogTest
     tests/MapEditorObjectStyleCatalogTest.cpp

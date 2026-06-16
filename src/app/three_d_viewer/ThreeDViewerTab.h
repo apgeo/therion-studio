@@ -1,12 +1,12 @@
 #pragma once
 
 #include "../../core/ThreeDViewerLoxLoader.h"
+#include "ThreeDViewerLayerListModel.h"
 
 #include <QWidget>
-#include <array>
 
 class QLabel;
-class QListWidget;
+class QListView;
 class QSplitter;
 
 namespace TherionStudio
@@ -42,26 +42,10 @@ signals:
     void titleChanged();
 
 private:
-    enum class Layer
-    {
-        Centerline = 0,
-        Stations = 1,
-        Labels = 2,
-        Meshes = 3,
-        Surfaces = 4,
-        Count = 5
-    };
-
     void buildUi();
     void rebuildScene();
     void updateSceneSummary();
-    void updateLayerList();
-    bool layerVisible(Layer layer) const;
-    void setLayerVisible(Layer layer, bool visible);
-    QString layerLabel(Layer layer) const;
     void loadSceneIntoView();
-    void addLayerItem(Layer layer);
-    void updateLayerItem(Layer layer);
 
     ThreeDViewerLoxLoader loader_;
     ThreeDViewerSceneModel sceneModel_;
@@ -76,8 +60,8 @@ private:
     QLabel *shotCountValue_ = nullptr;
     QLabel *meshCountValue_ = nullptr;
     QLabel *surfaceCountValue_ = nullptr;
-    QListWidget *layerList_ = nullptr;
-    std::array<bool, static_cast<int>(Layer::Count)> layerVisibility_ = {true, true, true, true, true};
+    QListView *layerList_ = nullptr;
+    ThreeDViewerLayerListModel *layerModel_ = nullptr;
 };
 
 } // namespace TherionStudio

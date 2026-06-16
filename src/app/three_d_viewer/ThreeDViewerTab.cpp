@@ -1,5 +1,6 @@
 #include "ThreeDViewerTab.h"
 
+#include "ThreeDViewerLayerListModel.h"
 #include "ThreeDViewerViewportWidget.h"
 
 #include <QAbstractItemView>
@@ -10,9 +11,7 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QListWidget>
-#include <QListWidgetItem>
-#include <QSignalBlocker>
+#include <QListView>
 #include <QSplitter>
 #include <QVBoxLayout>
 #include <QSize>
@@ -39,6 +38,9 @@ bool ThreeDViewerTab::loadFile(const QString &filePath, QString *errorMessage)
     }
 
     sceneModel_ = result.scene;
+    if (layerModel_ != nullptr) {
+        layerModel_->setSceneModel(sceneModel_);
+    }
 
     const QFileInfo fileInfo(filePath);
     const QString canonicalPath = fileInfo.canonicalFilePath();
@@ -49,7 +51,6 @@ bool ThreeDViewerTab::loadFile(const QString &filePath, QString *errorMessage)
     }
 
     updateSceneSummary();
-    updateLayerList();
     rebuildScene();
     emit titleChanged();
     return true;
@@ -201,30 +202,18 @@ void ThreeDViewerTab::buildUi()
     layersLayout->setContentsMargins(10, 10, 10, 10);
     layersLayout->setSpacing(6);
 
-    layerList_ = new QListWidget(layersGroup);
-    layerList_->setAlternatingRowColors(true);
-    layerList_->setSelectionMode(QAbstractItemView::NoSelection);
-    layerList_->setFrameShape(QFrame::StyledPanel);
-    connect(layerList_, &QListWidget::itemChanged, this, [this](QListWidgetItem *item) {
-        if (item == nullptr) {
-            return;
-        }
-
-        const int layerIndex = item->data(Qt::UserRole).toInt();
-        if (layerIndex < 0 || layerIndex >= static_cast<int>(Layer::Count)) {
-            return;
-        }
-
-        layerVisibility_[layerIndex] = item->checkState() == Qt::Checked;
-        updateLayerItem(static_cast<Layer>(layerIndex));
-        if (viewport_ != nullptr) {
-            viewport_->setLayerVisibility(layerVisibility_);
+    layerModel_ = new ThreeDViewerLayerListModel(this);
+    connect(layerModel_, &ThreeDViewerLayerListModel::layerVisibilityChanged, this, [this](int, bool) {
+        if (viewport_ != nullptr && layerModel_ != nullptr) {
+            viewport_->setLayerVisibility(layerModel_->layerVisibility());
         }
     });
 
-    for (int layerIndex = 0; layerIndex < static_cast<int>(Layer::Count); ++layerIndex) {
-        addLayerItem(static_cast<Layer>(layerIndex));
-    }
+    layerList_ = new QListView(layersGroup);
+    layerList_->setModel(layerModel_);
+    layerList_->setAlternatingRowColors(true);
+    layerList_->setSelectionMode(QAbstractItemView::NoSelection);
+    layerList_->setFrameShape(QFrame::StyledPanel);
     layersLayout->addWidget(layerList_);
     inspectorLayout->addWidget(layersGroup, 1);
 
@@ -261,68 +250,6 @@ void ThreeDViewerTab::updateSceneSummary()
     }
 }
 
-void ThreeDViewerTab::updateLayerList()
-{
-    if (layerList_ == nullptr) {
-        return;
-    }
-
-    for (int layerIndex = 0; layerIndex < static_cast<int>(Layer::Count); ++layerIndex) {
-        updateLayerItem(static_cast<Layer>(layerIndex));
-    }
-}
-
-bool ThreeDViewerTab::layerVisible(Layer layer) const
-{
-    const int index = static_cast<int>(layer);
-    return index >= 0 && index < static_cast<int>(Layer::Count) ? layerVisibility_[index] : false;
-}
-
-void ThreeDViewerTab::setLayerVisible(Layer layer, bool visible)
-{
-    const int index = static_cast<int>(layer);
-    if (index < 0 || index >= static_cast<int>(Layer::Count)) {
-        return;
-    }
-    layerVisibility_[index] = visible;
-    if (layerList_ == nullptr) {
-        return;
-    }
-
-    const QList<QListWidgetItem *> matches = layerList_->findItems(layerLabel(layer), Qt::MatchStartsWith);
-    for (QListWidgetItem *item : matches) {
-        if (item == nullptr) {
-            continue;
-        }
-        QSignalBlocker blocker(layerList_);
-        item->setCheckState(visible ? Qt::Checked : Qt::Unchecked);
-        updateLayerItem(layer);
-    }
-    if (viewport_ != nullptr) {
-        viewport_->setLayerVisibility(layerVisibility_);
-    }
-}
-
-QString ThreeDViewerTab::layerLabel(Layer layer) const
-{
-    switch (layer) {
-    case Layer::Centerline:
-        return tr("Centerline");
-    case Layer::Stations:
-        return tr("Stations");
-    case Layer::Labels:
-        return tr("Labels");
-    case Layer::Meshes:
-        return tr("Meshes");
-    case Layer::Surfaces:
-        return tr("Surfaces");
-    case Layer::Count:
-        break;
-    }
-
-    return {};
-}
-
 void ThreeDViewerTab::loadSceneIntoView()
 {
     if (viewport_ == nullptr) {
@@ -330,62 +257,11 @@ void ThreeDViewerTab::loadSceneIntoView()
     }
 
     viewport_->setSceneModel(sceneModel_);
-    viewport_->setLayerVisibility(layerVisibility_);
+    if (layerModel_ != nullptr) {
+        layerModel_->setSceneModel(sceneModel_);
+        viewport_->setLayerVisibility(layerModel_->layerVisibility());
+    }
     viewport_->fitToScene();
-}
-
-void ThreeDViewerTab::addLayerItem(Layer layer)
-{
-    if (layerList_ == nullptr) {
-        return;
-    }
-
-    auto *item = new QListWidgetItem(layerLabel(layer), layerList_);
-    item->setData(Qt::UserRole, static_cast<int>(layer));
-    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-    item->setCheckState(layerVisible(layer) ? Qt::Checked : Qt::Unchecked);
-    updateLayerItem(layer);
-}
-
-void ThreeDViewerTab::updateLayerItem(Layer layer)
-{
-    if (layerList_ == nullptr) {
-        return;
-    }
-
-    QSignalBlocker blocker(layerList_);
-    const QList<QListWidgetItem *> matches = layerList_->findItems(layerLabel(layer), Qt::MatchStartsWith);
-    for (QListWidgetItem *item : matches) {
-        if (item == nullptr) {
-            continue;
-        }
-
-        const bool visible = layerVisible(layer);
-        const int count = [this, layer]() -> int {
-            switch (layer) {
-            case Layer::Centerline:
-                return sceneModel_.shots.size();
-            case Layer::Stations:
-                return sceneModel_.stations.size();
-            case Layer::Labels:
-                return sceneModel_.stations.size();
-            case Layer::Meshes:
-                return sceneModel_.meshGroups.size();
-            case Layer::Surfaces:
-                return sceneModel_.surfaces.size();
-            case Layer::Count:
-                break;
-            }
-            return 0;
-        }();
-
-        item->setText(QStringLiteral("%1 (%2)").arg(layerLabel(layer)).arg(count));
-        item->setCheckState(visible ? Qt::Checked : Qt::Unchecked);
-        item->setIcon(themedLucideIcon(visible ? QStringLiteral("eye") : QStringLiteral("eye-off"),
-                                       palette(),
-                                       16,
-                                       devicePixelRatioF()));
-    }
 }
 
 } // namespace TherionStudio

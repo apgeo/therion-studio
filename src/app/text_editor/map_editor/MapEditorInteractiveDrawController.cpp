@@ -458,6 +458,12 @@ void MapEditorInteractiveDrawController::clearInteractiveDrawSession(bool clearM
         const bool modeChanged = mode() != MapEditorInteractiveDrawMode::None;
         setMode(MapEditorInteractiveDrawMode::None);
         (*context_.selectModeActive) = true;
+        if (context_.clearPendingInsertObject != nullptr) {
+            context_.clearPendingInsertObject();
+        }
+        if (context_.refreshObjectDetailsPanel != nullptr) {
+            context_.refreshObjectDetailsPanel();
+        }
         if (modeChanged) {
             context_.emitModeStatusChanged();
         }

@@ -73,6 +73,8 @@ struct MapEditorInteractiveDrawContext
     std::function<bool()> hasSmartAreaPreview;
     std::function<bool()> commitSmartAreaPreview;
     std::function<bool()> hasCompletableInteractiveDrawSession;
+    std::function<void()> clearPendingInsertObject;
+    std::function<void()> refreshObjectDetailsPanel;
     std::function<void()> refreshToolbarSummary;
     std::function<void()> updateCommandSurfaceState;
     std::function<void()> updateHelpPanel;

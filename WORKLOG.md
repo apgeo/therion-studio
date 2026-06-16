@@ -20,6 +20,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Keep inline `type:subtype` map object rendering aligned with inspector preview and `-subtype` rendering.
 - Keep Selection quick-field label/input visibility synchronized with wrapper visibility across clear/refresh cycles.
 - Keep point `-align` rendering anchored like Therion so map canvas placement matches saved point options.
+- Clear pending Selection inspector insert state when Smart Area confirmation returns to Select mode.
 - Keep release notes, package metadata, and CI artifact workflow aligned with `v2026.6.5`.
 
 ### Unified Source DOM / Transactions

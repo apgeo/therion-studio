@@ -127,6 +127,12 @@ MapEditorInteractiveDrawContext MapEditorTab::interactiveDrawContext()
         .hasCompletableInteractiveDrawSession = [this]() {
             return hasCompletableInteractiveDrawSession();
         },
+        .clearPendingInsertObject = [this]() {
+            clearPendingInsertObject();
+        },
+        .refreshObjectDetailsPanel = [this]() {
+            refreshObjectDetailsPanel();
+        },
         .refreshToolbarSummary = [this]() {
             refreshToolbarSummary();
         },

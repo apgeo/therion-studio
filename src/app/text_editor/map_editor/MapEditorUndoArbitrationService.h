@@ -38,6 +38,13 @@ struct MapEditorUndoExecutionContext
     std::function<void()> redoTextEdit;
 };
 
+struct MapEditorUndoOwnershipState
+{
+    int lastMapUndoStackIndex = 0;
+    MapEditorUndoOwner preferredUndoOwner = MapEditorUndoOwner::None;
+    MapEditorUndoOwner preferredRedoOwner = MapEditorUndoOwner::None;
+};
+
 class MapEditorUndoArbitrationService final
 {
 public:
@@ -47,5 +54,11 @@ public:
     static bool canRedo(const MapEditorUndoAvailability &availability);
     static bool triggerUndo(const MapEditorUndoExecutionContext &context);
     static bool triggerRedo(const MapEditorUndoExecutionContext &context);
+    static void markTextEdited(MapEditorUndoOwnershipState &state);
+    static void markTextUndoApplied(MapEditorUndoOwnershipState &state);
+    static void markTextRedoApplied(MapEditorUndoOwnershipState &state);
+    static void markMapCommandApplied(MapEditorUndoOwnershipState &state);
+    static void updateMapStackIndex(MapEditorUndoOwnershipState &state, int index);
+    static void resetOwnership(MapEditorUndoOwnershipState &state, int currentMapStackIndex);
 };
 }

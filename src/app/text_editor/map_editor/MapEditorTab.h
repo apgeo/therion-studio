@@ -728,9 +728,7 @@ private:
     bool touchFriendlyControlsEnabled_ = false;
     int selectedBackgroundLayerIndex_ = -1;
     bool mapCommandApplyInProgress_ = false;
-    int lastMapUndoStackIndex_ = 0;
-    MapEditorUndoOwner preferredUndoOwner_ = MapEditorUndoOwner::None;
-    MapEditorUndoOwner preferredRedoOwner_ = MapEditorUndoOwner::None;
+    MapEditorUndoOwnershipState undoOwnershipState_;
     bool preserveNextSourceDrivenMapRefresh_ = false;
     int preserveMapUndoForSourceRevision_ = 0;
     bool mapSceneRefreshPending_ = false;

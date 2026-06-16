@@ -3005,8 +3005,7 @@ void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item
                                       0,
                                       [this, &metadataApplied]() {
                                           metadataApplied = true;
-                                          preferredUndoOwner_ = MapEditorUndoOwner::MapCommand;
-                                          preferredRedoOwner_ = MapEditorUndoOwner::None;
+                                          MapEditorUndoArbitrationService::markMapCommandApplied(undoOwnershipState_);
                                           updateCommandSurfaceState();
                                           if (!toolbarStatusNote_.isEmpty()) {
                                               refreshToolbarSummary();
@@ -3119,8 +3118,7 @@ void MapEditorTab::syncBackgroundLayerMapiahMetadata(QGraphicsPixmapItem *item,
                                       0,
                                       [this, &metadataApplied]() {
                                           metadataApplied = true;
-                                          preferredUndoOwner_ = MapEditorUndoOwner::MapCommand;
-                                          preferredRedoOwner_ = MapEditorUndoOwner::None;
+                                          MapEditorUndoArbitrationService::markMapCommandApplied(undoOwnershipState_);
                                           updateCommandSurfaceState();
                                           if (!toolbarStatusNote_.isEmpty()) {
                                               refreshToolbarSummary();
@@ -3164,8 +3162,7 @@ bool MapEditorTab::syncBackgroundLayerXtherionGammaMetadata(QGraphicsPixmapItem 
                                       0,
                                       [this, &metadataApplied]() {
                                           metadataApplied = true;
-                                          preferredUndoOwner_ = MapEditorUndoOwner::MapCommand;
-                                          preferredRedoOwner_ = MapEditorUndoOwner::None;
+                                          MapEditorUndoArbitrationService::markMapCommandApplied(undoOwnershipState_);
                                           updateCommandSurfaceState();
                                           if (!toolbarStatusNote_.isEmpty()) {
                                               refreshToolbarSummary();
@@ -3208,8 +3205,7 @@ void MapEditorTab::removeBackgroundLayerXtherionMetadata(const QString &layerPat
                                       0,
                                       [this, &metadataApplied]() {
                                           metadataApplied = true;
-                                          preferredUndoOwner_ = MapEditorUndoOwner::MapCommand;
-                                          preferredRedoOwner_ = MapEditorUndoOwner::None;
+                                          MapEditorUndoArbitrationService::markMapCommandApplied(undoOwnershipState_);
                                           updateCommandSurfaceState();
                                           if (!toolbarStatusNote_.isEmpty()) {
                                               refreshToolbarSummary();

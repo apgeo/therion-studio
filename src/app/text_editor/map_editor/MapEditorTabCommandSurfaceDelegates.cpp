@@ -16,8 +16,8 @@ MapEditorUndoOwner MapEditorTab::nextUndoOwner() const
         .hasTextUndo = textEditor_ != nullptr && textEditor_->canUndo(),
         .hasMapRedo = undoStack_ != nullptr && undoStack_->canRedo(),
         .hasTextRedo = textEditor_ != nullptr && textEditor_->canRedo(),
-        .preferredUndoOwner = preferredUndoOwner_,
-        .preferredRedoOwner = preferredRedoOwner_};
+        .preferredUndoOwner = undoOwnershipState_.preferredUndoOwner,
+        .preferredRedoOwner = undoOwnershipState_.preferredRedoOwner};
     return MapEditorUndoArbitrationService::nextUndoOwner(availability);
 }
 
@@ -29,8 +29,8 @@ MapEditorUndoOwner MapEditorTab::nextRedoOwner() const
         .hasTextUndo = textEditor_ != nullptr && textEditor_->canUndo(),
         .hasMapRedo = undoStack_ != nullptr && undoStack_->canRedo(),
         .hasTextRedo = textEditor_ != nullptr && textEditor_->canRedo(),
-        .preferredUndoOwner = preferredUndoOwner_,
-        .preferredRedoOwner = preferredRedoOwner_};
+        .preferredUndoOwner = undoOwnershipState_.preferredUndoOwner,
+        .preferredRedoOwner = undoOwnershipState_.preferredRedoOwner};
     return MapEditorUndoArbitrationService::nextRedoOwner(availability);
 }
 
@@ -61,29 +61,20 @@ void MapEditorTab::handleDocumentTextChangedForUndoOwner()
         return;
     }
 
-    preferredUndoOwner_ = MapEditorUndoOwner::TextEdit;
-    preferredRedoOwner_ = MapEditorUndoOwner::None;
+    MapEditorUndoArbitrationService::markTextEdited(undoOwnershipState_);
     updateCommandSurfaceState();
 }
 
 void MapEditorTab::handleMapUndoStackIndexChanged(int index)
 {
-    if (index > lastMapUndoStackIndex_) {
-        preferredUndoOwner_ = MapEditorUndoOwner::MapCommand;
-        preferredRedoOwner_ = MapEditorUndoOwner::None;
-    } else if (index < lastMapUndoStackIndex_) {
-        preferredUndoOwner_ = MapEditorUndoOwner::None;
-        preferredRedoOwner_ = MapEditorUndoOwner::MapCommand;
-    }
-    lastMapUndoStackIndex_ = index;
+    MapEditorUndoArbitrationService::updateMapStackIndex(undoOwnershipState_, index);
     updateCommandSurfaceState();
 }
 
 void MapEditorTab::resetUndoOwnerState()
 {
-    preferredUndoOwner_ = MapEditorUndoOwner::None;
-    preferredRedoOwner_ = MapEditorUndoOwner::None;
-    lastMapUndoStackIndex_ = undoStack_ != nullptr ? undoStack_->index() : 0;
+    MapEditorUndoArbitrationService::resetOwnership(undoOwnershipState_,
+                                                    undoStack_ != nullptr ? undoStack_->index() : 0);
     updateCommandSurfaceState();
 }
 
@@ -165,7 +156,7 @@ bool MapEditorTab::isInsertModeActive() const
 void MapEditorTab::handleUndoTriggered()
 {
     const MapEditorUndoExecutionContext context{
-        .preferredUndoOwner = preferredUndoOwner_,
+        .preferredUndoOwner = undoOwnershipState_.preferredUndoOwner,
         .undoInteractiveDrawStep = [this]() { return undoInteractiveDrawStep(); },
         .canMapUndo = [this]() { return undoStack_ != nullptr && undoStack_->canUndo(); },
         .undoMapCommand = [this]() {
@@ -180,8 +171,7 @@ void MapEditorTab::handleUndoTriggered()
         .undoTextEdit = [this]() {
             if (textEditor_ != nullptr) {
                 textEditor_->triggerUndo();
-                preferredRedoOwner_ = MapEditorUndoOwner::TextEdit;
-                preferredUndoOwner_ = MapEditorUndoOwner::None;
+                MapEditorUndoArbitrationService::markTextUndoApplied(undoOwnershipState_);
             }
         },
         .canMapRedo = {},
@@ -194,7 +184,7 @@ void MapEditorTab::handleUndoTriggered()
 void MapEditorTab::handleRedoTriggered()
 {
     const MapEditorUndoExecutionContext context{
-        .preferredRedoOwner = preferredRedoOwner_,
+        .preferredRedoOwner = undoOwnershipState_.preferredRedoOwner,
         .undoInteractiveDrawStep = {},
         .canMapUndo = {},
         .undoMapCommand = {},
@@ -213,8 +203,7 @@ void MapEditorTab::handleRedoTriggered()
         .redoTextEdit = [this]() {
             if (textEditor_ != nullptr) {
                 textEditor_->triggerRedo();
-                preferredUndoOwner_ = MapEditorUndoOwner::TextEdit;
-                preferredRedoOwner_ = MapEditorUndoOwner::None;
+                MapEditorUndoArbitrationService::markTextRedoApplied(undoOwnershipState_);
             }
         }};
     MapEditorUndoArbitrationService::triggerRedo(context);

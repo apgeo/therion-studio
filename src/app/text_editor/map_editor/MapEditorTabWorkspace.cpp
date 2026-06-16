@@ -92,7 +92,7 @@ MapEditorTab::MapEditorTab(IFileSystem &fileSystem,
 void MapEditorTab::initializeWorkspace()
 {
     undoStack_ = new QUndoStack(this);
-    lastMapUndoStackIndex_ = undoStack_->index();
+    MapEditorUndoArbitrationService::resetOwnership(undoOwnershipState_, undoStack_->index());
     workspaceMode_ = WorkspaceMode::Visual;
     touchFriendlyControlsEnabled_ = false;
     magnifierEnabled_ = sessionStore_->therionMapMagnifierEnabled();

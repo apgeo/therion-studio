@@ -331,6 +331,65 @@ int runPreferredExecutionOwnerTest()
 
     return 0;
 }
+
+int runOwnershipStateTransitionsTest()
+{
+    MapEditorUndoOwnershipState state;
+
+    MapEditorUndoArbitrationService::resetOwnership(state, 3);
+    if (!expect(state.lastMapUndoStackIndex == 3
+                && state.preferredUndoOwner == MapEditorUndoOwner::None
+                && state.preferredRedoOwner == MapEditorUndoOwner::None,
+                "Ownership reset should clear preferred owners and keep the current map undo index.")) {
+        return 1;
+    }
+
+    MapEditorUndoArbitrationService::markTextEdited(state);
+    if (!expect(state.preferredUndoOwner == MapEditorUndoOwner::TextEdit
+                && state.preferredRedoOwner == MapEditorUndoOwner::None,
+                "Text edits should make text the preferred undo owner and clear redo preference.")) {
+        return 1;
+    }
+
+    MapEditorUndoArbitrationService::markTextUndoApplied(state);
+    if (!expect(state.preferredUndoOwner == MapEditorUndoOwner::None
+                && state.preferredRedoOwner == MapEditorUndoOwner::TextEdit,
+                "Text undo should make text the preferred redo owner.")) {
+        return 1;
+    }
+
+    MapEditorUndoArbitrationService::markTextRedoApplied(state);
+    if (!expect(state.preferredUndoOwner == MapEditorUndoOwner::TextEdit
+                && state.preferredRedoOwner == MapEditorUndoOwner::None,
+                "Text redo should make text the preferred undo owner.")) {
+        return 1;
+    }
+
+    MapEditorUndoArbitrationService::updateMapStackIndex(state, 4);
+    if (!expect(state.lastMapUndoStackIndex == 4
+                && state.preferredUndoOwner == MapEditorUndoOwner::MapCommand
+                && state.preferredRedoOwner == MapEditorUndoOwner::None,
+                "Advancing the map undo stack should prefer map command undo.")) {
+        return 1;
+    }
+
+    MapEditorUndoArbitrationService::updateMapStackIndex(state, 3);
+    if (!expect(state.lastMapUndoStackIndex == 3
+                && state.preferredUndoOwner == MapEditorUndoOwner::None
+                && state.preferredRedoOwner == MapEditorUndoOwner::MapCommand,
+                "Rewinding the map undo stack should prefer map command redo.")) {
+        return 1;
+    }
+
+    MapEditorUndoArbitrationService::markMapCommandApplied(state);
+    if (!expect(state.preferredUndoOwner == MapEditorUndoOwner::MapCommand
+                && state.preferredRedoOwner == MapEditorUndoOwner::None,
+                "Applied map commands should make map command the preferred undo owner.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char **argv)
@@ -356,6 +415,9 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runPreferredExecutionOwnerTest() != 0) {
+        return 1;
+    }
+    if (runOwnershipStateTransitionsTest() != 0) {
         return 1;
     }
 

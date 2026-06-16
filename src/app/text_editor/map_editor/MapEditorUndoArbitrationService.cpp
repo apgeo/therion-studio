@@ -139,4 +139,46 @@ bool MapEditorUndoArbitrationService::triggerRedo(const MapEditorUndoExecutionCo
 
     return false;
 }
+
+void MapEditorUndoArbitrationService::markTextEdited(MapEditorUndoOwnershipState &state)
+{
+    state.preferredUndoOwner = MapEditorUndoOwner::TextEdit;
+    state.preferredRedoOwner = MapEditorUndoOwner::None;
+}
+
+void MapEditorUndoArbitrationService::markTextUndoApplied(MapEditorUndoOwnershipState &state)
+{
+    state.preferredUndoOwner = MapEditorUndoOwner::None;
+    state.preferredRedoOwner = MapEditorUndoOwner::TextEdit;
+}
+
+void MapEditorUndoArbitrationService::markTextRedoApplied(MapEditorUndoOwnershipState &state)
+{
+    state.preferredUndoOwner = MapEditorUndoOwner::TextEdit;
+    state.preferredRedoOwner = MapEditorUndoOwner::None;
+}
+
+void MapEditorUndoArbitrationService::markMapCommandApplied(MapEditorUndoOwnershipState &state)
+{
+    state.preferredUndoOwner = MapEditorUndoOwner::MapCommand;
+    state.preferredRedoOwner = MapEditorUndoOwner::None;
+}
+
+void MapEditorUndoArbitrationService::updateMapStackIndex(MapEditorUndoOwnershipState &state, int index)
+{
+    if (index > state.lastMapUndoStackIndex) {
+        markMapCommandApplied(state);
+    } else if (index < state.lastMapUndoStackIndex) {
+        state.preferredUndoOwner = MapEditorUndoOwner::None;
+        state.preferredRedoOwner = MapEditorUndoOwner::MapCommand;
+    }
+    state.lastMapUndoStackIndex = index;
+}
+
+void MapEditorUndoArbitrationService::resetOwnership(MapEditorUndoOwnershipState &state, int currentMapStackIndex)
+{
+    state.lastMapUndoStackIndex = currentMapStackIndex;
+    state.preferredUndoOwner = MapEditorUndoOwner::None;
+    state.preferredRedoOwner = MapEditorUndoOwner::None;
+}
 }

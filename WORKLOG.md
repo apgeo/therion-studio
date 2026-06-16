@@ -18,7 +18,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 ### Unified Source DOM / Transactions
 
 - Tighten source-file reference resolution while preserving Therion namespace semantics from `docs/THERION_COMPATIBILITY.md`.
-- Replace `MapEditorTab` preferred-owner state with durable transaction ownership metadata attached to each source mutation.
+- Continue moving map/text undo ownership toward durable transaction metadata; keep ownership transitions centralized while source mutations still carry local callback labels.
 - Expand map/text undo regression coverage for save/dirty-state transitions, detached map panes, and inspector-applied source transactions.
 - Continue the phase plan in `plans/UNIFIED_SOURCE_DOM_PLAN.md`.
 

@@ -346,6 +346,9 @@ private:
         QComboBox *objectQuickProjectionCombo_ = nullptr;
         QComboBox *objectQuickTargetScrapCombo_ = nullptr;
         QLineEdit *objectQuickIdentifierEdit_ = nullptr;
+        QWidget *objectQuickNameEditor_ = nullptr;
+        QWidget *objectQuickTextEditor_ = nullptr;
+        QWidget *objectQuickValueEditor_ = nullptr;
         QLineEdit *objectQuickNameEdit_ = nullptr;
         QLineEdit *objectQuickTextEdit_ = nullptr;
         QLineEdit *objectQuickValueEdit_ = nullptr;
@@ -361,6 +364,10 @@ private:
         QCheckBox *linePointNextControlCheck_ = nullptr;
         QLabel *objectDetailsMetadataLabel_ = nullptr;
         QWidget *lineOptionsEditor_ = nullptr;
+        QWidget *scrapOptionsEditor_ = nullptr;
+        QLabel *scrapProjectionLabel_ = nullptr;
+        QWidget *scrapProjectionEditor_ = nullptr;
+        QWidget *objectQuickProjectionEditor_ = nullptr;
         QCheckBox *lineClosedCheck_ = nullptr;
         QCheckBox *lineReversedCheck_ = nullptr;
         QCheckBox *objectClipDisabledCheck_ = nullptr;
@@ -390,6 +397,7 @@ private:
         QWidget *linePointFlagsEditor_ = nullptr;
         QPlainTextEdit *linePointFlagsEdit_ = nullptr;
         bool linePointFlagsDirty_ = false;
+        QWidget *objectConfigureButtonRow_ = nullptr;
         QPushButton *objectConfigureButton_ = nullptr;
         bool updatingObjectDetailsUi_ = false;
     };

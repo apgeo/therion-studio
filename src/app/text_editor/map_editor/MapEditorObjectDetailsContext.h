@@ -67,6 +67,9 @@ struct MapEditorObjectDetailsContext
     QComboBox *quickProjectionCombo = nullptr;
     QComboBox *quickTargetScrapCombo = nullptr;
     QLineEdit *quickIdentifierEdit = nullptr;
+    QWidget *quickNameEditor = nullptr;
+    QWidget *quickTextEditor = nullptr;
+    QWidget *quickValueEditor = nullptr;
     QLineEdit *quickNameEdit = nullptr;
     QLineEdit *quickTextEdit = nullptr;
     QLineEdit *quickValueEdit = nullptr;
@@ -91,6 +94,10 @@ struct MapEditorObjectDetailsContext
     QWidget *linePointFlagsEditor = nullptr;
     QPlainTextEdit *linePointFlagsEdit = nullptr;
     QWidget *lineOptionsEditor = nullptr;
+    QWidget *scrapOptionsEditor = nullptr;
+    QLabel *scrapProjectionLabel = nullptr;
+    QWidget *scrapProjectionEditor = nullptr;
+    QWidget *quickProjectionEditor = nullptr;
     QCheckBox *lineClosedCheck = nullptr;
     QCheckBox *lineReversedCheck = nullptr;
     QCheckBox *objectClipDisabledCheck = nullptr;
@@ -107,6 +114,7 @@ struct MapEditorObjectDetailsContext
     QDoubleSpinBox *scrapScaleRealX2Spin = nullptr;
     QDoubleSpinBox *scrapScaleRealY2Spin = nullptr;
     QComboBox *scrapScaleUnitCombo = nullptr;
+    QWidget *configureButtonRow = nullptr;
     QPushButton *configureButton = nullptr;
 
     std::function<QString(const char *)> translate;

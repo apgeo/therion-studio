@@ -284,7 +284,7 @@ Map objects keep their normal rendered colors while editing. In select mode, the
 
 Selection is shared between the map canvas, the `Objects` pane, and the `Selection` inspector. Selecting an area also highlights its referenced border lines. Selecting a line vertex or Bezier handle switches the inspector to the corresponding line-point controls.
 
-Right-click a map object or line vertex without dragging to open a context menu with common XTherion-style actions. Empty canvas right-clicks do not open this menu. The menu mirrors the available `Selection` inspector groups, such as type/subtype choices, editable object fields, `Geometry`, the complete available `Line Point` panel, `Line Point Actions`, and `Object Actions`; free text or numeric editors are opened and focused in the inspector. On macOS, the trackpad secondary click, such as a two-finger click, opens the same menu. If the menu is already open, another secondary click on a different object or vertex retargets the menu to that new selection and moves it to the latest click position.
+Right-click a map object or line vertex without dragging to open a context menu with common XTherion-style actions. Empty canvas right-clicks do not open this menu. The menu mirrors the available `Selection` inspector groups, such as type/subtype choices, editable object fields, `Options`, the complete available `Line Point` panel, `Line Point Actions`, and `Object Actions`; free text or numeric editors are opened and focused in the inspector. On macOS, the trackpad secondary click, such as a two-finger click, opens the same menu. If the menu is already open, another secondary click on a different object or vertex retargets the menu to that new selection and moves it to the latest click position.
 
 For lines and area borders:
 
@@ -304,9 +304,9 @@ If a line is used as an area border, some destructive line actions are blocked; 
 
 In `Inspector -> Selection`, you can edit properties for selected `Scrap`, `Point`, `Line`, or `Area` objects.
 
-- `Scrap` shows ID/projection and a separate `Scrap Scale` section for XTherion/Therion-compatible `-scale [...]` calibration values.
-- `Point`, `Line`, and `Area` expose common fields such as ID, type, subtype, and supported options. Choose the empty subtype value, or `No subtype` in the context menu, to remove an existing `-subtype`.
-- `Edit Object Settings...` opens the full catalog-backed option editor for the selected `scrap`, `point`, `line`, or `area` command. Positional attributes such as point `x`/`y`, line `type`, and scrap `id` are shown as protected attribute rows, while `-id`, `-text`, `-orientation`, and other options remain editable option rows.
+- `Scrap` shows ID in the main section, `Projection` in `Options`, and a separate `Scrap Scale` section for XTherion/Therion-compatible `-scale [...]` calibration values.
+- `Point`, `Line`, and `Area` keep the main section focused on identity and preview (`ID`, `Type`, `Subtype`, `Preview`). Additional editable fields such as `Name (-name)`, `Text (-text)`, `Value (-value)`, clipping, alignment, and projection appear in `Options`. Choose the empty subtype value, or `No subtype` in the context menu, to remove an existing `-subtype`.
+- `Edit All Object Settings...` at the end of `Options` opens the full catalog-backed option editor for the selected `scrap`, `point`, `line`, or `area` command. Positional attributes such as point `x`/`y`, line `type`, and scrap `id` are shown as protected attribute rows, while `-id`, `-text`, `-orientation`, and other options remain editable option rows.
 - `point label` and `line label` expose `Text (-text)`. Point labels render near the point; line labels render along the label line path, so the line controls the text length and orientation.
 - supported point types such as `height`, `passage-height`, `altitude`, `dimensions`, and `date` expose `Value (-value)`. Bracketed Therion values such as `[fix 1300]` are preserved.
 - Point types that support `-orientation` show an orientation override and a draggable orientation handle. Station names stay screen-aligned for readability.

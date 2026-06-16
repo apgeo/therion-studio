@@ -106,6 +106,68 @@ QLabel *visibleLabelContaining(QWidget *root, const QString &fragment)
     return nullptr;
 }
 
+int visibleLabelCount(QWidget *root, const QString &text)
+{
+    if (root == nullptr) {
+        return 0;
+    }
+
+    int count = 0;
+    const QList<QLabel *> labels = root->findChildren<QLabel *>();
+    for (QLabel *label : labels) {
+        if (label != nullptr && label->isVisible() && label->text() == text) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+bool isVisibleWithin(QWidget *root, const QString &objectName)
+{
+    auto *widget = root != nullptr ? root->findChild<QWidget *>(objectName) : nullptr;
+    return widget != nullptr && widget->isVisible();
+}
+
+bool widgetComesBefore(QWidget *root, const QString &firstObjectName, const QString &secondObjectName)
+{
+    auto *first = root != nullptr ? root->findChild<QWidget *>(firstObjectName) : nullptr;
+    auto *second = root != nullptr ? root->findChild<QWidget *>(secondObjectName) : nullptr;
+    if (first == nullptr || second == nullptr || first->parentWidget() != second->parentWidget()) {
+        return false;
+    }
+
+    if (QLayout *layout = first->parentWidget()->layout(); layout != nullptr) {
+        return layout->indexOf(first) >= 0
+            && layout->indexOf(second) >= 0
+            && layout->indexOf(first) < layout->indexOf(second);
+    }
+
+    return false;
+}
+
+bool widgetComesAfter(QWidget *root, const QString &firstObjectName, const QString &secondObjectName)
+{
+    return widgetComesBefore(root, secondObjectName, firstObjectName);
+}
+
+QString parentObjectNameFor(QWidget *root, const QString &objectName)
+{
+    auto *widget = root != nullptr ? root->findChild<QWidget *>(objectName) : nullptr;
+    return widget != nullptr && widget->parentWidget() != nullptr
+        ? widget->parentWidget()->objectName()
+        : QString();
+}
+
+QString grandparentObjectNameFor(QWidget *root, const QString &objectName)
+{
+    auto *widget = root != nullptr ? root->findChild<QWidget *>(objectName) : nullptr;
+    return widget != nullptr
+            && widget->parentWidget() != nullptr
+            && widget->parentWidget()->parentWidget() != nullptr
+        ? widget->parentWidget()->parentWidget()->objectName()
+        : QString();
+}
+
 int formRowForLabelText(QWidget *root, const QString &labelText)
 {
     if (root == nullptr) {
@@ -206,6 +268,14 @@ int runSelectionPanelTypeValuesTest()
         "area water\n"
         "  border\n"
         "endarea\n"
+        "line label -text Entrance\n"
+        "  60 0\n"
+        "  80 0\n"
+        "endline\n"
+        "point station -name 3.11 -clip off\n"
+        "  10 10\n"
+        "point altitude -value \"[fix 1300]\"\n"
+        "  15 10\n"
         "endscrap\n";
     file.write(th2Contents);
     file.close();
@@ -329,6 +399,115 @@ int runSelectionPanelTypeValuesTest()
                 "Selection panel should show the style preview after selecting an object in Objects and switching back.")) {
         return 1;
     }
+    if (!expect(grandparentObjectNameFor(mapTab, QStringLiteral("mapObjectConfigureButton")) == QStringLiteral("mapLineOptionsEditor"),
+                "Line selection should place the full object settings button inside the line Options panel.")) {
+        return 1;
+    }
+    if (!expect(widgetComesAfter(mapTab,
+                                 QStringLiteral("mapObjectConfigureButtonRow"),
+                                 QStringLiteral("mapObjectClipDisabledCheck")),
+                "Line selection should keep the full object settings button after the other line options.")) {
+        return 1;
+    }
+    mapTab->goToLine(11);
+    pumpEvents();
+    if (!expect(parentObjectNameFor(mapTab, QStringLiteral("mapObjectQuickTextEditor")) == QStringLiteral("mapLineOptionsEditor"),
+                "Line label selection should place Text (-text) inside the line Options panel.")) {
+        return 1;
+    }
+    if (!expect(widgetComesBefore(mapTab,
+                                  QStringLiteral("mapObjectQuickTextEditor"),
+                                  QStringLiteral("mapObjectClipDisabledCheck")),
+                "Line label selection should keep Text (-text) before the other line options.")) {
+        return 1;
+    }
+    if (!expect(widgetComesAfter(mapTab,
+                                 QStringLiteral("mapObjectConfigureButtonRow"),
+                                 QStringLiteral("mapObjectQuickTextEditor")),
+                "Line label selection should keep the full object settings button after Text (-text).")) {
+        return 1;
+    }
+    mapTab->goToLine(15);
+    pumpEvents();
+    if (!expect(visibleLabelCount(mapTab, QStringLiteral("Options")) == 1,
+                "Point selection should show a single Options section.")) {
+        return 1;
+    }
+    if (!expect(visibleLabelCount(mapTab, QStringLiteral("Geometry")) == 0,
+                "Point selection should not expose a Geometry section.")) {
+        return 1;
+    }
+    if (!expect(isVisibleWithin(mapTab, QStringLiteral("mapObjectClipDisabledCheck")),
+                "Point selection should expose the existing -clip off option in Geometry.")) {
+        return 1;
+    }
+    if (!expect(parentObjectNameFor(mapTab, QStringLiteral("mapObjectQuickNameEditor")) == QStringLiteral("mapPointOptionsEditor"),
+                "Point selection should place Name inside the point Options panel.")) {
+        return 1;
+    }
+    if (!expect(widgetComesBefore(mapTab,
+                                  QStringLiteral("mapObjectQuickNameEditor"),
+                                  QStringLiteral("mapObjectClipDisabledCheck")),
+                "Point selection should keep Name before the other point options.")) {
+        return 1;
+    }
+    if (!expect(widgetComesBefore(mapTab,
+                                  QStringLiteral("mapVertexGeometrySection"),
+                                  QStringLiteral("mapObjectActionsSection")),
+                "Point Options should appear before Object Actions in the Selection inspector.")) {
+        return 1;
+    }
+    if (!expect(grandparentObjectNameFor(mapTab, QStringLiteral("mapObjectConfigureButton")) == QStringLiteral("mapPointOptionsEditor"),
+                "Point selection should place the full object settings button inside the point Options panel.")) {
+        return 1;
+    }
+    if (!expect(widgetComesAfter(mapTab,
+                                 QStringLiteral("mapObjectConfigureButtonRow"),
+                                 QStringLiteral("mapObjectClipDisabledCheck")),
+                "Point selection should keep the full object settings button after the other point options.")) {
+        return 1;
+    }
+    mapTab->goToLine(17);
+    pumpEvents();
+    if (!expect(parentObjectNameFor(mapTab, QStringLiteral("mapObjectQuickValueEditor")) == QStringLiteral("mapPointOptionsEditor"),
+                "Point selection should place Value (-value) inside the point Options panel.")) {
+        return 1;
+    }
+    if (!expect(widgetComesAfter(mapTab,
+                                 QStringLiteral("mapObjectConfigureButtonRow"),
+                                 QStringLiteral("mapObjectQuickValueEditor")),
+                "Point selection should keep the full object settings button after Value (-value).")) {
+        return 1;
+    }
+    const QModelIndex scrapObjectIndex = treeIndexForSourceLine(objectsTree->model(), 3);
+    if (!expect(scrapObjectIndex.isValid(),
+                "Objects inspector tree should contain the scrap object from the TH2 fixture.")) {
+        return 1;
+    }
+    inspectorTabs->setCurrentIndex(objectsTabIndex);
+    pumpEvents();
+    objectsTree->selectionModel()->setCurrentIndex(scrapObjectIndex,
+                                                   QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    pumpEvents();
+    inspectorTabs->setCurrentIndex(0);
+    pumpEvents();
+    auto *projectionCombo = mapTab->findChild<QComboBox *>(QStringLiteral("mapObjectQuickProjectionCombo"));
+    if (!expect(projectionCombo != nullptr && projectionCombo->isVisible(),
+                "Scrap selection should expose Projection in the Options panel.")) {
+        return 1;
+    }
+    if (!expect(grandparentObjectNameFor(mapTab, QStringLiteral("mapObjectConfigureButton")) == QStringLiteral("mapScrapOptionsEditor"),
+                "Scrap selection should place the full object settings button inside the scrap Options panel.")) {
+        return 1;
+    }
+    if (!expect(widgetComesAfter(mapTab,
+                                 QStringLiteral("mapObjectConfigureButtonRow"),
+                                 QStringLiteral("mapScrapProjectionEditor")),
+                "Scrap selection should keep the full object settings button after Projection.")) {
+        return 1;
+    }
+    mapTab->goToLine(4);
+    pumpEvents();
     mapView->scene()->clearSelection();
     pumpEvents();
 
@@ -362,6 +541,10 @@ int runSelectionPanelTypeValuesTest()
     }
     auto *subtypeCombo = mapTab->findChild<QComboBox *>(QStringLiteral("mapObjectQuickSubtypeCombo"));
     if (!expect(subtypeCombo != nullptr, "Selection panel subtype combo was not found.")) {
+        return 1;
+    }
+    if (!expect(typeCombo->width() > 200 && subtypeCombo->width() > 140,
+                "Selection panel type and subtype fields should expand in the available inspector width.")) {
         return 1;
     }
     subtypeCombo->setFocus(Qt::OtherFocusReason);

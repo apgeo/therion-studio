@@ -10,6 +10,7 @@
 #include "../../../core/TherionDocumentParser.h"
 #include "../../../core/TherionSourceText.h"
 
+#include <QBoxLayout>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCoreApplication>
@@ -99,6 +100,45 @@ QString metadataForSourceLine(const QVector<TherionParsedLine> &parsedLines, int
                                        "Source line %1%2")
         .arg(lineNumber)
         .arg(scrapContextMetadataSuffix(scrapContext));
+}
+
+void moveSelectionControlToContainer(QWidget *control, QWidget *container, bool forceReappend = false)
+{
+    if (control == nullptr || container == nullptr) {
+        return;
+    }
+
+    if (!forceReappend && control->parentWidget() == container) {
+        return;
+    }
+
+    if (QWidget *currentParent = control->parentWidget(); currentParent != nullptr) {
+        if (QLayout *currentLayout = currentParent->layout(); currentLayout != nullptr) {
+            currentLayout->removeWidget(control);
+        }
+    }
+
+    control->setParent(container);
+    if (auto *targetLayout = qobject_cast<QBoxLayout *>(container->layout()); targetLayout != nullptr) {
+        targetLayout->addWidget(control);
+    }
+}
+
+void reorderSelectionControls(QWidget *container, std::initializer_list<QWidget *> orderedControls)
+{
+    auto *layout = container != nullptr ? qobject_cast<QBoxLayout *>(container->layout()) : nullptr;
+    if (layout == nullptr) {
+        return;
+    }
+
+    int insertIndex = 0;
+    for (QWidget *control : orderedControls) {
+        if (control == nullptr || control->parentWidget() != container) {
+            continue;
+        }
+        layout->removeWidget(control);
+        layout->insertWidget(insertIndex++, control);
+    }
 }
 
 void setTargetScrapComboValues(QComboBox *combo,
@@ -237,6 +277,9 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.quickTypeLabel == nullptr
         || context_.quickSubtypeLabel == nullptr
         || context_.quickTargetScrapLabel == nullptr
+        || context_.quickNameEditor == nullptr
+        || context_.quickTextEditor == nullptr
+        || context_.quickValueEditor == nullptr
         || context_.stylePreviewLabel == nullptr
         || context_.quickTypeCombo == nullptr
         || context_.quickSubtypeCombo == nullptr
@@ -267,6 +310,10 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.linePointFlagsEditor == nullptr
         || context_.linePointFlagsEdit == nullptr
         || context_.lineOptionsEditor == nullptr
+        || context_.scrapOptionsEditor == nullptr
+        || context_.scrapProjectionLabel == nullptr
+        || context_.scrapProjectionEditor == nullptr
+        || context_.quickProjectionEditor == nullptr
         || context_.lineClosedCheck == nullptr
         || context_.lineReversedCheck == nullptr
         || context_.objectClipDisabledCheck == nullptr
@@ -283,6 +330,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.scrapScaleRealX2Spin == nullptr
         || context_.scrapScaleRealY2Spin == nullptr
         || context_.scrapScaleUnitCombo == nullptr
+        || context_.configureButtonRow == nullptr
         || context_.configureButton == nullptr) {
         return;
     }
@@ -305,6 +353,55 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             context_.stylePreview->clearStyleSelection();
         }
     };
+    auto moveProjectionComboForSelection = [this](const QString &commandKind) {
+        const bool scrapCommand = commandKind.trimmed().compare(QStringLiteral("scrap"), Qt::CaseInsensitive) == 0;
+        moveSelectionControlToContainer(context_.quickProjectionCombo,
+                                        scrapCommand ? context_.scrapProjectionEditor : context_.quickProjectionEditor);
+        context_.quickProjectionLabel->setVisible(false);
+        context_.scrapProjectionLabel->setVisible(false);
+    };
+    auto moveQuickOptionEditorsForSelection = [this](const QString &commandKind,
+                                                     bool nameVisible,
+                                                     bool textVisible,
+                                                     bool valueVisible) {
+        QWidget *targetContainer = context_.lineOptionsEditor;
+        const QString normalizedCommand = commandKind.trimmed().toLower();
+        if (normalizedCommand == QStringLiteral("point")) {
+            targetContainer = context_.orientationEditor;
+        } else if (normalizedCommand == QStringLiteral("scrap")) {
+            targetContainer = context_.scrapOptionsEditor;
+        }
+
+        moveSelectionControlToContainer(context_.quickNameEditor, targetContainer);
+        moveSelectionControlToContainer(context_.quickTextEditor, targetContainer);
+        moveSelectionControlToContainer(context_.quickValueEditor, targetContainer);
+        context_.quickNameEditor->setVisible(nameVisible);
+        context_.quickTextEditor->setVisible(textVisible);
+        context_.quickValueEditor->setVisible(valueVisible);
+        reorderSelectionControls(targetContainer,
+                                 {context_.quickNameEditor,
+                                  context_.quickTextEditor,
+                                  context_.quickValueEditor});
+    };
+    auto moveConfigureButtonForSelection = [this](const QString &commandKind, bool allowConfigure) {
+        QWidget *targetContainer = context_.advancedSection;
+        const QString normalizedCommand = commandKind.trimmed().toLower();
+        if (allowConfigure) {
+            if (normalizedCommand == QStringLiteral("point")) {
+                targetContainer = context_.orientationEditor;
+            } else if (normalizedCommand == QStringLiteral("line")
+                       || normalizedCommand == QStringLiteral("area")) {
+                targetContainer = context_.lineOptionsEditor;
+            } else if (normalizedCommand == QStringLiteral("scrap")) {
+                targetContainer = context_.scrapOptionsEditor;
+            }
+        }
+        moveSelectionControlToContainer(context_.configureButtonRow, targetContainer, true);
+        context_.configureButtonRow->setVisible(allowConfigure);
+        context_.configureButton->setEnabled(allowConfigure);
+    };
+    bool scrapOptionsVisible = false;
+    bool objectQuickOptionsVisible = false;
 
     if (context_.pendingInsertQuickFields) {
         const std::optional<InspectorObjectQuickFields> pendingFields = context_.pendingInsertQuickFields();
@@ -326,7 +423,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             context_.selectionSection->setVisible(true);
             context_.selectionTitleLabel->setText(objectSectionTitle);
             context_.vertexTitleLabel->setText(commandKind == QStringLiteral("point")
-                                                   ? tr("Geometry")
+                                                   ? tr("Options")
                                                    : tr("Line Point"));
             const std::optional<InspectorScrapContext> targetScrapContext = commandKind != QStringLiteral("scrap")
                     && context_.pendingInsertTargetScrapContext
@@ -344,10 +441,14 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             const bool projectionFieldVisible = commandKind == QStringLiteral("scrap");
             const bool textFieldVisible = pendingFields->textVisible;
             const bool valueFieldVisible = pendingFields->valueVisible;
-            context_.quickNameLabel->setVisible(pendingFields->nameVisible);
-            context_.quickTextLabel->setVisible(textFieldVisible);
-            context_.quickValueLabel->setVisible(valueFieldVisible);
-            context_.quickProjectionLabel->setVisible(projectionFieldVisible);
+            moveProjectionComboForSelection(commandKind);
+            moveQuickOptionEditorsForSelection(commandKind,
+                                               pendingFields->nameVisible,
+                                               textFieldVisible,
+                                               valueFieldVisible);
+            objectQuickOptionsVisible = pendingFields->nameVisible || textFieldVisible || valueFieldVisible;
+            context_.quickProjectionLabel->setVisible(false);
+            context_.scrapProjectionLabel->setVisible(projectionFieldVisible);
             context_.quickTypeLabel->setVisible(typeFieldsVisible);
             context_.quickSubtypeLabel->setVisible(typeFieldsVisible);
             const QVector<TherionParsedLine> parsedLines = context_.parsedLinesForCurrentDocument
@@ -358,9 +459,9 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             context_.metadataLabel->setVisible(commandKind != QStringLiteral("scrap") && !targetScrapVisible);
             context_.metadataLabel->setText(metadataForPendingInsert(targetScrapContext));
             context_.quickTargetScrapLabel->setVisible(targetScrapVisible);
-            context_.quickNameEdit->setVisible(pendingFields->nameVisible);
-            context_.quickTextEdit->setVisible(textFieldVisible);
-            context_.quickValueEdit->setVisible(valueFieldVisible);
+            context_.quickProjectionEditor->setVisible(false);
+            context_.scrapOptionsEditor->setVisible(projectionFieldVisible);
+            scrapOptionsVisible = projectionFieldVisible;
             context_.quickProjectionCombo->setVisible(projectionFieldVisible);
             context_.quickTypeCombo->setVisible(typeFieldsVisible);
             context_.quickSubtypeCombo->setVisible(typeFieldsVisible);
@@ -389,7 +490,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             showStylePreview(commandKind, pendingFields->type, pendingFields->subtype);
 
             context_.vertexSection->setVisible(false);
-            context_.geometrySection->setVisible(false);
+            context_.geometrySection->setVisible(projectionFieldVisible);
             context_.advancedSection->setVisible(false);
             context_.vertexActionsEditor->setVisible(false);
             context_.orientationEditor->setVisible(false);
@@ -399,8 +500,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             context_.pointAlignEditor->setVisible(false);
             context_.pointAlignCombo->setCurrentIndex(0);
             context_.scrapScaleEditor->setVisible(false);
-            context_.configureButton->setVisible(false);
-            context_.configureButton->setEnabled(false);
+            moveConfigureButtonForSelection(commandKind, false);
             context_.lineClosedCheck->setChecked(false);
             context_.lineReversedCheck->setChecked(false);
             return;
@@ -457,13 +557,15 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.linePointFlagsEditor->setVisible(false);
         context_.linePointFlagsEdit->setEnabled(false);
         context_.lineOptionsEditor->setVisible(false);
+        context_.scrapOptionsEditor->setVisible(false);
+        moveProjectionComboForSelection(QString());
+        context_.quickProjectionEditor->setVisible(false);
         context_.objectClipDisabledCheck->setChecked(false);
         context_.objectClipDisabledCheck->setVisible(false);
         context_.pointAlignEditor->setVisible(false);
         context_.pointAlignCombo->setCurrentIndex(0);
         context_.scrapScaleEditor->setVisible(false);
-        context_.configureButton->setVisible(false);
-        context_.configureButton->setEnabled(false);
+        moveConfigureButtonForSelection(QString(), false);
         context_.lineClosedCheck->setChecked(false);
         context_.lineReversedCheck->setChecked(false);
         return;
@@ -486,7 +588,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     context_.selectionTitleLabel->setText(objectSectionTitle);
     context_.vertexTitleLabel->setText(effectiveKind == QStringLiteral("line")
                                            ? tr("Line Point")
-                                           : tr("Geometry"));
+                                           : tr("Options"));
     const QVector<TherionParsedLine> parsedLines = context_.parsedLinesForCurrentDocument
         ? context_.parsedLinesForCurrentDocument()
         : QVector<TherionParsedLine>();
@@ -534,17 +636,21 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                 const bool valueFieldVisible =
                     inspectorValueOptionSupportedForCommandType(inspectorSymbolCatalog(), fields->commandKind, fields->type)
                     || fields->valueVisible;
+                moveProjectionComboForSelection(fields->commandKind);
+                moveQuickOptionEditorsForSelection(fields->commandKind,
+                                                   fields->nameVisible,
+                                                   textFieldVisible,
+                                                   valueFieldVisible);
+                objectQuickOptionsVisible = fields->nameVisible || textFieldVisible || valueFieldVisible;
                 context_.quickFieldsEditor->setVisible(true);
-                context_.quickNameLabel->setVisible(fields->nameVisible);
-                context_.quickTextLabel->setVisible(textFieldVisible);
-                context_.quickValueLabel->setVisible(valueFieldVisible);
-                context_.quickProjectionLabel->setVisible(projectionFieldVisible);
+                context_.quickProjectionLabel->setVisible(false);
+                context_.scrapProjectionLabel->setVisible(projectionFieldVisible);
                 context_.quickTypeLabel->setVisible(typeFieldsVisible);
                 context_.quickSubtypeLabel->setVisible(typeFieldsVisible);
                 context_.quickTargetScrapLabel->setVisible(false);
-                context_.quickNameEdit->setVisible(fields->nameVisible);
-                context_.quickTextEdit->setVisible(textFieldVisible);
-                context_.quickValueEdit->setVisible(valueFieldVisible);
+                context_.quickProjectionEditor->setVisible(false);
+                context_.scrapOptionsEditor->setVisible(projectionFieldVisible);
+                scrapOptionsVisible = projectionFieldVisible;
                 context_.quickProjectionCombo->setVisible(projectionFieldVisible);
                 context_.quickTypeCombo->setVisible(typeFieldsVisible);
                 context_.quickSubtypeCombo->setVisible(typeFieldsVisible);
@@ -574,10 +680,15 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     }
     if (!context_.quickFieldsEditor->isVisible()) {
         clearStylePreview();
+        context_.quickNameEditor->setVisible(false);
+        context_.quickTextEditor->setVisible(false);
+        context_.quickValueEditor->setVisible(false);
+        objectQuickOptionsVisible = false;
+        context_.scrapOptionsEditor->setVisible(false);
+        scrapOptionsVisible = false;
+        moveProjectionComboForSelection(effectiveKind);
+        context_.quickProjectionEditor->setVisible(false);
     }
-    context_.configureButton->setVisible(true);
-    context_.configureButton->setEnabled(isConfigurableMapObjectKind(effectiveKind));
-
     const bool lineVertexActionsAvailable = *context_.selectedObjectKind == QStringLiteral("line")
         && *context_.selectedObjectVertexIndex >= 0
         && context_.textEditor != nullptr;
@@ -626,13 +737,17 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     bool clipDisabledVisible = false;
     bool clipDisabled = false;
     QString pointAlign;
-    const bool lineOptionsVisible = *context_.selectedObjectLineNumber > 0
+    const bool objectOptionSourceVisible = *context_.selectedObjectLineNumber > 0
         && (*context_.selectedObjectKind == QStringLiteral("line")
             || *context_.selectedObjectKind == QStringLiteral("area")
             || *context_.selectedObjectKind == QStringLiteral("point"))
         && context_.textEditor != nullptr;
+    const bool lineOptionsVisible = *context_.selectedObjectLineNumber > 0
+        && (*context_.selectedObjectKind == QStringLiteral("line")
+            || *context_.selectedObjectKind == QStringLiteral("area"))
+        && context_.textEditor != nullptr;
     context_.lineOptionsEditor->setVisible(lineOptionsVisible);
-    if (lineOptionsVisible) {
+    if (objectOptionSourceVisible) {
         const QStringList lines = TherionSourceText::splitTextLines(context_.textEditor->text());
         TherionParsedLine parsedLine;
         if (*context_.selectedObjectLineNumber <= lines.size()) {
@@ -641,12 +756,15 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             if (parsedLine.directive == QStringLiteral("line")
                 || parsedLine.directive == QStringLiteral("area")
                 || parsedLine.directive == QStringLiteral("point")) {
-                clipDisabledVisible = parsedLine.directive != QStringLiteral("point")
-                    || pointTypeSupportsClip(parsedLine.tokens.value(3));
                 clipDisabled = singleValueOptionValue(parsedLine, QStringLiteral("-clip")).compare(QStringLiteral("off"), Qt::CaseInsensitive) == 0;
+                clipDisabledVisible = parsedLine.directive != QStringLiteral("point")
+                    || pointTypeSupportsClip(parsedLine.tokens.value(3))
+                    || clipDisabled;
                 pointAlign = singleValueOptionValue(parsedLine, QStringLiteral("-align"));
             }
         }
+    }
+    if (lineOptionsVisible) {
         if (const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), *context_.selectedObjectLineNumber);
             *context_.selectedObjectKind == QStringLiteral("line")
             && lineFeature.has_value()
@@ -667,11 +785,17 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.lineClosedCheck->setChecked(false);
         context_.lineReversedCheck->setChecked(false);
     }
+    const bool pointClipInGeometrySection = *context_.selectedObjectKind == QStringLiteral("point") && clipDisabledVisible;
+    moveSelectionControlToContainer(context_.objectClipDisabledCheck,
+                                    pointClipInGeometrySection ? context_.orientationEditor : context_.lineOptionsEditor);
     context_.objectClipDisabledCheck->setVisible(clipDisabledVisible);
     context_.objectClipDisabledCheck->setEnabled(clipDisabledVisible);
     context_.objectClipDisabledCheck->setChecked(clipDisabledVisible && clipDisabled);
 
     context_.geometrySection->setVisible(lineOptionsVisible && (clipDisabledVisible || *context_.selectedObjectKind == QStringLiteral("line")));
+    if (effectiveKind == QStringLiteral("scrap")) {
+        context_.geometrySection->setVisible(scrapOptionsVisible);
+    }
 
     const bool scrapScaleVisible = effectiveLineNumber > 0
         && effectiveKind == QStringLiteral("scrap")
@@ -791,8 +915,10 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     }
 
     context_.orientationEditor->setVisible(linePointSmoothApplicable
+                                           || objectQuickOptionsVisible
                                            || orientationApplicable
                                            || pointAlignApplicable
+                                           || pointClipInGeometrySection
                                            || linePointLeftSizeApplicable
                                            || linePointSegmentSubtypeApplicable
                                            || linePointAltitudeAutoApplicable
@@ -823,6 +949,8 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.orientationSpin->setEnabled(false);
         context_.orientationSpin->setValue(0.0);
     }
+
+    moveConfigureButtonForSelection(effectiveKind, isConfigurableMapObjectKind(effectiveKind));
     if (linePointLeftSizeApplicable) {
         context_.linePointLeftSizeEnabledCheck->setChecked(linePointLeftSize.has_value());
         context_.linePointLeftSizeSpin->setEnabled(context_.linePointLeftSizeEnabledCheck->isChecked());
@@ -863,7 +991,37 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                                                             linePointSegmentSubtypeApplicable,
                                                             linePointAltitudeAutoApplicable).join(QLatin1Char('\n')));
     }
+    reorderSelectionControls(context_.lineOptionsEditor,
+                             {context_.quickNameEditor,
+                              context_.quickTextEditor,
+                              context_.quickValueEditor,
+                              context_.lineClosedCheck,
+                              context_.lineReversedCheck,
+                              context_.objectClipDisabledCheck,
+                              context_.configureButtonRow});
+    reorderSelectionControls(context_.scrapOptionsEditor,
+                             {context_.quickNameEditor,
+                              context_.quickTextEditor,
+                              context_.quickValueEditor,
+                              context_.scrapProjectionEditor,
+                              context_.configureButtonRow});
+    reorderSelectionControls(context_.orientationEditor,
+                             {context_.quickNameEditor,
+                              context_.quickTextEditor,
+                              context_.quickValueEditor,
+                              context_.linePointPreviousControlCheck->parentWidget(),
+                              context_.orientationEnabledCheck,
+                              context_.orientationSpin,
+                              context_.linePointLeftSizeEnabledCheck,
+                              context_.linePointLeftSizeSpin,
+                              context_.linePointSegmentSubtypeLabel->parentWidget(),
+                              context_.linePointAltitudeAutoCheck,
+                              context_.pointAlignEditor,
+                              context_.objectClipDisabledCheck,
+                              context_.linePointFlagsEditor,
+                              context_.configureButtonRow});
     context_.vertexSection->setVisible(lineVertexActionsAvailable
+                                       || objectQuickOptionsVisible
                                        || linePointSmoothApplicable
                                        || orientationApplicable
                                        || pointAlignApplicable

@@ -4320,8 +4320,8 @@ Přesto bod smazat?</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="465" />
-            <source>Edit Object Settings</source>
-            <translation>Upravit nastavení objektu</translation>
+            <source>Edit All Object Settings</source>
+            <translation>Upravit všechna nastavení objektu</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="496" />
@@ -4652,8 +4652,8 @@ Přesto bod smazat?</translation>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="329" />
             <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="489" />
-            <source>Geometry</source>
-            <translation>Geometrie</translation>
+            <source>Options</source>
+            <translation>Volby</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="384" />
@@ -5128,8 +5128,8 @@ Přesto bod smazat?</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="147" />
-            <source>Name</source>
-            <translation>Název</translation>
+            <source>Name (-name)</source>
+            <translation>Název (-name)</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="148" />
@@ -5175,8 +5175,8 @@ Přesto bod smazat?</translation>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorControllerDelegates.cpp" line="675" />
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="197" />
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="216" />
-            <source>Geometry</source>
-            <translation>Geometrie</translation>
+            <source>Options</source>
+            <translation>Volby</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="203" />
@@ -5446,8 +5446,8 @@ subtype blocks</translation>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorControllerDelegates.cpp" line="728" />
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="412" />
-            <source>Edit Object Settings...</source>
-            <translation>Upravit nastavení objektu...</translation>
+            <source>Edit All Object Settings...</source>
+            <translation>Upravit všechna nastavení objektu...</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorControllerDelegates.cpp" line="734" />

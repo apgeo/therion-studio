@@ -13,6 +13,10 @@ Active planning only. Completed history belongs in archive files. Stable archite
 ### Release Readiness
 
 - Run local validation before tagging or packaging handoff, including focused map inspector regressions touched during release stabilization.
+- Keep Selection inspector point-geometry ordering, `-clip off`, and narrow-width layout regressions covered while stabilizing `v2026.6.5`.
+- Keep Selection inspector terminology consistent: use `Options` for object-level settings and reserve `Line Point` for vertex workflows.
+- Keep Selection inspector object-level actions grouped under `Options`, including `Name`/`Text`/`Value`, scrap projection, and the full object-settings entrypoint.
+- Keep Selection inspector `Options` ordering deterministic across refreshes; visible rows must not jump when selection state or option visibility changes.
 - Keep release notes, package metadata, and CI artifact workflow aligned with `v2026.6.5`.
 
 ### Unified Source DOM / Transactions

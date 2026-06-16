@@ -402,11 +402,6 @@ void MapEditorTab::showMapSelectionContextMenu(const QPoint &globalPosition)
         }
         addFocusAction(menu, title, editor);
     };
-    if (objectDetailsUiState_.objectQuickProjectionCombo_ != nullptr
-        && objectDetailsUiState_.objectQuickProjectionCombo_->isVisible()
-        && objectDetailsUiState_.objectQuickProjectionCombo_->isEnabled()) {
-        addComboMenu(tr("projection"), objectDetailsUiState_.objectQuickProjectionCombo_, false);
-    }
     addObjectFocusAction(tr("Edit ID..."), objectDetailsUiState_.objectQuickIdentifierEdit_);
     addObjectFocusAction(tr("Edit Name..."), objectDetailsUiState_.objectQuickNameEdit_);
     addObjectFocusAction(tr("Edit Text..."), objectDetailsUiState_.objectQuickTextEdit_);
@@ -436,12 +431,18 @@ void MapEditorTab::showMapSelectionContextMenu(const QPoint &globalPosition)
         && (objectDetailsUiState_.lineClosedCheck_->isVisible()
             || objectDetailsUiState_.lineReversedCheck_->isVisible()
             || objectDetailsUiState_.objectClipDisabledCheck_->isVisible());
-    QMenu *objectGeometryMenu = nullptr;
-    if (geometryAvailable) {
-        objectGeometryMenu = menu->addMenu(tr("Geometry"));
+    const bool scrapProjectionAvailable =
+        objectDetailsUiState_.objectQuickProjectionCombo_ != nullptr
+        && objectDetailsUiState_.objectQuickProjectionCombo_->isVisible()
+        && objectDetailsUiState_.objectQuickProjectionCombo_->isEnabled();
+    const bool settingsAvailable = objectDetailsUiState_.objectConfigureButton_ != nullptr
+        && objectDetailsUiState_.objectConfigureButton_->isEnabled();
+    QMenu *objectOptionsMenu = nullptr;
+    if (geometryAvailable || scrapProjectionAvailable || settingsAvailable) {
+        objectOptionsMenu = menu->addMenu(tr("Options"));
         if (objectDetailsUiState_.lineClosedCheck_ != nullptr
             && objectDetailsUiState_.lineClosedCheck_->isVisible()) {
-            QAction *closedAction = objectGeometryMenu->addAction(tr("Closed (-close on)"));
+            QAction *closedAction = objectOptionsMenu->addAction(tr("Closed (-close on)"));
             closedAction->setCheckable(true);
             closedAction->setChecked(objectDetailsUiState_.lineClosedCheck_->isChecked());
             connect(closedAction, &QAction::triggered, this, [this](bool checked) {
@@ -452,7 +453,7 @@ void MapEditorTab::showMapSelectionContextMenu(const QPoint &globalPosition)
 
         if (objectDetailsUiState_.lineReversedCheck_ != nullptr
             && objectDetailsUiState_.lineReversedCheck_->isVisible()) {
-            QAction *reversedAction = objectGeometryMenu->addAction(tr("Reversed (-reverse on)"));
+            QAction *reversedAction = objectOptionsMenu->addAction(tr("Reversed (-reverse on)"));
             reversedAction->setCheckable(true);
             reversedAction->setChecked(objectDetailsUiState_.lineReversedCheck_->isChecked());
             connect(reversedAction, &QAction::triggered, this, [this](bool checked) {
@@ -462,13 +463,28 @@ void MapEditorTab::showMapSelectionContextMenu(const QPoint &globalPosition)
         }
 
         if (objectClipAvailable) {
-            QAction *clipAction = objectGeometryMenu->addAction(tr("Disable clipping (-clip off)"));
+            QAction *clipAction = objectOptionsMenu->addAction(tr("Disable clipping (-clip off)"));
             clipAction->setCheckable(true);
             clipAction->setChecked(objectDetailsUiState_.objectClipDisabledCheck_->isChecked());
             connect(clipAction, &QAction::triggered, this, [this](bool checked) {
                 handleObjectClipDisabledToggled(checked);
                 refreshObjectDetailsPanel();
             });
+        }
+        if (scrapProjectionAvailable) {
+            if (!objectOptionsMenu->actions().isEmpty()) {
+                objectOptionsMenu->addSeparator();
+            }
+            addComboMenu(tr("Projection"),
+                         objectDetailsUiState_.objectQuickProjectionCombo_,
+                         false);
+        }
+        if (settingsAvailable) {
+            if (!objectOptionsMenu->actions().isEmpty()) {
+                objectOptionsMenu->addSeparator();
+            }
+            QAction *settingsAction = objectOptionsMenu->addAction(tr("Edit All Object Settings..."));
+            connect(settingsAction, &QAction::triggered, this, &MapEditorTab::handleConfigureObjectSettingsTriggered);
         }
     }
 
@@ -668,12 +684,12 @@ void MapEditorTab::showMapSelectionContextMenu(const QPoint &globalPosition)
         }
     };
     if (pointOrientationAvailable) {
-        QMenu *pointGeometryMenu = objectGeometryMenu != nullptr ? objectGeometryMenu : menu->addMenu(tr("Geometry"));
-        addOrientationMenu(pointGeometryMenu);
-        addPointAlignMenu(pointGeometryMenu);
+        QMenu *pointOptionsMenu = objectOptionsMenu != nullptr ? objectOptionsMenu : menu->addMenu(tr("Options"));
+        addOrientationMenu(pointOptionsMenu);
+        addPointAlignMenu(pointOptionsMenu);
     } else if (pointAlignAvailable) {
-        QMenu *pointGeometryMenu = objectGeometryMenu != nullptr ? objectGeometryMenu : menu->addMenu(tr("Geometry"));
-        addPointAlignMenu(pointGeometryMenu);
+        QMenu *pointOptionsMenu = objectOptionsMenu != nullptr ? objectOptionsMenu : menu->addMenu(tr("Options"));
+        addPointAlignMenu(pointOptionsMenu);
     }
 
     const bool insertBeforeAvailable = lineVertexSelected
@@ -718,16 +734,10 @@ void MapEditorTab::showMapSelectionContextMenu(const QPoint &globalPosition)
         }
     }
 
-    const bool settingsAvailable = objectDetailsUiState_.objectConfigureButton_ != nullptr
-        && objectDetailsUiState_.objectConfigureButton_->isEnabled();
     const bool deleteAvailable = objectDetailsUiState_.objectDeleteButton_ != nullptr
         && objectDetailsUiState_.objectDeleteButton_->isEnabled();
-    if (settingsAvailable || deleteAvailable) {
+    if (deleteAvailable) {
         QMenu *objectActionsMenu = menu->addMenu(tr("Object Actions"));
-        if (settingsAvailable) {
-            QAction *settingsAction = objectActionsMenu->addAction(tr("Edit Object Settings..."));
-            connect(settingsAction, &QAction::triggered, this, &MapEditorTab::handleConfigureObjectSettingsTriggered);
-        }
         if (deleteAvailable) {
             QAction *deleteAction = objectActionsMenu->addAction(objectDetailsUiState_.objectDeleteButton_ != nullptr
                                                                      ? objectDetailsUiState_.objectDeleteButton_->text()

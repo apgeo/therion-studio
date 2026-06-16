@@ -4320,8 +4320,8 @@ Napriek tomu bod zmazať?</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="465" />
-            <source>Edit Object Settings</source>
-            <translation>Upraviť nastavenia objektu</translation>
+            <source>Edit All Object Settings</source>
+            <translation>Upraviť všetky nastavenia objektu</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="496" />
@@ -4652,8 +4652,8 @@ Napriek tomu bod zmazať?</translation>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="329" />
             <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="489" />
-            <source>Geometry</source>
-            <translation>Geometria</translation>
+            <source>Options</source>
+            <translation>Voľby</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="384" />
@@ -5128,8 +5128,8 @@ Napriek tomu bod zmazať?</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="147" />
-            <source>Name</source>
-            <translation>Názov</translation>
+            <source>Name (-name)</source>
+            <translation>Názov (-name)</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="148" />
@@ -5175,8 +5175,8 @@ Napriek tomu bod zmazať?</translation>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorControllerDelegates.cpp" line="675" />
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="197" />
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="216" />
-            <source>Geometry</source>
-            <translation>Geometria</translation>
+            <source>Options</source>
+            <translation>Voľby</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="203" />
@@ -5446,8 +5446,8 @@ subtype blocks</translation>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorControllerDelegates.cpp" line="728" />
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="412" />
-            <source>Edit Object Settings...</source>
-            <translation>Upraviť nastavenia objektu...</translation>
+            <source>Edit All Object Settings...</source>
+            <translation>Upraviť všetky nastavenia objektu...</translation>
         </message>
         <message>
             <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorControllerDelegates.cpp" line="734" />

@@ -49,6 +49,7 @@ void configureSelectionEditableCombo(QComboBox *combo, const QString &objectName
     combo->setObjectName(objectName);
     combo->setEditable(true);
     combo->setInsertPolicy(QComboBox::NoInsert);
+    combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     if (QCompleter *completer = combo->completer(); completer != nullptr) {
         completer->setCompletionMode(QCompleter::UnfilteredPopupCompletion);
         completer->setCaseSensitivity(Qt::CaseInsensitive);
@@ -136,7 +137,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectQuickForm->setContentsMargins(0, 0, 0, 0);
     objectQuickForm->setSpacing(kInspectorFormSpacing);
     objectQuickForm->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
-    objectQuickForm->setRowWrapPolicy(QFormLayout::WrapLongRows);
+    objectQuickForm->setRowWrapPolicy(QFormLayout::DontWrapRows);
     objectDetailsUiState_.objectQuickTypeCombo_ = new QComboBox(objectDetailsUiState_.objectQuickFieldsEditor_);
     configureSelectionEditableCombo(objectDetailsUiState_.objectQuickTypeCombo_, QStringLiteral("mapObjectQuickTypeCombo"));
     objectDetailsUiState_.objectQuickSubtypeCombo_ = new QComboBox(objectDetailsUiState_.objectQuickFieldsEditor_);
@@ -147,14 +148,25 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.objectQuickTargetScrapCombo_->setObjectName(QStringLiteral("mapObjectQuickTargetScrapCombo"));
     objectDetailsUiState_.objectQuickTargetScrapCombo_->setEditable(false);
     objectDetailsUiState_.objectQuickTargetScrapCombo_->setInsertPolicy(QComboBox::NoInsert);
+    objectDetailsUiState_.objectQuickTargetScrapCombo_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     objectDetailsUiState_.objectQuickIdentifierEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
-    objectDetailsUiState_.objectQuickNameEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
-    objectDetailsUiState_.objectQuickTextEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
-    objectDetailsUiState_.objectQuickValueEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
+    objectDetailsUiState_.objectQuickNameEditor_ = new QWidget(objectDetailsUiState_.objectQuickFieldsEditor_);
+    objectDetailsUiState_.objectQuickTextEditor_ = new QWidget(objectDetailsUiState_.objectQuickFieldsEditor_);
+    objectDetailsUiState_.objectQuickValueEditor_ = new QWidget(objectDetailsUiState_.objectQuickFieldsEditor_);
+    objectDetailsUiState_.objectQuickNameEditor_->setObjectName(QStringLiteral("mapObjectQuickNameEditor"));
+    objectDetailsUiState_.objectQuickTextEditor_->setObjectName(QStringLiteral("mapObjectQuickTextEditor"));
+    objectDetailsUiState_.objectQuickValueEditor_->setObjectName(QStringLiteral("mapObjectQuickValueEditor"));
+    objectDetailsUiState_.objectQuickNameEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickNameEditor_);
+    objectDetailsUiState_.objectQuickTextEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickTextEditor_);
+    objectDetailsUiState_.objectQuickValueEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickValueEditor_);
+    objectDetailsUiState_.objectQuickIdentifierEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    objectDetailsUiState_.objectQuickNameEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    objectDetailsUiState_.objectQuickTextEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    objectDetailsUiState_.objectQuickValueEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     objectDetailsUiState_.objectQuickIdentifierLabel_ = new QLabel(tr("ID"), objectDetailsUiState_.objectQuickFieldsEditor_);
-    objectDetailsUiState_.objectQuickNameLabel_ = new QLabel(tr("Name"), objectDetailsUiState_.objectQuickFieldsEditor_);
-    objectDetailsUiState_.objectQuickTextLabel_ = new QLabel(tr("Text (-text)"), objectDetailsUiState_.objectQuickFieldsEditor_);
-    objectDetailsUiState_.objectQuickValueLabel_ = new QLabel(tr("Value (-value)"), objectDetailsUiState_.objectQuickFieldsEditor_);
+    objectDetailsUiState_.objectQuickNameLabel_ = new QLabel(tr("Name (-name)"), objectDetailsUiState_.objectQuickNameEditor_);
+    objectDetailsUiState_.objectQuickTextLabel_ = new QLabel(tr("Text (-text)"), objectDetailsUiState_.objectQuickTextEditor_);
+    objectDetailsUiState_.objectQuickValueLabel_ = new QLabel(tr("Value (-value)"), objectDetailsUiState_.objectQuickValueEditor_);
     objectDetailsUiState_.objectQuickProjectionLabel_ = new QLabel(tr("Projection"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickTypeLabel_ = new QLabel(tr("Type"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickSubtypeLabel_ = new QLabel(tr("Subtype"), objectDetailsUiState_.objectQuickFieldsEditor_);
@@ -189,28 +201,49 @@ void MapEditorTab::buildInspectorPanelUi()
     if (objectDetailsUiState_.objectQuickProjectionCombo_->lineEdit() != nullptr) {
         connect(objectDetailsUiState_.objectQuickProjectionCombo_->lineEdit(), &QLineEdit::editingFinished, this, &MapEditorTab::applyScrapProjectionEdit);
     }
+    auto configureQuickOptionRow = [](QWidget *row, QLabel *label, QWidget *field) {
+        auto *layout = new QFormLayout(row);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(kInspectorFormSpacing);
+        layout->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
+        layout->setRowWrapPolicy(QFormLayout::DontWrapRows);
+        layout->addRow(label, field);
+    };
+    configureQuickOptionRow(objectDetailsUiState_.objectQuickNameEditor_,
+                            objectDetailsUiState_.objectQuickNameLabel_,
+                            objectDetailsUiState_.objectQuickNameEdit_);
+    configureQuickOptionRow(objectDetailsUiState_.objectQuickTextEditor_,
+                            objectDetailsUiState_.objectQuickTextLabel_,
+                            objectDetailsUiState_.objectQuickTextEdit_);
+    configureQuickOptionRow(objectDetailsUiState_.objectQuickValueEditor_,
+                            objectDetailsUiState_.objectQuickValueLabel_,
+                            objectDetailsUiState_.objectQuickValueEdit_);
     objectQuickForm->addRow(objectDetailsUiState_.objectQuickTargetScrapLabel_, objectDetailsUiState_.objectQuickTargetScrapCombo_);
     objectQuickForm->addRow(objectDetailsUiState_.objectQuickIdentifierLabel_, objectDetailsUiState_.objectQuickIdentifierEdit_);
-    objectQuickForm->addRow(objectDetailsUiState_.objectQuickProjectionLabel_, objectDetailsUiState_.objectQuickProjectionCombo_);
+    objectDetailsUiState_.objectQuickProjectionEditor_ = new QWidget(objectDetailsUiState_.objectQuickFieldsEditor_);
+    auto *objectQuickProjectionLayout = new QHBoxLayout(objectDetailsUiState_.objectQuickProjectionEditor_);
+    objectQuickProjectionLayout->setContentsMargins(0, 0, 0, 0);
+    objectQuickProjectionLayout->setSpacing(0);
+    objectQuickProjectionLayout->addWidget(objectDetailsUiState_.objectQuickProjectionCombo_);
+    objectQuickForm->addRow(objectDetailsUiState_.objectQuickProjectionLabel_, objectDetailsUiState_.objectQuickProjectionEditor_);
     objectQuickForm->addRow(objectDetailsUiState_.objectQuickTypeLabel_, objectDetailsUiState_.objectQuickTypeCombo_);
     objectQuickForm->addRow(objectDetailsUiState_.objectQuickSubtypeLabel_, objectDetailsUiState_.objectQuickSubtypeCombo_);
     objectQuickForm->addRow(objectDetailsUiState_.objectStylePreviewLabel_, objectDetailsUiState_.objectStylePreview_);
-    objectQuickForm->addRow(objectDetailsUiState_.objectQuickNameLabel_, objectDetailsUiState_.objectQuickNameEdit_);
-    objectQuickForm->addRow(objectDetailsUiState_.objectQuickTextLabel_, objectDetailsUiState_.objectQuickTextEdit_);
-    objectQuickForm->addRow(objectDetailsUiState_.objectQuickValueLabel_, objectDetailsUiState_.objectQuickValueEdit_);
     objectSelectionLayout->addWidget(objectDetailsUiState_.objectQuickFieldsEditor_);
     selectionLayout->addWidget(objectDetailsUiState_.objectSelectionSection_);
 
     QVBoxLayout *geometrySelectionLayout = nullptr;
-    objectDetailsUiState_.geometrySelectionSection_ = createSelectionSection(tr("Geometry"), &geometrySelectionLayout);
+    objectDetailsUiState_.geometrySelectionSection_ = createSelectionSection(tr("Options"), &geometrySelectionLayout);
 
     objectDetailsUiState_.lineOptionsEditor_ = new QWidget(objectDetailsUiState_.geometrySelectionSection_);
+    objectDetailsUiState_.lineOptionsEditor_->setObjectName(QStringLiteral("mapLineOptionsEditor"));
     auto *lineOptionsLayout = new QVBoxLayout(objectDetailsUiState_.lineOptionsEditor_);
     lineOptionsLayout->setContentsMargins(0, 0, 0, 0);
     lineOptionsLayout->setSpacing(kInspectorFormSpacing);
     objectDetailsUiState_.lineClosedCheck_ = new QCheckBox(tr("Closed (-close)"), objectDetailsUiState_.lineOptionsEditor_);
     objectDetailsUiState_.lineReversedCheck_ = new QCheckBox(tr("Reversed (-reverse)"), objectDetailsUiState_.lineOptionsEditor_);
     objectDetailsUiState_.objectClipDisabledCheck_ = new QCheckBox(tr("Disable clipping (-clip off)"), objectDetailsUiState_.lineOptionsEditor_);
+    objectDetailsUiState_.objectClipDisabledCheck_->setObjectName(QStringLiteral("mapObjectClipDisabledCheck"));
     connect(objectDetailsUiState_.lineClosedCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLineClosedToggled);
     connect(objectDetailsUiState_.lineReversedCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLineReversedToggled);
     connect(objectDetailsUiState_.objectClipDisabledCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleObjectClipDisabledToggled);
@@ -218,12 +251,30 @@ void MapEditorTab::buildInspectorPanelUi()
     lineOptionsLayout->addWidget(objectDetailsUiState_.lineReversedCheck_);
     lineOptionsLayout->addWidget(objectDetailsUiState_.objectClipDisabledCheck_);
     geometrySelectionLayout->addWidget(objectDetailsUiState_.lineOptionsEditor_);
+
+    objectDetailsUiState_.scrapOptionsEditor_ = new QWidget(objectDetailsUiState_.geometrySelectionSection_);
+    objectDetailsUiState_.scrapOptionsEditor_->setObjectName(QStringLiteral("mapScrapOptionsEditor"));
+    auto *scrapOptionsLayout = new QVBoxLayout(objectDetailsUiState_.scrapOptionsEditor_);
+    scrapOptionsLayout->setContentsMargins(0, 0, 0, 0);
+    scrapOptionsLayout->setSpacing(kInspectorFormSpacing);
+    objectDetailsUiState_.scrapProjectionEditor_ = new QWidget(objectDetailsUiState_.scrapOptionsEditor_);
+    objectDetailsUiState_.scrapProjectionEditor_->setObjectName(QStringLiteral("mapScrapProjectionEditor"));
+    auto *scrapProjectionLayout = new QHBoxLayout(objectDetailsUiState_.scrapProjectionEditor_);
+    scrapProjectionLayout->setContentsMargins(0, 0, 0, 0);
+    scrapProjectionLayout->setSpacing(kInspectorInlineSpacing);
+    objectDetailsUiState_.scrapProjectionLabel_ = new QLabel(tr("Projection"), objectDetailsUiState_.scrapProjectionEditor_);
+    scrapProjectionLayout->addWidget(objectDetailsUiState_.scrapProjectionLabel_);
+    scrapProjectionLayout->addWidget(objectDetailsUiState_.objectQuickProjectionCombo_, 1);
+    scrapOptionsLayout->addWidget(objectDetailsUiState_.scrapProjectionEditor_);
+    geometrySelectionLayout->addWidget(objectDetailsUiState_.scrapOptionsEditor_);
     selectionLayout->addWidget(objectDetailsUiState_.geometrySelectionSection_);
 
     QVBoxLayout *vertexSelectionLayout = nullptr;
     objectDetailsUiState_.vertexSelectionSection_ = createSelectionSection(tr("Geometry"), &vertexSelectionLayout, &objectDetailsUiState_.vertexSelectionTitleLabel_);
+    objectDetailsUiState_.vertexSelectionSection_->setObjectName(QStringLiteral("mapVertexGeometrySection"));
 
     objectDetailsUiState_.objectOrientationEditor_ = new QWidget(objectDetailsUiState_.vertexSelectionSection_);
+    objectDetailsUiState_.objectOrientationEditor_->setObjectName(QStringLiteral("mapPointOptionsEditor"));
     auto *orientationLayout = new QVBoxLayout(objectDetailsUiState_.objectOrientationEditor_);
     orientationLayout->setContentsMargins(0, 0, 0, 0);
     orientationLayout->setSpacing(kInspectorFormSpacing);
@@ -417,16 +468,21 @@ void MapEditorTab::buildInspectorPanelUi()
 
     QVBoxLayout *advancedSelectionLayout = nullptr;
     objectDetailsUiState_.advancedSelectionSection_ = createSelectionSection(tr("Object Actions"), &advancedSelectionLayout);
-    objectDetailsUiState_.objectConfigureButton_ = new QPushButton(tr("Edit Object Settings..."), objectDetailsUiState_.advancedSelectionSection_);
+    objectDetailsUiState_.objectConfigureButtonRow_ = new QWidget(objectDetailsUiState_.advancedSelectionSection_);
+    objectDetailsUiState_.objectConfigureButtonRow_->setObjectName(QStringLiteral("mapObjectConfigureButtonRow"));
+    auto *objectConfigureButtonRowLayout = new QVBoxLayout(objectDetailsUiState_.objectConfigureButtonRow_);
+    objectConfigureButtonRowLayout->setContentsMargins(0, 8, 0, 0);
+    objectConfigureButtonRowLayout->setSpacing(0);
+    objectDetailsUiState_.objectConfigureButton_ = new QPushButton(tr("Edit All Object Settings..."), objectDetailsUiState_.objectConfigureButtonRow_);
+    objectDetailsUiState_.objectConfigureButton_->setObjectName(QStringLiteral("mapObjectConfigureButton"));
     connect(objectDetailsUiState_.objectConfigureButton_, &QPushButton::clicked, this, &MapEditorTab::handleConfigureObjectSettingsTriggered);
-    advancedSelectionLayout->addWidget(objectDetailsUiState_.objectConfigureButton_);
+    objectConfigureButtonRowLayout->addWidget(objectDetailsUiState_.objectConfigureButton_);
     objectDetailsUiState_.objectDeleteButton_ = new QPushButton(tr("Delete Object"), objectDetailsUiState_.advancedSelectionSection_);
     disableAutoDefault({objectDetailsUiState_.objectConfigureButton_, objectDetailsUiState_.objectDeleteButton_});
     connect(objectDetailsUiState_.objectDeleteButton_, &QPushButton::clicked, this, &MapEditorTab::deleteSelectedObjectFromSelection);
     advancedSelectionLayout->addWidget(objectDetailsUiState_.objectDeleteButton_);
-    const int geometrySectionIndex = selectionLayout->indexOf(objectDetailsUiState_.geometrySelectionSection_);
-    selectionLayout->insertWidget(geometrySectionIndex >= 0 ? geometrySectionIndex + 1 : selectionLayout->count(),
-                                  objectDetailsUiState_.advancedSelectionSection_);
+    objectDetailsUiState_.advancedSelectionSection_->setObjectName(QStringLiteral("mapObjectActionsSection"));
+    selectionLayout->addWidget(objectDetailsUiState_.advancedSelectionSection_);
     selectionLayout->addStretch(1);
 
     auto *objectsTab = inspectorPanel->addPlainTab(tr("Objects"));

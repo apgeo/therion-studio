@@ -462,7 +462,7 @@ void MapEditorObjectDetailsEditController::handleConfigureObjectSettingsTriggere
     }
     const MapEditorObjectDetailsContext context = context_;
     applySourceTransactionWithOptionalHook(context_,
-                                           tr("Edit Object Settings"),
+                                           tr("Edit All Object Settings"),
                                            beforeText,
                                            afterText,
                                            targetLineNumber,

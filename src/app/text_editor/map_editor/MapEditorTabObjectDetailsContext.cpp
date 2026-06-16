@@ -270,6 +270,9 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .quickProjectionCombo = objectDetailsUiState_.objectQuickProjectionCombo_,
         .quickTargetScrapCombo = objectDetailsUiState_.objectQuickTargetScrapCombo_,
         .quickIdentifierEdit = objectDetailsUiState_.objectQuickIdentifierEdit_,
+        .quickNameEditor = objectDetailsUiState_.objectQuickNameEditor_,
+        .quickTextEditor = objectDetailsUiState_.objectQuickTextEditor_,
+        .quickValueEditor = objectDetailsUiState_.objectQuickValueEditor_,
         .quickNameEdit = objectDetailsUiState_.objectQuickNameEdit_,
         .quickTextEdit = objectDetailsUiState_.objectQuickTextEdit_,
         .quickValueEdit = objectDetailsUiState_.objectQuickValueEdit_,
@@ -294,6 +297,10 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .linePointFlagsEditor = objectDetailsUiState_.linePointFlagsEditor_,
         .linePointFlagsEdit = objectDetailsUiState_.linePointFlagsEdit_,
         .lineOptionsEditor = objectDetailsUiState_.lineOptionsEditor_,
+        .scrapOptionsEditor = objectDetailsUiState_.scrapOptionsEditor_,
+        .scrapProjectionLabel = objectDetailsUiState_.scrapProjectionLabel_,
+        .scrapProjectionEditor = objectDetailsUiState_.scrapProjectionEditor_,
+        .quickProjectionEditor = objectDetailsUiState_.objectQuickProjectionEditor_,
         .lineClosedCheck = objectDetailsUiState_.lineClosedCheck_,
         .lineReversedCheck = objectDetailsUiState_.lineReversedCheck_,
         .objectClipDisabledCheck = objectDetailsUiState_.objectClipDisabledCheck_,
@@ -310,6 +317,7 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .scrapScaleRealX2Spin = objectDetailsUiState_.scrapScaleRealX2Spin_,
         .scrapScaleRealY2Spin = objectDetailsUiState_.scrapScaleRealY2Spin_,
         .scrapScaleUnitCombo = objectDetailsUiState_.scrapScaleUnitCombo_,
+        .configureButtonRow = objectDetailsUiState_.objectConfigureButtonRow_,
         .configureButton = objectDetailsUiState_.objectConfigureButton_,
         .translate = [this](const char *text) {
             return tr(text);

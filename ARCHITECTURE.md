@@ -159,6 +159,7 @@ The editor-mode layout is stable:
 - `src/core/ThreeDViewerSceneModel.*` and `src/core/ThreeDViewerCamera.*` for the shared 3D viewer scene contract and camera state, including orbit, pan, zoom, fit, reset, preset views, and world-blue-axis rotation
 - `src/app/three_d_viewer/ThreeDViewerProjection.*` for viewer-space projection math shared by the widget host and future render surfaces
 - `src/app/three_d_viewer/ThreeDViewerViewportRenderer.*` for shared widget/QML-ready scene painting over the model and projection helpers
+- `src/app/three_d_viewer/ThreeDViewerViewportController.*` for widget/QML-ready camera interaction and viewport command handling
 
 Do not add new editor-mode implementation files back into legacy top-level `src/app/` paths when they belong to this layout.
 

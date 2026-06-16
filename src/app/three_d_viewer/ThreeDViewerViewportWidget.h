@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../core/ThreeDViewerCamera.h"
 #include "../../core/ThreeDViewerSceneModel.h"
+#include "ThreeDViewerViewportController.h"
 #include "ThreeDViewerProjection.h"
 
 #include <QColor>
@@ -42,19 +42,9 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
 
 private:
-    enum class InteractionMode
-    {
-        None,
-        Orbit,
-        Pan,
-    };
-
     ThreeDViewerSceneModel sceneModel_;
     std::array<bool, 5> layerVisibility_ = {true, true, true, true, true};
-    ThreeDViewerCamera camera_;
-    InteractionMode interactionMode_ = InteractionMode::None;
-    QPoint lastMousePosition_;
-    ThreeDViewerCameraState cameraAtPress_;
+    ThreeDViewerViewportController controller_;
 };
 
 } // namespace TherionStudio

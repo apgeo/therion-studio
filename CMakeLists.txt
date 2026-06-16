@@ -243,6 +243,8 @@ set(THERION_APP_SOURCES
     src/app/TherionRunnerStartSuccessPresenter.h
     src/app/three_d_viewer/ThreeDViewerTab.cpp
     src/app/three_d_viewer/ThreeDViewerTab.h
+    src/app/three_d_viewer/ThreeDViewerViewportRenderer.cpp
+    src/app/three_d_viewer/ThreeDViewerViewportRenderer.h
     src/app/three_d_viewer/ThreeDViewerProjection.cpp
     src/app/three_d_viewer/ThreeDViewerProjection.h
     src/app/three_d_viewer/ThreeDViewerViewportWidget.cpp

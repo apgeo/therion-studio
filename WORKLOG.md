@@ -60,6 +60,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - The viewer projection helper now lives in `src/app/three_d_viewer/` and is covered by a dedicated `ThreeDViewerQTests` runner.
 - The 3D viewer toolbar now exposes top-view, side-view, and rotate-left/rotate-right controls alongside fit/reset controls, with rotation around the world blue axis.
 - The `ThreeDViewerTab` host is integrated into the main window as a read-only `.lox` viewer tab with basic layer toggles, scene summary, and a first interactive viewport slice.
+- The viewport painter is now split out from the widget shell so scene rendering can be reused by future render surfaces.
 - Viewer fit/reset controls now live in the shared workspace command bar instead of a tab-local toolbar.
 - The 3D viewer layer list now blocks internal item-change recursion during tab construction and refresh.
 - Continue the renderer refinement and then the Qt Quick/QML host once the widget viewport proves out the document-open workflow.

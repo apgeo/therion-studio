@@ -49,17 +49,6 @@ private:
         Pan,
     };
 
-    void paintScene(QPainter &painter);
-    void paintEmptyState(QPainter &painter);
-    void paintAxes(QPainter &painter);
-    void paintSurfaces(QPainter &painter);
-    void paintMeshes(QPainter &painter);
-    void paintShots(QPainter &painter);
-    void paintStations(QPainter &painter);
-    void paintLabels(QPainter &painter);
-    static QColor shotColorForFlags(const ThreeDViewerShot &shot);
-    static QColor stationColorForFlags(const ThreeDViewerStation &station);
-
     ThreeDViewerSceneModel sceneModel_;
     std::array<bool, 5> layerVisibility_ = {true, true, true, true, true};
     ThreeDViewerCamera camera_;

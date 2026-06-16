@@ -17,13 +17,13 @@ ThreeDViewerViewportWidget::ThreeDViewerViewportWidget(QWidget *parent)
     setAutoFillBackground(false);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
+    connect(&controller_, &ThreeDViewerViewportController::cameraChanged, this, QOverload<>::of(&QWidget::update));
 }
 
 void ThreeDViewerViewportWidget::setSceneModel(const ThreeDViewerSceneModel &sceneModel)
 {
     sceneModel_ = sceneModel;
     controller_.fitToScene(sceneModel_);
-    update();
 }
 
 void ThreeDViewerViewportWidget::setLayerVisibility(const std::array<bool, 5> &layerVisibility)
@@ -35,31 +35,26 @@ void ThreeDViewerViewportWidget::setLayerVisibility(const std::array<bool, 5> &l
 void ThreeDViewerViewportWidget::fitToScene()
 {
     controller_.fitToScene(sceneModel_);
-    update();
 }
 
 void ThreeDViewerViewportWidget::resetView()
 {
     controller_.resetView(sceneModel_);
-    update();
 }
 
 void ThreeDViewerViewportWidget::setViewPreset(ThreeDViewerViewPreset preset)
 {
     controller_.setViewPreset(preset, sceneModel_);
-    update();
 }
 
 void ThreeDViewerViewportWidget::rollLeft()
 {
     controller_.rotateLeft();
-    update();
 }
 
 void ThreeDViewerViewportWidget::rollRight()
 {
     controller_.rotateRight();
-    update();
 }
 
 void ThreeDViewerViewportWidget::paintEvent(QPaintEvent *event)
@@ -107,7 +102,6 @@ void ThreeDViewerViewportWidget::mouseMoveEvent(QMouseEvent *event)
     }
 
     if (controller_.mouseMove(event->pos(), height())) {
-        update();
         event->accept();
         return;
     }
@@ -139,8 +133,6 @@ void ThreeDViewerViewportWidget::wheelEvent(QWheelEvent *event)
         QWidget::wheelEvent(event);
         return;
     }
-
-    update();
     event->accept();
 }
 

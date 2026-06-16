@@ -5,6 +5,11 @@
 namespace TherionStudio
 {
 
+ThreeDViewerViewportController::ThreeDViewerViewportController(QObject *parent)
+    : QObject(parent)
+{
+}
+
 const ThreeDViewerCamera &ThreeDViewerViewportController::camera() const
 {
     return camera_;
@@ -13,27 +18,32 @@ const ThreeDViewerCamera &ThreeDViewerViewportController::camera() const
 void ThreeDViewerViewportController::fitToScene(const ThreeDViewerSceneModel &sceneModel)
 {
     camera_.fitToBounds(sceneModel.bounds());
+    emitCameraChanged();
 }
 
 void ThreeDViewerViewportController::resetView(const ThreeDViewerSceneModel &sceneModel)
 {
     camera_.resetToBounds(sceneModel.bounds());
+    emitCameraChanged();
 }
 
 void ThreeDViewerViewportController::setViewPreset(ThreeDViewerViewPreset preset, const ThreeDViewerSceneModel &sceneModel)
 {
     camera_.setViewPreset(preset);
     camera_.fitToBounds(sceneModel.bounds());
+    emitCameraChanged();
 }
 
 void ThreeDViewerViewportController::rotateLeft()
 {
     camera_.yawByRadians(3.14159265358979323846 / 12.0);
+    emitCameraChanged();
 }
 
 void ThreeDViewerViewportController::rotateRight()
 {
     camera_.yawByRadians(-3.14159265358979323846 / 12.0);
+    emitCameraChanged();
 }
 
 bool ThreeDViewerViewportController::mousePress(Qt::MouseButton button, const QPoint &position)
@@ -65,6 +75,7 @@ bool ThreeDViewerViewportController::mouseMove(const QPoint &position, int viewp
     } else if (interactionMode_ == InteractionMode::Pan) {
         camera_.panByPixels(delta.x(), delta.y(), viewportHeight);
     }
+    emitCameraChanged();
     return true;
 }
 
@@ -85,7 +96,13 @@ bool ThreeDViewerViewportController::wheel(const QPoint &angleDelta)
 
     const double factor = angleDelta.y() > 0 ? 0.88 : 1.0 / 0.88;
     camera_.zoomByFactor(factor);
+    emitCameraChanged();
     return true;
+}
+
+void ThreeDViewerViewportController::emitCameraChanged()
+{
+    emit cameraChanged();
 }
 
 } // namespace TherionStudio

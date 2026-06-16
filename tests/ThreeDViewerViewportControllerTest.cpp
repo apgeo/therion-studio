@@ -1,6 +1,7 @@
 #include "../src/app/three_d_viewer/ThreeDViewerViewportController.h"
 
 #include <QtTest/QtTest>
+#include <QSignalSpy>
 
 #include <cmath>
 
@@ -13,6 +14,7 @@ class ThreeDViewerViewportControllerTest : public QObject
 private slots:
     void rotatesAroundBlueAxisAndZooms();
     void orbitsAroundScene();
+    void emitsCameraChanged();
 };
 
 void ThreeDViewerViewportControllerTest::rotatesAroundBlueAxisAndZooms()
@@ -45,6 +47,18 @@ void ThreeDViewerViewportControllerTest::orbitsAroundScene()
     QVERIFY(std::abs(orbitState.yaw - (-0.85 + 20.0 * 0.008)) < 1e-12);
     QVERIFY(std::abs(orbitState.pitch - (0.45 + 35.0 * 0.008)) < 1e-12);
     QVERIFY(controller.mouseRelease(Qt::LeftButton));
+}
+
+void ThreeDViewerViewportControllerTest::emitsCameraChanged()
+{
+    ThreeDViewerViewportController controller;
+    QSignalSpy spy(&controller, &ThreeDViewerViewportController::cameraChanged);
+
+    controller.rotateLeft();
+    controller.fitToScene(ThreeDViewerSceneModel{});
+    controller.wheel(QPoint(0, 120));
+
+    QCOMPARE(spy.count(), 3);
 }
 
 int runThreeDViewerViewportControllerTest(int argc, char **argv)

@@ -3,14 +3,20 @@
 #include "../../core/ThreeDViewerCamera.h"
 #include "../../core/ThreeDViewerSceneModel.h"
 
+#include <QObject>
 #include <QPoint>
 
 namespace TherionStudio
 {
 
 class ThreeDViewerViewportController final
+    : public QObject
 {
+    Q_OBJECT
+
 public:
+    explicit ThreeDViewerViewportController(QObject *parent = nullptr);
+
     const ThreeDViewerCamera &camera() const;
 
     void fitToScene(const ThreeDViewerSceneModel &sceneModel);
@@ -24,7 +30,12 @@ public:
     bool mouseRelease(Qt::MouseButton button);
     bool wheel(const QPoint &angleDelta);
 
+signals:
+    void cameraChanged();
+
 private:
+    void emitCameraChanged();
+
     enum class InteractionMode
     {
         None,

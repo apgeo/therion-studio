@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../core/ThreeDViewerCamera.h"
 #include "../../core/ThreeDViewerSceneModel.h"
 
 #include <QColor>
@@ -46,14 +47,6 @@ private:
         Pan,
     };
 
-    struct CameraState
-    {
-        ThreeDViewerVec3 target;
-        double yaw = -0.85;
-        double pitch = 0.45;
-        double distance = 120.0;
-    };
-
     struct ProjectedPoint
     {
         QPointF screenPosition;
@@ -71,23 +64,15 @@ private:
     void paintLabels(QPainter &painter);
     ProjectedPoint projectPoint(const ThreeDViewerVec3 &point) const;
     bool projectLine(const ThreeDViewerVec3 &from, const ThreeDViewerVec3 &to, QPointF *fromScreen, QPointF *toScreen) const;
-    QVector3D cameraPosition() const;
-    QVector3D cameraRightVector() const;
-    QVector3D cameraUpVector() const;
-    QVector3D cameraForwardVector() const;
-    QVector3D worldUpVector() const;
-    void recenterCameraOnScene();
-    double screenPanScale() const;
-    static double clampPitch(double pitch);
     static QColor shotColorForFlags(const ThreeDViewerShot &shot);
     static QColor stationColorForFlags(const ThreeDViewerStation &station);
 
     ThreeDViewerSceneModel sceneModel_;
     std::array<bool, 5> layerVisibility_ = {true, true, true, true, true};
-    CameraState camera_;
+    ThreeDViewerCamera camera_;
     InteractionMode interactionMode_ = InteractionMode::None;
     QPoint lastMousePosition_;
-    CameraState cameraAtPress_;
+    ThreeDViewerCameraState cameraAtPress_;
 };
 
 } // namespace TherionStudio

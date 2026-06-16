@@ -85,6 +85,8 @@ set(THERION_CORE_SOURCES
     src/core/TherionXviParser.cpp
     src/core/TherionXviParser.h
     src/core/TherionFileTypes.h
+    src/core/ThreeDViewerCamera.cpp
+    src/core/ThreeDViewerCamera.h
     src/core/ThreeDViewerLoxLoader.cpp
     src/core/ThreeDViewerLoxLoader.h
     src/core/ThreeDViewerSceneModel.cpp
@@ -949,6 +951,7 @@ therion_add_core_unit_test(TherionDocumentParserTest
 
 therion_add_core_qtest_runner(TherionCoreQTests
     tests/core/CoreQTestMain.cpp
+    tests/core/ThreeDViewerCameraTest.cpp
     tests/core/TherionFileTypesTest.cpp
     tests/core/ThreeDViewerLoxLoaderTest.cpp
     tests/core/TherionSourceTextTest.cpp

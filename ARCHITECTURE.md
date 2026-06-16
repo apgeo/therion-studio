@@ -156,6 +156,7 @@ The editor-mode layout is stable:
 - `src/app/text_editor/block_editor/` for Blocks-specific components (`BlockEditor*`)
 - `src/app/text_editor/map_editor/` for Map/Visual-specific components (`MapEditor*`)
 - `src/app/three_d_viewer/` for the read-only 3D viewer shell and viewport host
+- `src/core/ThreeDViewerSceneModel.*` and `src/core/ThreeDViewerCamera.*` for the shared 3D viewer scene contract and camera state
 
 Do not add new editor-mode implementation files back into legacy top-level `src/app/` paths when they belong to this layout.
 

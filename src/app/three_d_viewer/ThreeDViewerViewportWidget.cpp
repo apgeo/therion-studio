@@ -1,5 +1,7 @@
 #include "ThreeDViewerViewportWidget.h"
 
+#include "../../core/ThreeDViewerCamera.h"
+
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
@@ -24,16 +26,6 @@ constexpr int kSurfacesLayer = 4;
 QVector3D toVector3D(const TherionStudio::ThreeDViewerVec3 &value)
 {
     return {float(value.x), float(value.y), float(value.z)};
-}
-
-TherionStudio::ThreeDViewerVec3 toSceneVec3(const QVector3D &value)
-{
-    return {double(value.x()), double(value.y()), double(value.z())};
-}
-
-double vectorLength(const QVector3D &value)
-{
-    return std::sqrt(double(QVector3D::dotProduct(value, value)));
 }
 
 QColor translucentColor(const QColor &color, int alpha)
@@ -65,7 +57,7 @@ ThreeDViewerViewportWidget::ThreeDViewerViewportWidget(QWidget *parent)
 void ThreeDViewerViewportWidget::setSceneModel(const ThreeDViewerSceneModel &sceneModel)
 {
     sceneModel_ = sceneModel;
-    recenterCameraOnScene();
+    camera_.fitToBounds(sceneModel_.bounds());
     update();
 }
 
@@ -77,15 +69,13 @@ void ThreeDViewerViewportWidget::setLayerVisibility(const std::array<bool, 5> &l
 
 void ThreeDViewerViewportWidget::fitToScene()
 {
-    recenterCameraOnScene();
+    camera_.fitToBounds(sceneModel_.bounds());
     update();
 }
 
 void ThreeDViewerViewportWidget::resetView()
 {
-    camera_.yaw = -0.85;
-    camera_.pitch = 0.45;
-    recenterCameraOnScene();
+    camera_.resetToBounds(sceneModel_.bounds());
     update();
 }
 
@@ -119,7 +109,7 @@ void ThreeDViewerViewportWidget::mousePressEvent(QMouseEvent *event)
     }
 
     lastMousePosition_ = event->pos();
-    cameraAtPress_ = camera_;
+    cameraAtPress_ = camera_.state();
 
     if (event->button() == Qt::LeftButton) {
         interactionMode_ = InteractionMode::Orbit;
@@ -145,17 +135,12 @@ void ThreeDViewerViewportWidget::mouseMoveEvent(QMouseEvent *event)
 
     const QPoint delta = event->pos() - lastMousePosition_;
     if (interactionMode_ == InteractionMode::Orbit) {
-        camera_.yaw = cameraAtPress_.yaw + double(delta.x()) * 0.008;
-        camera_.pitch = clampPitch(cameraAtPress_.pitch + double(delta.y()) * 0.008);
+        camera_.setState(cameraAtPress_);
+        camera_.orbitByPixels(delta.x(), delta.y());
         update();
     } else if (interactionMode_ == InteractionMode::Pan) {
-        const QVector3D right = cameraRightVector();
-        const QVector3D up = cameraUpVector();
-        const double scale = screenPanScale();
-        const QVector3D target = toVector3D(cameraAtPress_.target)
-            - right * float(double(delta.x()) * scale)
-            + up * float(double(delta.y()) * scale);
-        camera_.target = toSceneVec3(target);
+        camera_.setState(cameraAtPress_);
+        camera_.panByPixels(delta.x(), delta.y(), height());
         update();
     }
 
@@ -190,7 +175,7 @@ void ThreeDViewerViewportWidget::wheelEvent(QWheelEvent *event)
     }
 
     const double factor = angleDelta.y() > 0 ? 0.88 : 1.0 / 0.88;
-    camera_.distance = std::clamp(camera_.distance * factor, 4.0, 100000.0);
+    camera_.zoomByFactor(factor);
     update();
     event->accept();
 }
@@ -419,10 +404,10 @@ ThreeDViewerViewportWidget::ProjectedPoint ThreeDViewerViewportWidget::projectPo
         return projected;
     }
 
-    const QVector3D forward = cameraForwardVector();
-    const QVector3D right = cameraRightVector();
-    const QVector3D up = cameraUpVector();
-    const QVector3D delta = toVector3D(point) - cameraPosition();
+    const QVector3D forward = toVector3D(camera_.forwardVector());
+    const QVector3D right = toVector3D(camera_.rightVector());
+    const QVector3D up = toVector3D(camera_.upVector());
+    const QVector3D delta = toVector3D(point) - toVector3D(camera_.position());
 
     const double depth = double(QVector3D::dotProduct(delta, forward));
     if (depth <= 0.1) {
@@ -433,8 +418,7 @@ ThreeDViewerViewportWidget::ProjectedPoint ThreeDViewerViewportWidget::projectPo
     const double y = double(QVector3D::dotProduct(delta, up));
     const double halfHeight = qMax(1.0, double(height()) * 0.5);
     const double halfWidth = qMax(1.0, double(width()) * 0.5);
-    constexpr double fovRadians = 35.0 * M_PI / 180.0;
-    const double scale = halfHeight / (depth * std::tan(fovRadians * 0.5));
+    const double scale = halfHeight / (depth * std::tan(ThreeDViewerCamera::defaultFieldOfViewRadians() * 0.5));
 
     projected.screenPosition = QPointF(halfWidth + x * scale, halfHeight - y * scale);
     projected.depth = depth;
@@ -460,85 +444,6 @@ bool ThreeDViewerViewportWidget::projectLine(const ThreeDViewerVec3 &from,
         *toScreen = projectedTo.screenPosition;
     }
     return true;
-}
-
-QVector3D ThreeDViewerViewportWidget::cameraPosition() const
-{
-    const double cosPitch = std::cos(camera_.pitch);
-    return toVector3D(camera_.target) + QVector3D(float(camera_.distance * cosPitch * std::cos(camera_.yaw)),
-                                                 float(camera_.distance * cosPitch * std::sin(camera_.yaw)),
-                                                 float(camera_.distance * std::sin(camera_.pitch)));
-}
-
-QVector3D ThreeDViewerViewportWidget::cameraForwardVector() const
-{
-    const QVector3D forward = toVector3D(camera_.target) - cameraPosition();
-    if (vectorLength(forward) <= 0.0001) {
-        return {0.0f, 0.0f, -1.0f};
-    }
-    return forward.normalized();
-}
-
-QVector3D ThreeDViewerViewportWidget::worldUpVector() const
-{
-    return {0.0f, 0.0f, 1.0f};
-}
-
-QVector3D ThreeDViewerViewportWidget::cameraRightVector() const
-{
-    const QVector3D forward = cameraForwardVector();
-    QVector3D right = QVector3D::crossProduct(forward, worldUpVector());
-    if (vectorLength(right) <= 0.0001) {
-        right = QVector3D::crossProduct(forward, {0.0f, 1.0f, 0.0f});
-    }
-    if (vectorLength(right) <= 0.0001) {
-        return {1.0f, 0.0f, 0.0f};
-    }
-    return right.normalized();
-}
-
-QVector3D ThreeDViewerViewportWidget::cameraUpVector() const
-{
-    const QVector3D right = cameraRightVector();
-    const QVector3D forward = cameraForwardVector();
-    QVector3D up = QVector3D::crossProduct(right, forward);
-    if (vectorLength(up) <= 0.0001) {
-        up = worldUpVector();
-    }
-    return up.normalized();
-}
-
-void ThreeDViewerViewportWidget::recenterCameraOnScene()
-{
-    const ThreeDViewerBounds bounds = sceneModel_.bounds();
-    if (!bounds.valid) {
-        camera_.target = {0.0, 0.0, 0.0};
-        camera_.distance = 120.0;
-        return;
-    }
-
-    camera_.target = {
-        (bounds.minimum.x + bounds.maximum.x) * 0.5,
-        (bounds.minimum.y + bounds.maximum.y) * 0.5,
-        (bounds.minimum.z + bounds.maximum.z) * 0.5,
-    };
-
-    const QVector3D diagonal = toVector3D(bounds.maximum) - toVector3D(bounds.minimum);
-    const double radius = qMax(1.0, vectorLength(diagonal) * 0.5);
-    constexpr double fovRadians = 35.0 * M_PI / 180.0;
-    camera_.distance = qMax(12.0, radius / std::tan(fovRadians * 0.5) * 1.35);
-}
-
-double ThreeDViewerViewportWidget::screenPanScale() const
-{
-    const double viewHeight = qMax(1, height());
-    constexpr double fovRadians = 35.0 * M_PI / 180.0;
-    return 2.0 * camera_.distance * std::tan(fovRadians * 0.5) / viewHeight;
-}
-
-double ThreeDViewerViewportWidget::clampPitch(double pitch)
-{
-    return std::clamp(pitch, -1.45, 1.45);
 }
 
 QColor ThreeDViewerViewportWidget::shotColorForFlags(const ThreeDViewerShot &shot)

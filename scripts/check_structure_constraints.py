@@ -158,10 +158,18 @@ MAP_EDITOR_CONTEXT_CONTROLLER_FORBIDDEN_PATTERNS = (
 
 MAP_EDITOR_SOURCE_MUTATION_LOW_LEVEL_PATTERNS = (
     "->replaceTextForCommand(",
+    "TherionDocumentEditor::replaceTextForCommand(",
+    "TherionDocumentEditor::replaceTextForCommandWithUndo(",
     "->rewritePointCoordinates(",
     "->rewriteLineAreaVertex(",
     "->rewriteStructureEntryName(",
     "->rewriteLineOptionToggle(",
+    "textEditor_->setPlainText(",
+    "textEditor_->insertPlainText(",
+    "textEditor->setPlainText(",
+    "textEditor->insertPlainText(",
+    "context_.textEditor->setPlainText(",
+    "context_.textEditor->insertPlainText(",
 )
 
 # Low-level TextEditorTab source writes are intentionally confined to:

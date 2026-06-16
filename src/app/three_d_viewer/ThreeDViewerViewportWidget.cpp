@@ -10,11 +10,6 @@
 #include <QResizeEvent>
 #include <QWheelEvent>
 
-#include <QtMath>
-
-#include <algorithm>
-#include <cmath>
-
 namespace
 {
 constexpr int kCenterlineLayer = 0;
@@ -22,11 +17,6 @@ constexpr int kStationsLayer = 1;
 constexpr int kLabelsLayer = 2;
 constexpr int kMeshesLayer = 3;
 constexpr int kSurfacesLayer = 4;
-
-QVector3D toVector3D(const TherionStudio::ThreeDViewerVec3 &value)
-{
-    return {float(value.x), float(value.y), float(value.z)};
-}
 
 QColor translucentColor(const QColor &color, int alpha)
 {
@@ -76,6 +66,25 @@ void ThreeDViewerViewportWidget::fitToScene()
 void ThreeDViewerViewportWidget::resetView()
 {
     camera_.resetToBounds(sceneModel_.bounds());
+    update();
+}
+
+void ThreeDViewerViewportWidget::setViewPreset(ThreeDViewerViewPreset preset)
+{
+    camera_.setViewPreset(preset);
+    camera_.fitToBounds(sceneModel_.bounds());
+    update();
+}
+
+void ThreeDViewerViewportWidget::rollLeft()
+{
+    camera_.yawByRadians(3.14159265358979323846 / 12.0);
+    update();
+}
+
+void ThreeDViewerViewportWidget::rollRight()
+{
+    camera_.yawByRadians(-3.14159265358979323846 / 12.0);
     update();
 }
 
@@ -208,10 +217,10 @@ void ThreeDViewerViewportWidget::paintEmptyState(QPainter &painter)
 
 void ThreeDViewerViewportWidget::paintAxes(QPainter &painter)
 {
-    const ProjectedPoint origin = projectPoint({0.0, 0.0, 0.0});
-    const ProjectedPoint xAxis = projectPoint({40.0, 0.0, 0.0});
-    const ProjectedPoint yAxis = projectPoint({0.0, 40.0, 0.0});
-    const ProjectedPoint zAxis = projectPoint({0.0, 0.0, 40.0});
+    const ThreeDViewerProjectedPoint origin = ThreeDViewerProjection::projectPoint(camera_, {0.0, 0.0, 0.0}, width(), height());
+    const ThreeDViewerProjectedPoint xAxis = ThreeDViewerProjection::projectPoint(camera_, {40.0, 0.0, 0.0}, width(), height());
+    const ThreeDViewerProjectedPoint yAxis = ThreeDViewerProjection::projectPoint(camera_, {0.0, 40.0, 0.0}, width(), height());
+    const ThreeDViewerProjectedPoint zAxis = ThreeDViewerProjection::projectPoint(camera_, {0.0, 0.0, 40.0}, width(), height());
 
     if (!origin.visible) {
         return;
@@ -268,7 +277,7 @@ void ThreeDViewerViewportWidget::paintSurfaces(QPainter &painter)
 
                     QPointF fromScreen;
                     QPointF toScreen;
-                    if (projectLine(currentPoint, rightPoint, &fromScreen, &toScreen)) {
+                    if (ThreeDViewerProjection::projectLine(camera_, currentPoint, rightPoint, width(), height(), &fromScreen, &toScreen)) {
                         painter.drawLine(fromScreen, toScreen);
                     }
                 }
@@ -284,7 +293,7 @@ void ThreeDViewerViewportWidget::paintSurfaces(QPainter &painter)
 
                         QPointF fromScreen;
                         QPointF toScreen;
-                        if (projectLine(currentPoint, downPoint, &fromScreen, &toScreen)) {
+                        if (ThreeDViewerProjection::projectLine(camera_, currentPoint, downPoint, width(), height(), &fromScreen, &toScreen)) {
                             painter.drawLine(fromScreen, toScreen);
                         }
                     }
@@ -310,9 +319,9 @@ void ThreeDViewerViewportWidget::paintMeshes(QPainter &painter)
                 continue;
             }
 
-            const ProjectedPoint p0 = projectPoint(mesh.vertices.at(triangle[0]));
-            const ProjectedPoint p1 = projectPoint(mesh.vertices.at(triangle[1]));
-            const ProjectedPoint p2 = projectPoint(mesh.vertices.at(triangle[2]));
+            const ThreeDViewerProjectedPoint p0 = ThreeDViewerProjection::projectPoint(camera_, mesh.vertices.at(triangle[0]), width(), height());
+            const ThreeDViewerProjectedPoint p1 = ThreeDViewerProjection::projectPoint(camera_, mesh.vertices.at(triangle[1]), width(), height());
+            const ThreeDViewerProjectedPoint p2 = ThreeDViewerProjection::projectPoint(camera_, mesh.vertices.at(triangle[2]), width(), height());
             if (!p0.visible || !p1.visible || !p2.visible) {
                 continue;
             }
@@ -348,7 +357,7 @@ void ThreeDViewerViewportWidget::paintShots(QPainter &painter)
 
         QPointF fromScreen;
         QPointF toScreen;
-        if (!projectLine(fromStation->position, toStation->position, &fromScreen, &toScreen)) {
+        if (!ThreeDViewerProjection::projectLine(camera_, fromStation->position, toStation->position, width(), height(), &fromScreen, &toScreen)) {
             continue;
         }
 
@@ -366,7 +375,7 @@ void ThreeDViewerViewportWidget::paintStations(QPainter &painter)
 
     painter.save();
     for (const ThreeDViewerStation &station : sceneModel_.stations) {
-        const ProjectedPoint projected = projectPoint(station.position);
+        const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera_, station.position, width(), height());
         if (!projected.visible) {
             continue;
         }
@@ -387,7 +396,7 @@ void ThreeDViewerViewportWidget::paintLabels(QPainter &painter)
             continue;
         }
 
-        const ProjectedPoint projected = projectPoint(station.position);
+        const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera_, station.position, width(), height());
         if (!projected.visible) {
             continue;
         }
@@ -395,55 +404,6 @@ void ThreeDViewerViewportWidget::paintLabels(QPainter &painter)
         painter.drawText(projected.screenPosition + QPointF(8.0, -8.0), station.name);
     }
     painter.restore();
-}
-
-ThreeDViewerViewportWidget::ProjectedPoint ThreeDViewerViewportWidget::projectPoint(const ThreeDViewerVec3 &point) const
-{
-    ProjectedPoint projected;
-    if (width() <= 0 || height() <= 0) {
-        return projected;
-    }
-
-    const QVector3D forward = toVector3D(camera_.forwardVector());
-    const QVector3D right = toVector3D(camera_.rightVector());
-    const QVector3D up = toVector3D(camera_.upVector());
-    const QVector3D delta = toVector3D(point) - toVector3D(camera_.position());
-
-    const double depth = double(QVector3D::dotProduct(delta, forward));
-    if (depth <= 0.1) {
-        return projected;
-    }
-
-    const double x = double(QVector3D::dotProduct(delta, right));
-    const double y = double(QVector3D::dotProduct(delta, up));
-    const double halfHeight = qMax(1.0, double(height()) * 0.5);
-    const double halfWidth = qMax(1.0, double(width()) * 0.5);
-    const double scale = halfHeight / (depth * std::tan(ThreeDViewerCamera::defaultFieldOfViewRadians() * 0.5));
-
-    projected.screenPosition = QPointF(halfWidth + x * scale, halfHeight - y * scale);
-    projected.depth = depth;
-    projected.visible = true;
-    return projected;
-}
-
-bool ThreeDViewerViewportWidget::projectLine(const ThreeDViewerVec3 &from,
-                                             const ThreeDViewerVec3 &to,
-                                             QPointF *fromScreen,
-                                             QPointF *toScreen) const
-{
-    const ProjectedPoint projectedFrom = projectPoint(from);
-    const ProjectedPoint projectedTo = projectPoint(to);
-    if (!projectedFrom.visible || !projectedTo.visible) {
-        return false;
-    }
-
-    if (fromScreen != nullptr) {
-        *fromScreen = projectedFrom.screenPosition;
-    }
-    if (toScreen != nullptr) {
-        *toScreen = projectedTo.screenPosition;
-    }
-    return true;
 }
 
 QColor ThreeDViewerViewportWidget::shotColorForFlags(const ThreeDViewerShot &shot)

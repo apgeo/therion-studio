@@ -105,7 +105,7 @@ When a project is open, the welcome tab shows the active project name and path. 
 - `.th`, `thconfig`, `*.thconfig`, `thconfig.*`, `.log`, `.txt`, and ordinary text files open in the text editor.
 - Unsupported files, such as images or PDF, show an `Unsupported file` message with `Open in External App`.
 
-The 3D viewer is read-only. Its toolbar provides `Fit` and `Reset` controls, left-drag orbit navigation, right- or middle-drag pan navigation, and mouse-wheel zoom.
+The 3D viewer is read-only. Its toolbar provides `Fit`, `Reset`, `Top View`, `Side View`, `Rotate Left`, and `Rotate Right` controls, left-drag orbit navigation, right- or middle-drag pan navigation, mouse-wheel zoom, and rotate buttons that spin the view around the blue/world axis.
 
 ### 3.4 Create and Manage Files
 

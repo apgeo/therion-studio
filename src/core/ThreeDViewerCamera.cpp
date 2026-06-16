@@ -88,6 +88,30 @@ void ThreeDViewerCamera::resetToBounds(const ThreeDViewerBounds &bounds)
     fitToBounds(bounds);
 }
 
+void ThreeDViewerCamera::setViewPreset(ThreeDViewerViewPreset preset)
+{
+    switch (preset) {
+    case ThreeDViewerViewPreset::Isometric:
+        state_.yaw = -0.85;
+        state_.pitch = 0.45;
+        break;
+    case ThreeDViewerViewPreset::Top:
+        state_.yaw = -0.85;
+        state_.pitch = 1.34;
+        break;
+    case ThreeDViewerViewPreset::Side:
+        state_.yaw = 0.0;
+        state_.pitch = 0.0;
+        break;
+    }
+    state_.pitch = clampPitch(state_.pitch);
+}
+
+void ThreeDViewerCamera::yawByRadians(double deltaRadians)
+{
+    state_.yaw = std::remainder(state_.yaw + deltaRadians, 2.0 * 3.14159265358979323846);
+}
+
 void ThreeDViewerCamera::orbitByPixels(double deltaX, double deltaY, double yawScale, double pitchScale)
 {
     state_.yaw += deltaX * yawScale;
@@ -140,13 +164,15 @@ ThreeDViewerVec3 ThreeDViewerCamera::rightVector() const
     if (vectorLengthSquared(right) <= 0.00000001) {
         right = cross(forward, {0.0, 1.0, 0.0});
     }
-    return normalizedOrFallback(right, {1.0, 0.0, 0.0});
+    right = normalizedOrFallback(right, {1.0, 0.0, 0.0});
+    return right;
 }
 
 ThreeDViewerVec3 ThreeDViewerCamera::upVector() const
 {
-    const ThreeDViewerVec3 up = cross(rightVector(), forwardVector());
-    return normalizedOrFallback(up, worldUp);
+    const ThreeDViewerVec3 forward = forwardVector();
+    const ThreeDViewerVec3 right = rightVector();
+    return normalizedOrFallback(cross(right, forward), worldUp);
 }
 
 double ThreeDViewerCamera::screenPanScale(int viewportHeight, double fieldOfViewRadians) const

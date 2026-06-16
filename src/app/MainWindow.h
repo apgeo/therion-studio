@@ -300,6 +300,10 @@ private:
     void triggerFitWithBackgroundForActiveDocument();
     void triggerThreeDViewerFitForActiveDocument();
     void triggerThreeDViewerResetForActiveDocument();
+    void triggerThreeDViewerTopViewForActiveDocument();
+    void triggerThreeDViewerSideViewForActiveDocument();
+    void triggerThreeDViewerRollLeftForActiveDocument();
+    void triggerThreeDViewerRollRightForActiveDocument();
     void triggerSelectForActiveDocument();
     void triggerCompleteDraftForActiveDocument();
     void triggerInsertScrapForActiveDocument();
@@ -437,6 +441,10 @@ private:
     QToolButton *workspaceFitBackgroundButton_ = nullptr;
     QToolButton *workspaceThreeDViewerFitButton_ = nullptr;
     QToolButton *workspaceThreeDViewerResetButton_ = nullptr;
+    QToolButton *workspaceThreeDViewerTopViewButton_ = nullptr;
+    QToolButton *workspaceThreeDViewerSideViewButton_ = nullptr;
+    QToolButton *workspaceThreeDViewerRollLeftButton_ = nullptr;
+    QToolButton *workspaceThreeDViewerRollRightButton_ = nullptr;
     QToolButton *workspaceSelectButton_ = nullptr;
     QToolButton *workspaceCompleteDraftButton_ = nullptr;
     QToolButton *workspaceInsertScrapButton_ = nullptr;

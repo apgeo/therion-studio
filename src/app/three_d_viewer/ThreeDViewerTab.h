@@ -29,6 +29,10 @@ public:
     bool save(QString *errorMessage = nullptr);
     void fitToScene();
     void resetView();
+    void setTopView();
+    void setSideView();
+    void rollViewLeft();
+    void rollViewRight();
     void showFindBar(bool replaceMode = false);
     void hideFindBar();
     void goToLine(int lineNumber);

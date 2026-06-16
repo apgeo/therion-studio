@@ -309,8 +309,16 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     viewerLayout->setSpacing(4);
     workspaceThreeDViewerFitButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Fit 3D View"), QStringLiteral("scan"));
     workspaceThreeDViewerResetButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Reset 3D View"), QStringLiteral("locate-fixed"));
+    workspaceThreeDViewerTopViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Top View"), QStringLiteral("view-top"));
+    workspaceThreeDViewerSideViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Side View"), QStringLiteral("view-side"));
+    workspaceThreeDViewerRollLeftButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Left"), QStringLiteral("view-roll-left"));
+    workspaceThreeDViewerRollRightButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Right"), QStringLiteral("view-roll-right"));
     viewerLayout->addWidget(workspaceThreeDViewerFitButton_);
     viewerLayout->addWidget(workspaceThreeDViewerResetButton_);
+    viewerLayout->addWidget(workspaceThreeDViewerTopViewButton_);
+    viewerLayout->addWidget(workspaceThreeDViewerSideViewButton_);
+    viewerLayout->addWidget(workspaceThreeDViewerRollLeftButton_);
+    viewerLayout->addWidget(workspaceThreeDViewerRollRightButton_);
     hostLayout->addWidget(workspaceThreeDViewerGroup_);
     workspaceThreeDViewerGroup_->setVisible(false);
     workspaceMapToolsGroup_ = new QWidget(workspaceModeSwitcher_);
@@ -383,6 +391,10 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     connect(workspaceFitBackgroundButton_, &QToolButton::clicked, this, &MainWindow::triggerFitWithBackgroundForActiveDocument);
     connect(workspaceThreeDViewerFitButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerFitForActiveDocument);
     connect(workspaceThreeDViewerResetButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerResetForActiveDocument);
+    connect(workspaceThreeDViewerTopViewButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerTopViewForActiveDocument);
+    connect(workspaceThreeDViewerSideViewButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerSideViewForActiveDocument);
+    connect(workspaceThreeDViewerRollLeftButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerRollLeftForActiveDocument);
+    connect(workspaceThreeDViewerRollRightButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerRollRightForActiveDocument);
     connect(workspaceSelectButton_, &QToolButton::clicked, this, &MainWindow::triggerSelectForActiveDocument);
     connect(workspaceCompleteDraftButton_, &QToolButton::clicked, this, &MainWindow::triggerCompleteDraftForActiveDocument);
     connect(workspaceInsertScrapButton_, &QToolButton::clicked, this, &MainWindow::triggerInsertScrapForActiveDocument);
@@ -471,6 +483,10 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspaceThreeDViewerGroup_ == nullptr
         || workspaceThreeDViewerFitButton_ == nullptr
         || workspaceThreeDViewerResetButton_ == nullptr
+        || workspaceThreeDViewerTopViewButton_ == nullptr
+        || workspaceThreeDViewerSideViewButton_ == nullptr
+        || workspaceThreeDViewerRollLeftButton_ == nullptr
+        || workspaceThreeDViewerRollRightButton_ == nullptr
         || workspaceMapToolsGroup_ == nullptr
         || workspaceSelectButton_ == nullptr
         || workspaceCompleteDraftButton_ == nullptr
@@ -526,6 +542,10 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceZoomSeparator_->setVisible(showEditorActions && showZoomTools);
     workspaceThreeDViewerFitButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerResetButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerTopViewButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerSideViewButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerRollLeftButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerRollRightButton_->setEnabled(showThreeDViewerModes);
     workspaceMapToolsGroup_->setVisible(showEditorActions && showMapTools);
     workspaceSaveButton_->setVisible(showEditorActions);
     workspaceSaveButton_->setEnabled(showEditorActions && tabWidget != nullptr);
@@ -576,8 +596,16 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceSmartAreaButton_->setEnabled(showEditorActions && showMapTools && embeddedMapSurfaceActive);
     workspaceThreeDViewerFitButton_->setVisible(showThreeDViewerModes);
     workspaceThreeDViewerResetButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerTopViewButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerSideViewButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerRollLeftButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerRollRightButton_->setVisible(showThreeDViewerModes);
     workspaceThreeDViewerFitButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerResetButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerTopViewButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerSideViewButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerRollLeftButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerRollRightButton_->setEnabled(showThreeDViewerModes);
 
     workspaceModeSwitcherSyncInProgress_ = true;
     if (showMapModes) {
@@ -762,6 +790,34 @@ void MainWindow::triggerThreeDViewerResetForActiveDocument()
 {
     if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
         viewerTab->resetView();
+    }
+}
+
+void MainWindow::triggerThreeDViewerTopViewForActiveDocument()
+{
+    if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+        viewerTab->setTopView();
+    }
+}
+
+void MainWindow::triggerThreeDViewerSideViewForActiveDocument()
+{
+    if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+        viewerTab->setSideView();
+    }
+}
+
+void MainWindow::triggerThreeDViewerRollLeftForActiveDocument()
+{
+    if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+        viewerTab->rollViewLeft();
+    }
+}
+
+void MainWindow::triggerThreeDViewerRollRightForActiveDocument()
+{
+    if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+        viewerTab->rollViewRight();
     }
 }
 

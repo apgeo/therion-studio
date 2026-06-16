@@ -5,6 +5,13 @@
 namespace TherionStudio
 {
 
+enum class ThreeDViewerViewPreset
+{
+    Isometric,
+    Top,
+    Side,
+};
+
 struct ThreeDViewerCameraState
 {
     ThreeDViewerVec3 target;
@@ -21,7 +28,9 @@ public:
 
     void fitToBounds(const ThreeDViewerBounds &bounds);
     void resetToBounds(const ThreeDViewerBounds &bounds);
+    void setViewPreset(ThreeDViewerViewPreset preset);
 
+    void yawByRadians(double deltaRadians);
     void orbitByPixels(double deltaX,
                        double deltaY,
                        double yawScale = 0.008,

@@ -100,6 +100,38 @@ void ThreeDViewerTab::resetView()
     viewport_->resetView();
 }
 
+void ThreeDViewerTab::setTopView()
+{
+    if (viewport_ == nullptr) {
+        return;
+    }
+    viewport_->setViewPreset(ThreeDViewerViewPreset::Top);
+}
+
+void ThreeDViewerTab::setSideView()
+{
+    if (viewport_ == nullptr) {
+        return;
+    }
+    viewport_->setViewPreset(ThreeDViewerViewPreset::Side);
+}
+
+void ThreeDViewerTab::rollViewLeft()
+{
+    if (viewport_ == nullptr) {
+        return;
+    }
+    viewport_->rollLeft();
+}
+
+void ThreeDViewerTab::rollViewRight()
+{
+    if (viewport_ == nullptr) {
+        return;
+    }
+    viewport_->rollRight();
+}
+
 void ThreeDViewerTab::showFindBar(bool)
 {
 }

@@ -243,6 +243,8 @@ set(THERION_APP_SOURCES
     src/app/TherionRunnerStartSuccessPresenter.h
     src/app/three_d_viewer/ThreeDViewerTab.cpp
     src/app/three_d_viewer/ThreeDViewerTab.h
+    src/app/three_d_viewer/ThreeDViewerProjection.cpp
+    src/app/three_d_viewer/ThreeDViewerProjection.h
     src/app/three_d_viewer/ThreeDViewerViewportWidget.cpp
     src/app/three_d_viewer/ThreeDViewerViewportWidget.h)
 
@@ -703,6 +705,10 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/trash-2.svg
     resources/icons/lucide/undo-2.svg
     resources/icons/lucide/play.svg
+    resources/icons/lucide/view-top.svg
+    resources/icons/lucide/view-side.svg
+    resources/icons/lucide/view-roll-left.svg
+    resources/icons/lucide/view-roll-right.svg
     resources/icons/lucide/zoom-in.svg
     resources/icons/lucide/zoom-out.svg)
 
@@ -1051,6 +1057,14 @@ qt_add_executable(MapEditorLogicQTests
     src/app/text_editor/map_editor/MapEditorUndoArbitrationService.h)
 
 target_link_libraries(MapEditorLogicQTests PRIVATE therion_core Qt6::Core Qt6::Gui Qt6::Test)
+
+qt_add_executable(ThreeDViewerQTests
+    tests/ThreeDViewerQTestMain.cpp
+    tests/ThreeDViewerProjectionTest.cpp
+    src/app/three_d_viewer/ThreeDViewerProjection.cpp
+    src/app/three_d_viewer/ThreeDViewerProjection.h)
+
+target_link_libraries(ThreeDViewerQTests PRIVATE therion_core Qt6::Gui Qt6::Test)
 
 qt_add_executable(MapEditorObjectStyleCatalogTest
     tests/MapEditorObjectStyleCatalogTest.cpp
@@ -1427,6 +1441,7 @@ set(THERION_UNIT_TEST_TARGETS
     DocumentFileEncodingTest
     MapEditorInputPolicyTest
     MapEditorLogicQTests
+    ThreeDViewerQTests
     MapEditorInspectorDataTest
     MapEditorObjectStyleCatalogTest
     MapEditorObjectDetailsLogicTest

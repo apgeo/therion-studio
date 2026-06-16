@@ -60,7 +60,7 @@ Required capabilities:
 - display project files and subfolders
 - recognize common Therion-related file types such as `.th`, `.th2`, `thconfig`, `*.thconfig`, and `thconfig.*`, plus compiled 3D `.lox` artifacts
 - open files in editor tabs
-- opening a `.lox` file shall create a read-only 3D viewer tab with Fit/Reset controls and orbit, pan, and zoom navigation
+- opening a `.lox` file shall create a read-only 3D viewer tab with Fit/Reset, Top/Side view, and rotate-left/rotate-right controls, plus orbit, pan, zoom, and world-blue-axis rotation navigation
 - support file selection, multi-tab workflows, and recent project reopening
 - preserve folder expansion state where practical
 

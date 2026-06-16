@@ -2,10 +2,9 @@
 
 #include "../../core/ThreeDViewerCamera.h"
 #include "../../core/ThreeDViewerSceneModel.h"
+#include "ThreeDViewerProjection.h"
 
 #include <QColor>
-#include <QPointF>
-#include <QVector3D>
 #include <QWidget>
 
 #include <array>
@@ -30,6 +29,9 @@ public:
     void setLayerVisibility(const std::array<bool, 5> &layerVisibility);
     void fitToScene();
     void resetView();
+    void setViewPreset(ThreeDViewerViewPreset preset);
+    void rollLeft();
+    void rollRight();
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -47,13 +49,6 @@ private:
         Pan,
     };
 
-    struct ProjectedPoint
-    {
-        QPointF screenPosition;
-        double depth = 0.0;
-        bool visible = false;
-    };
-
     void paintScene(QPainter &painter);
     void paintEmptyState(QPainter &painter);
     void paintAxes(QPainter &painter);
@@ -62,8 +57,6 @@ private:
     void paintShots(QPainter &painter);
     void paintStations(QPainter &painter);
     void paintLabels(QPainter &painter);
-    ProjectedPoint projectPoint(const ThreeDViewerVec3 &point) const;
-    bool projectLine(const ThreeDViewerVec3 &from, const ThreeDViewerVec3 &to, QPointF *fromScreen, QPointF *toScreen) const;
     static QColor shotColorForFlags(const ThreeDViewerShot &shot);
     static QColor stationColorForFlags(const ThreeDViewerStation &station);
 

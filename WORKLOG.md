@@ -57,6 +57,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
 
 - The `.lox` loader and neutral scene model are implemented in `src/core/` and covered by `TherionCoreQTests`.
 - The `ThreeDViewerCamera` model now lives in `src/core/` and owns orbit, pan, zoom, fit, and reset state for the viewer shell.
+- The viewer projection helper now lives in `src/app/three_d_viewer/` and is covered by a dedicated `ThreeDViewerQTests` runner.
+- The 3D viewer toolbar now exposes top-view, side-view, and rotate-left/rotate-right controls alongside fit/reset controls, with rotation around the world blue axis.
 - The `ThreeDViewerTab` host is integrated into the main window as a read-only `.lox` viewer tab with basic layer toggles, scene summary, and a first interactive viewport slice.
 - Viewer fit/reset controls now live in the shared workspace command bar instead of a tab-local toolbar.
 - The 3D viewer layer list now blocks internal item-change recursion during tab construction and refresh.

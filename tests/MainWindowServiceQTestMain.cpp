@@ -10,6 +10,7 @@ int runMainWindowSessionRestoreOrchestrationServiceTest(int argc, char **argv);
 int runMainWindowSessionRestoreUiFlowServiceTest(int argc, char **argv);
 int runMainWindowSessionStateServiceTest(int argc, char **argv);
 int runMainWindowSessionWindowRestoreServiceTest(int argc, char **argv);
+int runMainWindowStructureNameOverridesServiceTest(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
@@ -24,5 +25,6 @@ int main(int argc, char **argv)
     status |= runMainWindowSessionRestoreUiFlowServiceTest(argc, argv);
     status |= runMainWindowSessionStateServiceTest(argc, argv);
     status |= runMainWindowSessionWindowRestoreServiceTest(argc, argv);
+    status |= runMainWindowStructureNameOverridesServiceTest(argc, argv);
     return status;
 }

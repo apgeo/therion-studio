@@ -1133,9 +1133,6 @@ therion_add_app_unit_test(MainWindowDocumentOpenControllerTest
 therion_add_app_unit_test(MainWindowDocumentTabOpenControllerTest
     tests/MainWindowDocumentTabOpenControllerTest.cpp)
 
-therion_add_app_unit_test(MainWindowSessionDocumentServiceTest
-    tests/MainWindowSessionDocumentServiceTest.cpp)
-
 therion_add_app_unit_test(MainWindowSessionDocumentControllerTest
     tests/MainWindowSessionDocumentControllerTest.cpp)
 
@@ -1156,7 +1153,8 @@ qt_add_executable(MainWindowServiceQTests
     tests/MainWindowSessionRestoreOrchestrationServiceTest.cpp
     tests/MainWindowSessionRestoreUiFlowServiceTest.cpp
     tests/MainWindowSessionStateServiceTest.cpp
-    tests/MainWindowSessionWindowRestoreServiceTest.cpp)
+    tests/MainWindowSessionWindowRestoreServiceTest.cpp
+    tests/MainWindowStructureNameOverridesServiceTest.cpp)
 
 target_link_libraries(MainWindowServiceQTests PRIVATE therion_app Qt6::Test)
 
@@ -1168,9 +1166,6 @@ therion_add_app_unit_test(MainWindowRecentProjectsServiceTest
 
 therion_add_app_unit_test(MainWindowRecentFilesServiceTest
     tests/MainWindowRecentFilesServiceTest.cpp)
-
-therion_add_app_unit_test(MainWindowStructureNameOverridesServiceTest
-    tests/MainWindowStructureNameOverridesServiceTest.cpp)
 
 therion_add_app_unit_test(MainWindowValidationFixApplyServiceTest
     tests/MainWindowValidationFixApplyServiceTest.cpp)

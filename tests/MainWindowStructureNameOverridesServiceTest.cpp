@@ -1,50 +1,35 @@
 #include "../src/app/MainWindowStructureNameOverridesService.h"
 
-#include <QHash>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class MainWindowStructureNameOverridesServiceTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
 
-int runParseTest()
+private slots:
+    void parsesOverrides();
+    void serializesOverrides();
+};
+
+void MainWindowStructureNameOverridesServiceTest::parsesOverrides()
 {
     const QString json = QStringLiteral("{\"a\":\" Alpha \",\"b\":\"\",\"c\":\"Charlie\",\"d\":123}");
     const QHash<QString, QString> overrides = MainWindowStructureNameOverridesService::parse(json);
 
-    if (!expect(overrides.size() == 2,
-                "Parse should keep only non-empty trimmed string values.")) {
-        return 1;
-    }
-    if (!expect(overrides.value(QStringLiteral("a")) == QStringLiteral("Alpha"),
-                "Parse should trim override values.")) {
-        return 1;
-    }
-    if (!expect(overrides.value(QStringLiteral("c")) == QStringLiteral("Charlie"),
-                "Parse should keep valid string override values.")) {
-        return 1;
-    }
+    QCOMPARE(overrides.size(), 2);
+    QCOMPARE(overrides.value(QStringLiteral("a")), QStringLiteral("Alpha"));
+    QCOMPARE(overrides.value(QStringLiteral("c")), QStringLiteral("Charlie"));
 
     const QHash<QString, QString> emptyFromInvalid =
         MainWindowStructureNameOverridesService::parse(QStringLiteral("not-json"));
-    if (!expect(emptyFromInvalid.isEmpty(),
-                "Parse should return empty overrides for invalid JSON.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY(emptyFromInvalid.isEmpty());
 }
 
-int runSerializeTest()
+void MainWindowStructureNameOverridesServiceTest::serializesOverrides()
 {
     QHash<QString, QString> overrides;
     overrides.insert(QStringLiteral("a"), QStringLiteral("Alpha"));
@@ -52,23 +37,14 @@ int runSerializeTest()
 
     const QString json = MainWindowStructureNameOverridesService::serialize(overrides);
     const QHash<QString, QString> roundtrip = MainWindowStructureNameOverridesService::parse(json);
-    if (!expect(roundtrip == overrides,
-                "Serialize output should round-trip through parse without semantic loss.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(roundtrip, overrides);
 }
 }
 
-int main()
+int runMainWindowStructureNameOverridesServiceTest(int argc, char **argv)
 {
-    if (runParseTest() != 0) {
-        return 1;
-    }
-    if (runSerializeTest() != 0) {
-        return 1;
-    }
-
-    return 0;
+    MainWindowStructureNameOverridesServiceTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "MainWindowStructureNameOverridesServiceTest.moc"

@@ -180,6 +180,7 @@ These instructions apply to the whole repository.
 ## Change Discipline
 
 - Keep changes tightly scoped to the request.
+- Do not create commits without explicit user confirmation for that specific commit. After preparing changes, summarize the scope, verification, and proposed commit message, then wait for the user's approval before running `git commit`.
 - Maintain a living [SPECIFICATION.md](SPECIFICATION.md): whenever important behavior, workflow, constraints, acceptance criteria, or architecture assumptions change, update the specification in the same change.
 - Maintain a living [ARCHITECTURE.md](ARCHITECTURE.md): whenever architectural direction, ownership boundaries, source model strategy, transaction policy, or UI surface ownership changes, update it in the same change.
 - Prefer specification wording that is framework-agnostic where practical so future reimplementations can reuse it as product/source-of-truth guidance.
@@ -198,6 +199,7 @@ These instructions apply to the whole repository.
 
 ## Commit Message Discipline
 
+- Every commit requires explicit user confirmation before it is created, even when the user already requested code or documentation changes.
 - Use short English commit subjects in the Conventional Commits style: `<type>: <imperative summary>`.
 - Prefer these types:
   - `feat` for user-visible behavior or capability

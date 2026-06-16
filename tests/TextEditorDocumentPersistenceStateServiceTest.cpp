@@ -1,22 +1,22 @@
 #include "../src/app/text_editor/TextEditorDocumentPersistenceStateService.h"
 
-#include <QCoreApplication>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class TextEditorDocumentPersistenceStateServiceTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
 
-int runBuildLoadStateUpdateNormalizesEncodingTest()
+private slots:
+    void normalizesEncodingOnLoadStateUpdate();
+    void formatsNonUtf8LoadStatus();
+    void formatsSaveStateStatus();
+};
+
+void TextEditorDocumentPersistenceStateServiceTest::normalizesEncodingOnLoadStateUpdate()
 {
     TextEditorDocumentPersistenceStateService::LoadStateInput input;
     input.filePath = QStringLiteral("/tmp/survey.th");
@@ -30,43 +30,19 @@ int runBuildLoadStateUpdateNormalizesEncodingTest()
     input.openedEncodingStatusTemplate = QStringLiteral("Opened as %1.");
 
     const auto update = TextEditorDocumentPersistenceStateService::buildLoadStateUpdate(input);
-    if (!expect(update.fileEncodingName == QStringLiteral("UTF-8"),
-                "Load update should normalize empty encoding name to UTF-8.")) {
-        return 1;
-    }
-    if (!expect(update.fileEncodingLabel == QStringLiteral("UTF-8"),
-                "Load update should normalize empty encoding label to UTF-8.")) {
-        return 1;
-    }
-    if (!expect(update.encodingStatusNote.isEmpty(),
-                "Load update for UTF-8 should clear encoding status note.")) {
-        return 1;
-    }
-    if (!expect(update.currentLineNumber == 4 && update.currentColumnNumber == 7,
-                "Load update should keep cursor location.")) {
-        return 1;
-    }
-    if (!expect(update.highlightedLineNumber == 4,
-                "Load update should align highlighted line with current line.")) {
-        return 1;
-    }
-    if (!expect(update.disableBlocksMode,
-                "Load update should request blocks-mode disable when unsupported.")) {
-        return 1;
-    }
-    if (!expect(update.cleanTextSnapshot == input.textContents,
-                "Load update should preserve clean text snapshot.")) {
-        return 1;
-    }
-    if (!expect(update.blockDetailsSelectedLineNumber == 0 && update.blockDetailsSelectedKind.isEmpty(),
-                "Load update should reset block-details selection state.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(update.fileEncodingName, QStringLiteral("UTF-8"));
+    QCOMPARE(update.fileEncodingLabel, QStringLiteral("UTF-8"));
+    QVERIFY(update.encodingStatusNote.isEmpty());
+    QCOMPARE(update.currentLineNumber, 4);
+    QCOMPARE(update.currentColumnNumber, 7);
+    QCOMPARE(update.highlightedLineNumber, 4);
+    QVERIFY(update.disableBlocksMode);
+    QCOMPARE(update.cleanTextSnapshot, input.textContents);
+    QCOMPARE(update.blockDetailsSelectedLineNumber, 0);
+    QVERIFY(update.blockDetailsSelectedKind.isEmpty());
 }
 
-int runBuildLoadStateUpdateNonUtf8StatusTest()
+void TextEditorDocumentPersistenceStateServiceTest::formatsNonUtf8LoadStatus()
 {
     TextEditorDocumentPersistenceStateService::LoadStateInput input;
     input.loadedEncodingName = QStringLiteral("cp1250");
@@ -74,23 +50,12 @@ int runBuildLoadStateUpdateNonUtf8StatusTest()
     input.openedEncodingStatusTemplate = QStringLiteral("Opened as %1. Keep encoding.");
 
     const auto update = TextEditorDocumentPersistenceStateService::buildLoadStateUpdate(input);
-    if (!expect(update.fileEncodingName == QStringLiteral("cp1250"),
-                "Load update should keep explicit encoding name.")) {
-        return 1;
-    }
-    if (!expect(update.fileEncodingLabel == QStringLiteral("Windows-1250"),
-                "Load update should keep explicit encoding label.")) {
-        return 1;
-    }
-    if (!expect(update.encodingStatusNote == QStringLiteral("Opened as Windows-1250. Keep encoding."),
-                "Load update should format non-UTF-8 opened status note.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(update.fileEncodingName, QStringLiteral("cp1250"));
+    QCOMPARE(update.fileEncodingLabel, QStringLiteral("Windows-1250"));
+    QCOMPARE(update.encodingStatusNote, QStringLiteral("Opened as Windows-1250. Keep encoding."));
 }
 
-int runBuildSaveStateUpdateStatusTest()
+void TextEditorDocumentPersistenceStateServiceTest::formatsSaveStateStatus()
 {
     TextEditorDocumentPersistenceStateService::SaveStateInput utf8Input;
     utf8Input.textContents = QStringLiteral("abc");
@@ -99,15 +64,9 @@ int runBuildSaveStateUpdateStatusTest()
     utf8Input.savedEncodingStatusTemplate = QStringLiteral("Saved using %1.");
 
     const auto utf8Update = TextEditorDocumentPersistenceStateService::buildSaveStateUpdate(utf8Input);
-    if (!expect(utf8Update.encodingStatusNote.isEmpty(),
-                "Save update should clear encoding note for UTF-8.")) {
-        return 1;
-    }
-    if (!expect(utf8Update.cleanTextSnapshot == QStringLiteral("abc")
-                && utf8Update.cleanEncodingNameSnapshot == QStringLiteral("UTF-8"),
-                "Save update should refresh clean snapshots.")) {
-        return 1;
-    }
+    QVERIFY(utf8Update.encodingStatusNote.isEmpty());
+    QCOMPARE(utf8Update.cleanTextSnapshot, QStringLiteral("abc"));
+    QCOMPARE(utf8Update.cleanEncodingNameSnapshot, QStringLiteral("UTF-8"));
 
     TextEditorDocumentPersistenceStateService::SaveStateInput nonUtf8Input;
     nonUtf8Input.textContents = QStringLiteral("def");
@@ -116,24 +75,14 @@ int runBuildSaveStateUpdateStatusTest()
     nonUtf8Input.savedEncodingStatusTemplate = QStringLiteral("Saved using %1 encoding.");
 
     const auto nonUtf8Update = TextEditorDocumentPersistenceStateService::buildSaveStateUpdate(nonUtf8Input);
-    if (!expect(nonUtf8Update.encodingStatusNote == QStringLiteral("Saved using ISO-8859-2 encoding."),
-                "Save update should format non-UTF-8 saved status note.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(nonUtf8Update.encodingStatusNote, QStringLiteral("Saved using ISO-8859-2 encoding."));
 }
 }
 
-int main(int argc, char **argv)
+int runTextEditorDocumentPersistenceStateServiceTest(int argc, char **argv)
 {
-    QCoreApplication app(argc, argv);
-
-    if (runBuildLoadStateUpdateNormalizesEncodingTest() != 0) {
-        return 1;
-    }
-    if (runBuildLoadStateUpdateNonUtf8StatusTest() != 0) {
-        return 1;
-    }
-    return runBuildSaveStateUpdateStatusTest();
+    TextEditorDocumentPersistenceStateServiceTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "TextEditorDocumentPersistenceStateServiceTest.moc"

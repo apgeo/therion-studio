@@ -1,22 +1,12 @@
 #include "../src/app/text_editor/TextEditorDocumentIoService.h"
 #include "../src/core/IFileSystem.h"
 
-#include <QCoreApplication>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
-{
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
-
 class FakeFileSystem final : public IFileSystem
 {
 public:
@@ -87,93 +77,66 @@ public:
     }
 };
 
-int runReadDocumentTest()
+class TextEditorDocumentIoServiceTest : public QObject
+{
+    Q_OBJECT
+
+private slots:
+    void readsDocument();
+    void writesDocument();
+    void buildsStateInputs();
+};
+
+void TextEditorDocumentIoServiceTest::readsDocument()
 {
     FakeFileSystem fileSystem;
     TextEditorDocumentIoService::ReadDocumentResult result;
     QString errorMessage;
 
-    if (!expect(TextEditorDocumentIoService::readDocument(fileSystem,
-                                                          QStringLiteral("/tmp/survey.th"),
-                                                          &errorMessage,
-                                                          &result),
-                "readDocument should pass on successful filesystem read.")) {
-        return 1;
-    }
-    if (!expect(fileSystem.lastReadPath == QStringLiteral("/tmp/survey.th"),
-                "readDocument should pass file path to filesystem.")) {
-        return 1;
-    }
-    if (!expect(result.contents == fileSystem.readContents,
-                "readDocument should expose loaded contents.")) {
-        return 1;
-    }
-    if (!expect(result.loadedEncodingName == fileSystem.readEncodingName,
-                "readDocument should expose loaded encoding name.")) {
-        return 1;
-    }
-    if (!expect(result.loadedEncodingLabel == fileSystem.readEncodingLabel,
-                "readDocument should expose loaded encoding label.")) {
-        return 1;
-    }
+    QVERIFY(TextEditorDocumentIoService::readDocument(fileSystem,
+                                                      QStringLiteral("/tmp/survey.th"),
+                                                      &errorMessage,
+                                                      &result));
+    QCOMPARE(fileSystem.lastReadPath, QStringLiteral("/tmp/survey.th"));
+    QCOMPARE(result.contents, fileSystem.readContents);
+    QCOMPARE(result.loadedEncodingName, fileSystem.readEncodingName);
+    QCOMPARE(result.loadedEncodingLabel, fileSystem.readEncodingLabel);
 
     fileSystem.readSucceeds = false;
     result = {};
     errorMessage.clear();
-    if (!expect(!TextEditorDocumentIoService::readDocument(fileSystem,
-                                                           QStringLiteral("/tmp/missing.th"),
-                                                           &errorMessage,
-                                                           &result),
-                "readDocument should fail when filesystem read fails.")) {
-        return 1;
-    }
-    if (!expect(errorMessage == fileSystem.failureMessage,
-                "readDocument should propagate filesystem read error message.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY(!TextEditorDocumentIoService::readDocument(fileSystem,
+                                                       QStringLiteral("/tmp/missing.th"),
+                                                       &errorMessage,
+                                                       &result));
+    QCOMPARE(errorMessage, fileSystem.failureMessage);
 }
 
-int runWriteDocumentTest()
+void TextEditorDocumentIoServiceTest::writesDocument()
 {
     FakeFileSystem fileSystem;
     QString errorMessage;
 
-    if (!expect(TextEditorDocumentIoService::writeDocument(fileSystem,
-                                                           QStringLiteral("/tmp/saved.th"),
-                                                           QStringLiteral("updated"),
-                                                           QStringLiteral("UTF-8"),
-                                                           &errorMessage),
-                "writeDocument should pass on successful filesystem write.")) {
-        return 1;
-    }
-    if (!expect(fileSystem.lastWritePath == QStringLiteral("/tmp/saved.th")
-                && fileSystem.lastWriteContents == QStringLiteral("updated")
-                && fileSystem.lastWriteEncoding == QStringLiteral("UTF-8"),
-                "writeDocument should pass path/text/encoding to filesystem.")) {
-        return 1;
-    }
+    QVERIFY(TextEditorDocumentIoService::writeDocument(fileSystem,
+                                                       QStringLiteral("/tmp/saved.th"),
+                                                       QStringLiteral("updated"),
+                                                       QStringLiteral("UTF-8"),
+                                                       &errorMessage));
+    QCOMPARE(fileSystem.lastWritePath, QStringLiteral("/tmp/saved.th"));
+    QCOMPARE(fileSystem.lastWriteContents, QStringLiteral("updated"));
+    QCOMPARE(fileSystem.lastWriteEncoding, QStringLiteral("UTF-8"));
 
     fileSystem.writeSucceeds = false;
     errorMessage.clear();
-    if (!expect(!TextEditorDocumentIoService::writeDocument(fileSystem,
-                                                            QStringLiteral("/tmp/fail.th"),
-                                                            QStringLiteral("x"),
-                                                            QStringLiteral("CP1250"),
-                                                            &errorMessage),
-                "writeDocument should fail when filesystem write fails.")) {
-        return 1;
-    }
-    if (!expect(errorMessage == fileSystem.failureMessage,
-                "writeDocument should propagate filesystem write error message.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY(!TextEditorDocumentIoService::writeDocument(fileSystem,
+                                                        QStringLiteral("/tmp/fail.th"),
+                                                        QStringLiteral("x"),
+                                                        QStringLiteral("CP1250"),
+                                                        &errorMessage));
+    QCOMPARE(errorMessage, fileSystem.failureMessage);
 }
 
-int runBuildStateInputsTest()
+void TextEditorDocumentIoServiceTest::buildsStateInputs()
 {
     TextEditorDocumentIoService::BuildLoadStateInputRequest loadRequest;
     loadRequest.filePath = QStringLiteral("/tmp/survey.th");
@@ -187,18 +150,15 @@ int runBuildStateInputsTest()
     loadRequest.openedEncodingStatusTemplate = QStringLiteral("Opened as %1");
 
     const auto loadInput = TextEditorDocumentIoService::buildLoadStateInput(loadRequest);
-    if (!expect(loadInput.filePath == loadRequest.filePath
-                && loadInput.textContents == loadRequest.contents
-                && loadInput.loadedEncodingName == loadRequest.loadedEncodingName
-                && loadInput.loadedEncodingLabel == loadRequest.loadedEncodingLabel
-                && loadInput.cursorLineNumber == loadRequest.cursorLineNumber
-                && loadInput.cursorColumnNumber == loadRequest.cursorColumnNumber
-                && loadInput.blocksModeActive == loadRequest.blocksModeActive
-                && loadInput.blocksModeSupportedForCurrentFile == loadRequest.blocksModeSupportedForCurrentFile
-                && loadInput.openedEncodingStatusTemplate == loadRequest.openedEncodingStatusTemplate,
-                "buildLoadStateInput should map all fields.")) {
-        return 1;
-    }
+    QCOMPARE(loadInput.filePath, loadRequest.filePath);
+    QCOMPARE(loadInput.textContents, loadRequest.contents);
+    QCOMPARE(loadInput.loadedEncodingName, loadRequest.loadedEncodingName);
+    QCOMPARE(loadInput.loadedEncodingLabel, loadRequest.loadedEncodingLabel);
+    QCOMPARE(loadInput.cursorLineNumber, loadRequest.cursorLineNumber);
+    QCOMPARE(loadInput.cursorColumnNumber, loadRequest.cursorColumnNumber);
+    QCOMPARE(loadInput.blocksModeActive, loadRequest.blocksModeActive);
+    QCOMPARE(loadInput.blocksModeSupportedForCurrentFile, loadRequest.blocksModeSupportedForCurrentFile);
+    QCOMPARE(loadInput.openedEncodingStatusTemplate, loadRequest.openedEncodingStatusTemplate);
 
     TextEditorDocumentIoService::BuildSaveStateInputRequest saveRequest;
     saveRequest.textContents = QStringLiteral("new text");
@@ -207,27 +167,17 @@ int runBuildStateInputsTest()
     saveRequest.savedEncodingStatusTemplate = QStringLiteral("Saved using %1");
 
     const auto saveInput = TextEditorDocumentIoService::buildSaveStateInput(saveRequest);
-    if (!expect(saveInput.textContents == saveRequest.textContents
-                && saveInput.fileEncodingName == saveRequest.fileEncodingName
-                && saveInput.fileEncodingLabel == saveRequest.fileEncodingLabel
-                && saveInput.savedEncodingStatusTemplate == saveRequest.savedEncodingStatusTemplate,
-                "buildSaveStateInput should map all fields.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(saveInput.textContents, saveRequest.textContents);
+    QCOMPARE(saveInput.fileEncodingName, saveRequest.fileEncodingName);
+    QCOMPARE(saveInput.fileEncodingLabel, saveRequest.fileEncodingLabel);
+    QCOMPARE(saveInput.savedEncodingStatusTemplate, saveRequest.savedEncodingStatusTemplate);
 }
 }
 
-int main(int argc, char **argv)
+int runTextEditorDocumentIoServiceTest(int argc, char **argv)
 {
-    QCoreApplication app(argc, argv);
-
-    if (runReadDocumentTest() != 0) {
-        return 1;
-    }
-    if (runWriteDocumentTest() != 0) {
-        return 1;
-    }
-    return runBuildStateInputsTest();
+    TextEditorDocumentIoServiceTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "TextEditorDocumentIoServiceTest.moc"

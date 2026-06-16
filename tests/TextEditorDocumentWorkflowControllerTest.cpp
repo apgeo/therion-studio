@@ -1,23 +1,23 @@
 #include "../src/app/text_editor/TextEditorDocumentWorkflowController.h"
 
-#include <QCoreApplication>
-#include <QStringList>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class TextEditorDocumentWorkflowControllerTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
 
-int runPostLoadWorkflowOrderWithDisableTest()
+private slots:
+    void runsPostLoadWorkflowWithDisable();
+    void skipsPostLoadDisableWhenNotRequested();
+    void runsPostSaveWorkflow();
+    void runsProjectRootWorkflow();
+};
+
+void TextEditorDocumentWorkflowControllerTest::runsPostLoadWorkflowWithDisable()
 {
     QStringList calls;
 
@@ -47,15 +47,10 @@ int runPostLoadWorkflowOrderWithDisableTest()
         QStringLiteral("dirty_changed:false"),
         QStringLiteral("update_context_help")};
 
-    if (!expect(calls == expected,
-                "Post-load workflow order with disableBlocksMode changed unexpectedly.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(calls, expected);
 }
 
-int runPostLoadWorkflowSkipsDisableWhenNotRequestedTest()
+void TextEditorDocumentWorkflowControllerTest::skipsPostLoadDisableWhenNotRequested()
 {
     QStringList calls;
 
@@ -70,15 +65,10 @@ int runPostLoadWorkflowSkipsDisableWhenNotRequestedTest()
         QStringLiteral("refresh_blocks_mode"),
         QStringLiteral("dirty_changed:false")};
 
-    if (!expect(calls == expected,
-                "Post-load workflow should skip blocks-mode disable when not requested.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(calls, expected);
 }
 
-int runPostSaveWorkflowOrderTest()
+void TextEditorDocumentWorkflowControllerTest::runsPostSaveWorkflow()
 {
     QStringList calls;
 
@@ -92,15 +82,10 @@ int runPostSaveWorkflowOrderTest()
         QStringLiteral("refresh_title"),
         QStringLiteral("dirty_changed:false")};
 
-    if (!expect(calls == expected,
-                "Post-save workflow order changed unexpectedly.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(calls, expected);
 }
 
-int runProjectRootWorkflowTest()
+void TextEditorDocumentWorkflowControllerTest::runsProjectRootWorkflow()
 {
     QStringList calls;
 
@@ -109,27 +94,14 @@ int runProjectRootWorkflowTest()
 
     TextEditorDocumentWorkflowController::runPostProjectRootSetWorkflow(actions);
 
-    if (!expect(calls == QStringList{QStringLiteral("refresh_status")},
-                "Project-root workflow should only trigger refreshStatus.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(calls, QStringList{QStringLiteral("refresh_status")});
 }
 }
 
-int main(int argc, char **argv)
+int runTextEditorDocumentWorkflowControllerTest(int argc, char **argv)
 {
-    QCoreApplication app(argc, argv);
-
-    if (runPostLoadWorkflowOrderWithDisableTest() != 0) {
-        return 1;
-    }
-    if (runPostLoadWorkflowSkipsDisableWhenNotRequestedTest() != 0) {
-        return 1;
-    }
-    if (runPostSaveWorkflowOrderTest() != 0) {
-        return 1;
-    }
-    return runProjectRootWorkflowTest();
+    TextEditorDocumentWorkflowControllerTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "TextEditorDocumentWorkflowControllerTest.moc"

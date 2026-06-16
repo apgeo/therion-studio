@@ -1306,35 +1306,22 @@ qt_add_executable(TextEditorDocumentControllerTest
 
 target_link_libraries(TextEditorDocumentControllerTest PRIVATE therion_core Qt6::Widgets)
 
-qt_add_executable(TextEditorDocumentIoServiceTest
+qt_add_executable(TextEditorDocumentServiceQTests
+    tests/TextEditorDocumentServiceQTestMain.cpp
     tests/TextEditorDocumentIoServiceTest.cpp
+    tests/TextEditorDocumentPersistenceStateServiceTest.cpp
+    tests/TextEditorDocumentPreconditionsServiceTest.cpp
+    tests/TextEditorDocumentWorkflowControllerTest.cpp
     src/app/text_editor/TextEditorDocumentIoService.cpp
     src/app/text_editor/TextEditorDocumentIoService.h
     src/app/text_editor/TextEditorDocumentPersistenceStateService.cpp
-    src/app/text_editor/TextEditorDocumentPersistenceStateService.h)
-
-target_link_libraries(TextEditorDocumentIoServiceTest PRIVATE therion_core Qt6::Core)
-
-qt_add_executable(TextEditorDocumentPersistenceStateServiceTest
-    tests/TextEditorDocumentPersistenceStateServiceTest.cpp
-    src/app/text_editor/TextEditorDocumentPersistenceStateService.cpp
-    src/app/text_editor/TextEditorDocumentPersistenceStateService.h)
-
-target_link_libraries(TextEditorDocumentPersistenceStateServiceTest PRIVATE therion_core Qt6::Core)
-
-qt_add_executable(TextEditorDocumentPreconditionsServiceTest
-    tests/TextEditorDocumentPreconditionsServiceTest.cpp
+    src/app/text_editor/TextEditorDocumentPersistenceStateService.h
     src/app/text_editor/TextEditorDocumentPreconditionsService.cpp
-    src/app/text_editor/TextEditorDocumentPreconditionsService.h)
-
-target_link_libraries(TextEditorDocumentPreconditionsServiceTest PRIVATE therion_core Qt6::Core)
-
-qt_add_executable(TextEditorDocumentWorkflowControllerTest
-    tests/TextEditorDocumentWorkflowControllerTest.cpp
+    src/app/text_editor/TextEditorDocumentPreconditionsService.h
     src/app/text_editor/TextEditorDocumentWorkflowController.cpp
     src/app/text_editor/TextEditorDocumentWorkflowController.h)
 
-target_link_libraries(TextEditorDocumentWorkflowControllerTest PRIVATE therion_core Qt6::Core)
+target_link_libraries(TextEditorDocumentServiceQTests PRIVATE therion_core Qt6::Core Qt6::Test)
 
 qt_add_executable(TextEditorTabInteractionControllerTest
     tests/TextEditorTabInteractionControllerTest.cpp
@@ -1436,11 +1423,8 @@ set(THERION_UNIT_TEST_TARGETS
     MapEditorLineExtensionPlannerTest
     MapEditorLineSplitPlannerTest
     TextEditorDocumentControllerTest
-    TextEditorDocumentIoServiceTest
-    TextEditorDocumentPreconditionsServiceTest
-    TextEditorDocumentPersistenceStateServiceTest
+    TextEditorDocumentServiceQTests
     TextEditorOptionValidationTest
-    TextEditorDocumentWorkflowControllerTest
     TextEditorTabInteractionControllerTest
     MainWindowHelpDocumentTest
     ProjectStructureScannerTest

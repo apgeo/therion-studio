@@ -938,10 +938,8 @@ therion_add_core_unit_test(TherionDocumentParserTest
 
 therion_add_core_qtest_runner(TherionCoreQTests
     tests/core/CoreQTestMain.cpp
+    tests/core/TherionSourceTextTest.cpp
     tests/core/TherionTokenRulesTest.cpp)
-
-therion_add_core_unit_test(TherionSourceTextTest
-    tests/TherionSourceTextTest.cpp)
 
 therion_add_core_unit_test(CommandCatalogStoreTest
     tests/CommandCatalogStoreTest.cpp)
@@ -1443,7 +1441,6 @@ set(THERION_UNIT_TEST_TARGETS
     TherionSourceDocumentTest
     TherionSourceLogicalDocumentTest
     TherionDocumentParserTest
-    TherionSourceTextTest
     TherionCoreQTests
     ApplicationIdentityTest
     TherionProjectStructureIndexTest

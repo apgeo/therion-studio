@@ -1413,6 +1413,26 @@ QString pointTypeTokenFromLine(const TherionParsedLine &parsedLine)
     return QString();
 }
 
+QString geometryFeatureTypePart(const QString &typeToken)
+{
+    return typeToken.section(QLatin1Char(':'), 0, 0).trimmed().toLower();
+}
+
+QString geometryFeatureInlineSubtypePart(const QString &typeToken)
+{
+    return typeToken.section(QLatin1Char(':'), 1).trimmed().toLower();
+}
+
+QString geometryFeatureSubtypeFromParsedLine(const TherionParsedLine &parsedLine, const QString &typeToken)
+{
+    const QString optionSubtype = commandOptionValue(parsedLine.tokens, QStringLiteral("-subtype")).trimmed().toLower();
+    if (!optionSubtype.isEmpty()) {
+        return optionSubtype;
+    }
+
+    return geometryFeatureInlineSubtypePart(typeToken);
+}
+
 QString stationPointNameFromLine(const TherionParsedLine &parsedLine)
 {
     const QString optionName = commandOptionValue(parsedLine.tokens, QStringLiteral("-name")).trimmed();
@@ -1693,16 +1713,16 @@ QString mapEntryTitleForLine(const TherionParsedLine &parsedLine)
     }
 
     const QString directive = parsedLine.tokens.first().toLower();
-    if (directive == QStringLiteral("point")) {
-        const QString pointType = pointTypeTokenFromLine(parsedLine);
-        if (pointType == QStringLiteral("station")) {
-            const QString stationName = stationPointNameFromLine(parsedLine);
-            return stationName.isEmpty() ? pointType : stationName;
+        if (directive == QStringLiteral("point")) {
+            const QString pointType = pointTypeTokenFromLine(parsedLine);
+            if (geometryFeatureTypePart(pointType) == QStringLiteral("station")) {
+                const QString stationName = stationPointNameFromLine(parsedLine);
+                return stationName.isEmpty() ? geometryFeatureTypePart(pointType) : stationName;
+            }
+            if (!pointType.isEmpty()) {
+                return geometryFeatureTypePart(pointType);
+            }
         }
-        if (!pointType.isEmpty()) {
-            return pointType;
-        }
-    }
 
     if (parsedLine.tokens.size() > 1) {
         return parsedLine.tokens.value(1);
@@ -2828,8 +2848,8 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             feature.lineNumber = parsedLine.lineNumber;
             feature.scrapLineNumber = currentScrapLineNumber();
             feature.category = mapEntryCategoryForLine(parsedLine);
-            feature.label = pointType.isEmpty() ? mapEntryTitleForLine(parsedLine) : pointType;
-            feature.subtype = commandOptionValue(parsedLine.tokens, QStringLiteral("-subtype"));
+            feature.label = pointType.isEmpty() ? mapEntryTitleForLine(parsedLine) : geometryFeatureTypePart(pointType);
+            feature.subtype = geometryFeatureSubtypeFromParsedLine(parsedLine, pointType);
             feature.subtitle = mapEntrySubtitleForLine(parsedLine);
             feature.optionValues = commandOptionValuesByName(parsedLine.tokens);
             feature.accent = mapEntryAccentForCategory(feature.category);
@@ -2845,7 +2865,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
                                                             QStringLiteral("orient")})) {
                 feature.orientationDegrees = normalizedSceneOrientationDegrees(orientation.value());
             }
-            feature.stationPoint = pointType == QStringLiteral("station");
+            feature.stationPoint = geometryFeatureTypePart(pointType) == QStringLiteral("station");
             features.append(feature);
             continue;
         }
@@ -2862,7 +2882,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             feature.scrapLineNumber = currentScrapLineNumber();
             feature.category = mapEntryCategoryForLine(parsedLine);
             feature.label = mapEntryTitleForLine(parsedLine);
-            feature.subtype = commandOptionValue(parsedLine.tokens, QStringLiteral("-subtype"));
+            feature.subtype = geometryFeatureSubtypeFromParsedLine(parsedLine, pointTypeTokenFromLine(parsedLine));
             feature.subtitle = mapEntrySubtitleForLine(parsedLine);
             feature.optionValues = commandOptionValuesByName(parsedLine.tokens);
             feature.accent = mapEntryAccentForCategory(feature.category);
@@ -2881,8 +2901,8 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.lineNumber = parsedLine.lineNumber;
             currentFeature.scrapLineNumber = currentScrapLineNumber();
             currentFeature.category = mapEntryCategoryForLine(parsedLine);
-            currentFeature.label = mapEntryTitleForLine(parsedLine);
-            currentFeature.subtype = commandOptionValue(parsedLine.tokens, QStringLiteral("-subtype"));
+            currentFeature.label = geometryFeatureTypePart(parsedLine.tokens.value(1));
+            currentFeature.subtype = geometryFeatureSubtypeFromParsedLine(parsedLine, parsedLine.tokens.value(1));
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
             currentFeature.optionValues = commandOptionValuesByName(parsedLine.tokens);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
@@ -2901,8 +2921,8 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.lineNumber = parsedLine.lineNumber;
             currentFeature.scrapLineNumber = currentScrapLineNumber();
             currentFeature.category = mapEntryCategoryForLine(parsedLine);
-            currentFeature.label = mapEntryTitleForLine(parsedLine);
-            currentFeature.subtype = commandOptionValue(parsedLine.tokens, QStringLiteral("-subtype"));
+            currentFeature.label = geometryFeatureTypePart(parsedLine.tokens.value(1));
+            currentFeature.subtype = geometryFeatureSubtypeFromParsedLine(parsedLine, parsedLine.tokens.value(1));
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
             if (const std::optional<bool> clip = commandOptionToggleValue(parsedLine.tokens, QStringLiteral("-clip"))) {

@@ -306,6 +306,7 @@ In `Inspector -> Selection`, you can edit properties for selected `Scrap`, `Poin
 
 - `Scrap` shows ID in the main section, `Projection` in `Options`, and a separate `Scrap Scale` section for XTherion/Therion-compatible `-scale [...]` calibration values.
 - `Point`, `Line`, and `Area` keep the main section focused on identity and preview (`ID`, `Type`, `Subtype`, `Preview`). Additional editable fields such as `Name (-name)`, `Text (-text)`, `Value (-value)`, clipping, alignment, and projection appear in `Options`. Choose the empty subtype value, or `No subtype` in the context menu, to remove an existing `-subtype`.
+- Inline Therion subtype syntax such as `wall:debris` renders the same as the equivalent explicit `-subtype debris` form in both the map canvas and the Selection preview.
 - `Edit All Object Settings...` at the end of `Options` opens the full catalog-backed option editor for the selected `scrap`, `point`, `line`, or `area` command. Positional attributes such as point `x`/`y`, line `type`, and scrap `id` are shown as protected attribute rows, while `-id`, `-text`, `-orientation`, and other options remain editable option rows.
 - `point label` and `line label` expose `Text (-text)`. Point labels render near the point; line labels render along the label line path, so the line controls the text length and orientation.
 - supported point types such as `height`, `passage-height`, `altitude`, `dimensions`, and `date` expose `Value (-value)`. Bracketed Therion values such as `[fix 1300]` are preserved.

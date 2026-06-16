@@ -232,6 +232,69 @@ int runSmoothAndOptionMetadataIgnoredTest()
     return 0;
 }
 
+int runInlineSubtypeParsingTest()
+{
+    const QString text =
+        QStringLiteral("point 10 20 station:fixed -name P1\n"
+                       "line wall:debris\n"
+                       "  0 0\n"
+                       "  40 0\n"
+                       "endline\n"
+                       "area water:temporary\n"
+                       "  border-1\n"
+                       "endarea\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+    const QVector<const MapGeometryFeature *> points = pointFeatures(features);
+    if (!expect(points.size() == 1, "Expected one point feature for inline subtype parsing test.")) {
+        return 1;
+    }
+
+    if (!expect(points.first()->label == QStringLiteral("station"),
+                "Expected inline point subtype parsing to keep only the type in feature.label.")) {
+        return 1;
+    }
+    if (!expect(points.first()->subtype == QStringLiteral("fixed"),
+                "Expected inline point subtype parsing to populate feature.subtype.")) {
+        return 1;
+    }
+
+    const MapGeometryFeature *line = firstLineFeature(features);
+    if (!expect(line != nullptr, "Expected one line feature for inline subtype parsing test.")) {
+        return 1;
+    }
+    if (!expect(line->label == QStringLiteral("wall"),
+                "Expected inline line subtype parsing to keep only the type in feature.label.")) {
+        return 1;
+    }
+    if (!expect(line->subtype == QStringLiteral("debris"),
+                "Expected inline line subtype parsing to populate feature.subtype.")) {
+        return 1;
+    }
+
+    bool foundArea = false;
+    for (const MapGeometryFeature &feature : features) {
+        if (feature.kind != MapGeometryFeature::Kind::Area) {
+            continue;
+        }
+        foundArea = true;
+        if (!expect(feature.label == QStringLiteral("water"),
+                    "Expected inline area subtype parsing to keep only the type in feature.label.")) {
+            return 1;
+        }
+        if (!expect(feature.subtype == QStringLiteral("temporary"),
+                    "Expected inline area subtype parsing to populate feature.subtype.")) {
+            return 1;
+        }
+    }
+    if (!expect(foundArea, "Expected one area feature for inline subtype parsing test.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runSlopeLinePointOptionsParsingTest()
 {
     const QString text =
@@ -1699,6 +1762,9 @@ int main(int argc, char **argv)
         return rc;
     }
     if (const int rc = runSmoothAndOptionMetadataIgnoredTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runInlineSubtypeParsingTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runSlopeLinePointOptionsParsingTest(); rc != 0) {

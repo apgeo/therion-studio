@@ -6,6 +6,7 @@
 #include <QPolygonF>
 #include <QPointF>
 #include <QRectF>
+#include <QString>
 #include <QTransform>
 #include <QtGlobal>
 
@@ -128,6 +129,116 @@ inline QPainterPath mapEditorPointSymbolPath(MapEditorPointSymbol symbol, const 
     return path;
 }
 
+inline QPointF mapEditorPointAlignShiftFactors(const QString &alignToken)
+{
+    const QString normalized = alignToken.trimmed().toLower();
+    if (normalized.isEmpty()
+        || normalized == QStringLiteral("c")
+        || normalized == QStringLiteral("center")) {
+        return {};
+    }
+    if (normalized == QStringLiteral("t")
+        || normalized == QStringLiteral("top")) {
+        return QPointF(0.0, 1.0);
+    }
+    if (normalized == QStringLiteral("b")
+        || normalized == QStringLiteral("bottom")) {
+        return QPointF(0.0, -1.0);
+    }
+    if (normalized == QStringLiteral("l")
+        || normalized == QStringLiteral("left")) {
+        return QPointF(1.0, 0.0);
+    }
+    if (normalized == QStringLiteral("r")
+        || normalized == QStringLiteral("right")) {
+        return QPointF(-1.0, 0.0);
+    }
+    if (normalized == QStringLiteral("tl")
+        || normalized == QStringLiteral("top-left")) {
+        return QPointF(1.0, 1.0);
+    }
+    if (normalized == QStringLiteral("tr")
+        || normalized == QStringLiteral("top-right")) {
+        return QPointF(-1.0, 1.0);
+    }
+    if (normalized == QStringLiteral("bl")
+        || normalized == QStringLiteral("bottom-left")) {
+        return QPointF(1.0, -1.0);
+    }
+    if (normalized == QStringLiteral("br")
+        || normalized == QStringLiteral("bottom-right")) {
+        return QPointF(-1.0, -1.0);
+    }
+    return {};
+}
+
+inline QRectF mapEditorPointAlignedRect(const QRectF &baseRect, const QString &alignToken)
+{
+    QRectF alignedRect = baseRect;
+    const QPointF shiftFactors = mapEditorPointAlignShiftFactors(alignToken);
+    const QPointF offset((alignedRect.width() / 2.0) * shiftFactors.x(),
+                         (alignedRect.height() / 2.0) * shiftFactors.y());
+    alignedRect.translate(offset);
+    return alignedRect;
+}
+
+inline QRectF mapEditorPointLabelBounds(const QPointF &anchor,
+                                        const QSizeF &symbolSize,
+                                        const QSizeF &labelSize,
+                                        const QString &alignToken,
+                                        qreal gap = 3.0)
+{
+    const QString normalized = alignToken.trimmed().toLower();
+    const qreal halfWidth = symbolSize.width() / 2.0;
+    const qreal halfHeight = symbolSize.height() / 2.0;
+    const qreal leftX = anchor.x() - halfWidth - gap - labelSize.width();
+    const qreal rightX = anchor.x() + halfWidth + gap;
+    const qreal centeredX = anchor.x() - (labelSize.width() / 2.0);
+    const qreal topY = anchor.y() - halfHeight - gap - labelSize.height();
+    const qreal bottomY = anchor.y() + halfHeight + gap;
+    const qreal centeredY = anchor.y() - (labelSize.height() / 2.0);
+
+    if (normalized == QStringLiteral("l")
+        || normalized == QStringLiteral("left")) {
+        return QRectF(QPointF(leftX, centeredY), labelSize);
+    }
+    if (normalized == QStringLiteral("r")
+        || normalized == QStringLiteral("right")) {
+        return QRectF(QPointF(rightX, centeredY), labelSize);
+    }
+    if (normalized == QStringLiteral("t")
+        || normalized == QStringLiteral("top")) {
+        return QRectF(QPointF(centeredX, topY), labelSize);
+    }
+    if (normalized == QStringLiteral("b")
+        || normalized == QStringLiteral("bottom")) {
+        return QRectF(QPointF(centeredX, bottomY), labelSize);
+    }
+    if (normalized == QStringLiteral("tl")
+        || normalized == QStringLiteral("top-left")) {
+        return QRectF(QPointF(leftX, topY), labelSize);
+    }
+    if (normalized == QStringLiteral("tr")
+        || normalized == QStringLiteral("top-right")) {
+        return QRectF(QPointF(rightX, topY), labelSize);
+    }
+    if (normalized == QStringLiteral("bl")
+        || normalized == QStringLiteral("bottom-left")) {
+        return QRectF(QPointF(leftX, bottomY), labelSize);
+    }
+    if (normalized == QStringLiteral("br")
+        || normalized == QStringLiteral("bottom-right")) {
+        return QRectF(QPointF(rightX, bottomY), labelSize);
+    }
+    if (normalized == QStringLiteral("c")
+        || normalized == QStringLiteral("center")) {
+        return QRectF(QPointF(centeredX, centeredY), labelSize);
+    }
+
+    // Keep existing Studio behavior for unspecified align until label rendering is migrated fully.
+    return QRectF(QPointF(rightX, centeredY), labelSize);
+}
+
 inline QPainterPath mapEditorPointSymbolPartPath(const MapEditorPointSymbolPart &part,
                                                  const QRectF &baseRect,
                                                  qreal baseStyleSize)
@@ -216,5 +327,34 @@ inline bool mapEditorSymbolPartUsesFill(const MapEditorPointSymbolPart &part)
         return false;
     }
     return false;
+}
+
+inline QPainterPath mapEditorPointRenderPath(MapEditorPointSymbol symbol,
+                                             const QVector<MapEditorPointSymbolPart> &parts,
+                                             const QRectF &baseRect,
+                                             qreal baseStyleSize,
+                                             const QString &alignToken = QString(),
+                                             qreal rotationDegrees = 0.0)
+{
+    const QRectF alignedRect = mapEditorPointAlignedRect(baseRect, alignToken);
+    QPainterPath path;
+    if (parts.isEmpty()) {
+        path = mapEditorPointSymbolPath(symbol, alignedRect);
+    } else {
+        const qreal ownerSize = qMax<qreal>(0.001, baseStyleSize);
+        for (const MapEditorPointSymbolPart &part : parts) {
+            path.addPath(mapEditorPointSymbolPartPath(part, alignedRect, ownerSize));
+        }
+    }
+
+    if (std::abs(rotationDegrees) > 0.001 && !path.isEmpty()) {
+        QTransform transform;
+        const QPointF anchor = baseRect.center();
+        transform.translate(anchor.x(), anchor.y());
+        transform.rotate(rotationDegrees);
+        transform.translate(-anchor.x(), -anchor.y());
+        path = transform.map(path);
+    }
+    return path;
 }
 } // namespace TherionStudio

@@ -18,6 +18,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Keep Selection inspector object-level actions grouped under `Options`, including `Name`/`Text`/`Value`, scrap projection, and the full object-settings entrypoint.
 - Keep Selection inspector `Options` ordering deterministic across refreshes; visible rows must not jump when selection state or option visibility changes.
 - Keep inline `type:subtype` map object rendering aligned with inspector preview and `-subtype` rendering.
+- Keep Selection quick-field label/input visibility synchronized with wrapper visibility across clear/refresh cycles.
+- Keep point `-align` rendering anchored like Therion so map canvas placement matches saved point options.
 - Keep release notes, package metadata, and CI artifact workflow aligned with `v2026.6.5`.
 
 ### Unified Source DOM / Transactions

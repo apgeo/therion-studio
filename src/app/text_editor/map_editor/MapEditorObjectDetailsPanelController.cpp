@@ -376,8 +376,14 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         moveSelectionControlToContainer(context_.quickTextEditor, targetContainer);
         moveSelectionControlToContainer(context_.quickValueEditor, targetContainer);
         context_.quickNameEditor->setVisible(nameVisible);
+        context_.quickNameLabel->setVisible(nameVisible);
+        context_.quickNameEdit->setVisible(nameVisible);
         context_.quickTextEditor->setVisible(textVisible);
+        context_.quickTextLabel->setVisible(textVisible);
+        context_.quickTextEdit->setVisible(textVisible);
         context_.quickValueEditor->setVisible(valueVisible);
+        context_.quickValueLabel->setVisible(valueVisible);
+        context_.quickValueEdit->setVisible(valueVisible);
         reorderSelectionControls(targetContainer,
                                  {context_.quickNameEditor,
                                   context_.quickTextEditor,

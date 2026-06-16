@@ -1022,6 +1022,7 @@ qt_add_executable(MapEditorLogicQTests
     tests/MapEditorAreaReferenceResolverTest.cpp
     tests/MapEditorObjectDeletePlannerTest.cpp
     tests/MapEditorObjectMovePlannerTest.cpp
+    tests/MapEditorPointSymbolGeometryTest.cpp
     tests/MapEditorUndoArbitrationServiceTest.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.h
@@ -1029,10 +1030,11 @@ qt_add_executable(MapEditorLogicQTests
     src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.h
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
+    src/app/text_editor/map_editor/MapEditorPointSymbolGeometry.h
     src/app/text_editor/map_editor/MapEditorUndoArbitrationService.cpp
     src/app/text_editor/map_editor/MapEditorUndoArbitrationService.h)
 
-target_link_libraries(MapEditorLogicQTests PRIVATE therion_core Qt6::Core Qt6::Test)
+target_link_libraries(MapEditorLogicQTests PRIVATE therion_core Qt6::Core Qt6::Gui Qt6::Test)
 
 qt_add_executable(MapEditorObjectStyleCatalogTest
     tests/MapEditorObjectStyleCatalogTest.cpp

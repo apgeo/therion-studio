@@ -1883,6 +1883,8 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 pointItem->setRect(QRectF(-pointSize / 2.0, -pointSize / 2.0, pointSize, pointSize));
                 pointItem->setSymbol(pointStyle.symbol);
                 pointItem->setSymbolParts(pointStyle.symbolParts);
+                pointItem->setPointAlignAffectsSymbol(!pointStyle.labelField.has_value());
+                pointItem->setPointAlign(optionValueForFieldName(feature.optionValues, QStringLiteral("align")));
                 if (feature.orientationSupported && explicitOrientation(feature.orientationDegrees)) {
                     pointItem->setSymbolRotationDegrees(feature.orientationDegrees.value());
                 }

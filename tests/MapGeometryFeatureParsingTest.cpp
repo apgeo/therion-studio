@@ -235,14 +235,17 @@ int runSmoothAndOptionMetadataIgnoredTest()
 int runInlineSubtypeParsingTest()
 {
     const QString text =
-        QStringLiteral("point 10 20 station:fixed -name P1\n"
-                       "line wall:debris\n"
+        QStringLiteral("scrap s1 -projection plan\n"
+                       "point 10 20 station:fixed -name P1\n"
+                       "line wall:debris -id border-1 -close on\n"
                        "  0 0\n"
                        "  40 0\n"
+                       "  20 20\n"
                        "endline\n"
                        "area water:temporary\n"
                        "  border-1\n"
-                       "endarea\n");
+                       "endarea\n"
+                       "endscrap\n");
 
     const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);

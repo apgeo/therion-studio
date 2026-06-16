@@ -159,6 +159,20 @@ public:
         update();
     }
 
+    void setPointAlign(const QString &alignToken)
+    {
+        prepareGeometryChange();
+        pointAlign_ = alignToken.trimmed().toLower();
+        update();
+    }
+
+    void setPointAlignAffectsSymbol(bool affectsSymbol)
+    {
+        prepareGeometryChange();
+        pointAlignAffectsSymbol_ = affectsSymbol;
+        update();
+    }
+
     void setLabel(const QStaticText &labelText, const QFont &font, const QColor &color)
     {
         prepareGeometryChange();
@@ -199,11 +213,22 @@ public:
 protected:
     QRectF boundingRect() const override
     {
+        QRectF symbolBounds = mapEditorPointRenderPath(symbol_,
+                                                       symbolParts_,
+                                                       rect(),
+                                                       qMax<qreal>(0.001, qMin(rect().width(), rect().height())),
+                                                       pointAlignAffectsSymbol_ ? pointAlign_ : QString(),
+                                                       symbolRotationDegrees_).boundingRect();
+        if (!symbolBounds.isValid() || symbolBounds.isEmpty()) {
+            symbolBounds = rect();
+        }
         // Paint includes scaled marker plus halo; keep update region larger to avoid drag trails.
-        QRectF bounds = QGraphicsEllipseItem::boundingRect().adjusted(-6.0, -6.0, 6.0, 6.0);
+        QRectF bounds = symbolBounds.adjusted(-8.0, -8.0, 8.0, 8.0);
         if (hasLabel_) {
             const QSizeF labelSize = labelText_.size();
-            bounds = bounds.united(orientedLabelBounds(labelBoundsForRect(rect(), labelSize))
+            bounds = bounds.united(orientedLabelBounds(labelBoundsForRect(rect().center(),
+                                                                         rect().size(),
+                                                                         labelSize))
                                        .adjusted(-1.0, -1.0, 1.0, 1.0));
         }
         return bounds;
@@ -225,6 +250,8 @@ protected:
         drawRect.setWidth(baseRect.width() * scale);
         drawRect.setHeight(baseRect.height() * scale);
         drawRect.moveCenter(center);
+        const QRectF alignedDrawRect = mapEditorPointAlignedRect(drawRect, pointAlign_);
+        const QRectF effectiveSymbolRect = pointAlignAffectsSymbol_ ? alignedDrawRect : drawRect;
 
         const QColor baseFill = brush().color().isValid() ? brush().color() : QColor(24, 24, 24, 170);
         QColor fill = baseFill;
@@ -241,7 +268,7 @@ protected:
             painter->setPen(Qt::NoPen);
             painter->setBrush(halo);
             const qreal haloRadius = 2.2 * zoomOutScale;
-            painter->drawEllipse(drawRect.adjusted(-haloRadius, -haloRadius, haloRadius, haloRadius));
+            painter->drawEllipse(effectiveSymbolRect.adjusted(-haloRadius, -haloRadius, haloRadius, haloRadius));
         }
 
         const qreal baseOutlineWidth = pen().widthF() > 0.0 ? pen().widthF() : 1.1;
@@ -266,29 +293,31 @@ protected:
             painter->drawPath(path);
         };
 
-        painter->save();
-        if (std::abs(symbolRotationDegrees_) > 0.001) {
-            painter->translate(drawRect.center());
-            painter->rotate(symbolRotationDegrees_);
-            painter->translate(-drawRect.center());
-        }
-        {
-            if (symbolParts_.isEmpty()) {
-                drawSymbolPath(mapEditorPointSymbolUsesFill(symbol_), mapEditorPointSymbolPath(symbol_, drawRect));
-            } else {
-                const qreal baseStyleSize = qMax<qreal>(0.001, qMin(rect().width(), rect().height()));
-                for (const MapEditorPointSymbolPart &part : symbolParts_) {
-                    drawSymbolPath(mapEditorSymbolPartUsesFill(part),
-                                   mapEditorPointSymbolPartPath(part, drawRect, baseStyleSize),
-                                   part.strokeColor,
-                                   part.fillColor,
-                                   part.strokeWidth.has_value()
-                                       ? std::optional<qreal>(part.strokeWidth.value() * zoomOutScale)
-                                       : std::nullopt);
-                }
+        if (symbolParts_.isEmpty()) {
+            drawSymbolPath(mapEditorPointSymbolUsesFill(symbol_),
+                           mapEditorPointRenderPath(symbol_,
+                                                    {},
+                                                    drawRect,
+                                                    qMax<qreal>(0.001, qMin(rect().width(), rect().height())),
+                                                    pointAlignAffectsSymbol_ ? pointAlign_ : QString(),
+                                                    symbolRotationDegrees_));
+        } else {
+            const qreal baseStyleSize = qMax<qreal>(0.001, qMin(rect().width(), rect().height()));
+            for (const MapEditorPointSymbolPart &part : symbolParts_) {
+                drawSymbolPath(mapEditorSymbolPartUsesFill(part),
+                               mapEditorPointRenderPath(symbol_,
+                                                        QVector<MapEditorPointSymbolPart>{part},
+                                                        drawRect,
+                                                        baseStyleSize,
+                                                        pointAlignAffectsSymbol_ ? pointAlign_ : QString(),
+                                                        symbolRotationDegrees_),
+                               part.strokeColor,
+                               part.fillColor,
+                               part.strokeWidth.has_value()
+                                   ? std::optional<qreal>(part.strokeWidth.value() * zoomOutScale)
+                                   : std::nullopt);
             }
         }
-        painter->restore();
 
         bool renderLabel = false;
         if (hasLabel_) {
@@ -315,7 +344,9 @@ protected:
             painter->setPen(labelColor_.isValid() ? labelColor_ : outline);
             painter->setBrush(Qt::NoBrush);
             const QSizeF labelSize = labelText_.size();
-            const QRectF labelBounds = labelBoundsForRect(drawRect, labelSize);
+            const QRectF labelBounds = labelBoundsForRect(drawRect.center(),
+                                                          drawRect.size(),
+                                                          labelSize);
             painter->save();
             if (labelRotationDegrees_.has_value()) {
                 painter->rotate(labelRotationDegrees_.value());
@@ -389,9 +420,11 @@ private:
         return sceneCoordsPreviewToSource(previewPoint, sourceBounds_, previewBounds_);
     }
 
-    QRectF labelBoundsForRect(const QRectF &symbolRect, const QSizeF &labelSize) const
+    QRectF labelBoundsForRect(const QPointF &anchor,
+                              const QSizeF &symbolSize,
+                              const QSizeF &labelSize) const
     {
-        return QRectF(QPointF(symbolRect.right() + 3.0, -labelSize.height() / 2.0), labelSize);
+        return mapEditorPointLabelBounds(anchor, symbolSize, labelSize, pointAlign_);
     }
 
     QRectF orientedLabelBounds(const QRectF &labelBounds) const
@@ -424,6 +457,8 @@ private:
     MapEditorPointSymbol symbol_ = MapEditorPointSymbol::Circle;
     QVector<MapEditorPointSymbolPart> symbolParts_;
     qreal symbolRotationDegrees_ = 0.0;
+    QString pointAlign_;
+    bool pointAlignAffectsSymbol_ = true;
     QStaticText labelText_;
     QFont labelFont_;
     QColor labelColor_;

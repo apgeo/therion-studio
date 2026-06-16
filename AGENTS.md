@@ -167,6 +167,9 @@ These instructions apply to the whole repository.
 ## Verification Expectations
 
 - Prefer focused automated tests for parser, serializer, project loading, indexing, command routing, session restore, and document-editing logic.
+- Use Qt's QTest framework for all new C++ tests. Keep CTest as the test runner/orchestrator, but do not add new hand-rolled `main()`/`require()`/`expect()` test harnesses unless there is a narrowly documented reason.
+- When touching existing hand-rolled tests, prefer migrating the affected test file or newly added cases to QTest where practical. Migrations should be incremental and should preserve focused dependency boundaries rather than forcing unrelated tests into one executable.
+- Keep test executables grouped by sensible dependency boundaries such as core-only logic, app services, widget/UI support, resource needs, or offscreen UI setup. Consolidate small test executables when their dependencies and runtime environment already match, but avoid broad aggregate runners that make failures harder to isolate or pull UI dependencies into core tests.
 - Before proposing a commit or opening a PR, run `python3 scripts/check_structure_constraints.py` locally and fix any violations in the same change.
 - If a change affects externally visible behavior, verify it against the acceptance criteria in the specification.
 - If automated verification is not possible, document a concrete manual verification pass with specific user workflows or scenarios.

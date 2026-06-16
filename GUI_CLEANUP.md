@@ -93,15 +93,9 @@ src/app/
 
 The exact files should be introduced incrementally only when there is code to move into them.
 
-## Phase 1 - Extract Style Tokens
+## Phase 1 - Maintain Style Tokens
 
-Create app-wide style token helpers without changing behavior.
-
-Initial files:
-
-- `src/app/ui/ApplicationStyleTokens.h`
-- `src/app/ui/ApplicationStyleTokens.cpp`
-- `src/app/ui/ApplicationControlMetrics.h`
+Keep app-wide style token helpers as the place for reusable visual constants and palette-derived values. Extend them when new UI cleanup work would otherwise add repeated literals to widgets.
 
 Move constants such as:
 
@@ -126,20 +120,11 @@ Verification:
 - Run `python3 scripts/check_structure_constraints.py`.
 - Compare light/dark screenshots of the map inspector and sidebars.
 
-## Phase 2 - Extract Stylesheet Builders
+## Phase 2 - Continue Stylesheet Builder Extraction
 
-Move long inline stylesheet strings out of widget constructors.
+Move remaining long inline stylesheet strings out of widget constructors and keep existing style builders focused.
 
-Initial targets:
-
-- `InspectorPanel.cpp`
-- `ApplicationAppearanceBootstrap.cpp`
-- `ApplicationStylePolicy.h`
-- `MainWindowStatusUi.cpp`
-- workspace command bar styling
-- sidebar activity rail styling
-
-Create focused style builders:
+Use focused style builders such as:
 
 ```cpp
 QString inspectorPanelStyleSheet(const QPalette &palette);
@@ -351,16 +336,3 @@ Do not migrate the map canvas until:
   - one presenter or intent extraction
 - Update `WORKLOG.md` when a phase starts or changes scope.
 - Update `docs/USER_MANUAL.md` only when user-visible behavior changes, not for internal style refactors.
-
-## Suggested First Slice
-
-Start with the inspector because it is the current pain point and a good boundary between style, widget layout, state, and actions.
-
-1. Add `src/app/ui/ApplicationStyleTokens.*`.
-2. Add `src/app/text_editor/InspectorPanelStyle.*`.
-3. Move `InspectorPanel` stylesheet strings into `InspectorPanelStyle`.
-4. Keep `InspectorPanel` responsible only for widget composition.
-5. Add semantic object names for inspector fields, trees, and segmented controls.
-6. Verify Map inspector light/dark mode manually.
-
-This gives immediate centralized style control without forcing a UI framework migration.

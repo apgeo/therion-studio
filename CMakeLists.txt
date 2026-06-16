@@ -46,7 +46,7 @@ option(THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL
     "Run Qt's Linux runtime deployment script during install; intended for AppDir/AppImage builds"
     OFF)
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Core Widgets Svg Concurrent)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Widgets Svg Concurrent Test)
 find_package(Qt6LinguistTools 6.4 QUIET)
 
 qt_standard_project_setup()
@@ -120,6 +120,13 @@ function(therion_add_core_unit_test target_name)
         ${ARGN})
 
     target_link_libraries(${target_name} PRIVATE therion_core)
+endfunction()
+
+function(therion_add_core_qtest_runner target_name)
+    qt_add_executable(${target_name}
+        ${ARGN})
+
+    target_link_libraries(${target_name} PRIVATE therion_core Qt6::Test)
 endfunction()
 
 set(THERION_PLATFORM_SOURCES
@@ -929,8 +936,9 @@ therion_add_core_unit_test(TherionSourceLogicalDocumentTest
 therion_add_core_unit_test(TherionDocumentParserTest
     tests/TherionDocumentParserTest.cpp)
 
-therion_add_core_unit_test(TherionTokenRulesTest
-    tests/TherionTokenRulesTest.cpp)
+therion_add_core_qtest_runner(TherionCoreQTests
+    tests/core/CoreQTestMain.cpp
+    tests/core/TherionTokenRulesTest.cpp)
 
 therion_add_core_unit_test(TherionSourceTextTest
     tests/TherionSourceTextTest.cpp)
@@ -1436,7 +1444,7 @@ set(THERION_UNIT_TEST_TARGETS
     TherionSourceLogicalDocumentTest
     TherionDocumentParserTest
     TherionSourceTextTest
-    TherionTokenRulesTest
+    TherionCoreQTests
     ApplicationIdentityTest
     TherionProjectStructureIndexTest
     MapBackgroundPlacementTest

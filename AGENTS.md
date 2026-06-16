@@ -168,8 +168,10 @@ These instructions apply to the whole repository.
 
 - Prefer focused automated tests for parser, serializer, project loading, indexing, command routing, session restore, and document-editing logic.
 - Use Qt's QTest framework for all new C++ tests. Keep CTest as the test runner/orchestrator, but do not add new hand-rolled `main()`/`require()`/`expect()` test harnesses unless there is a narrowly documented reason.
-- When touching existing hand-rolled tests, prefer migrating the affected test file or newly added cases to QTest where practical. Migrations should be incremental and should preserve focused dependency boundaries rather than forcing unrelated tests into one executable.
-- Keep test executables grouped by sensible dependency boundaries such as core-only logic, app services, widget/UI support, resource needs, or offscreen UI setup. Consolidate small test executables when their dependencies and runtime environment already match, but avoid broad aggregate runners that make failures harder to isolate or pull UI dependencies into core tests.
+- Organize QTest executables by dependency/runtime boundary, not by individual test class and not as one global runner. Use aggregate runners such as `TherionCoreQTests`, future app-service runners, text-editor runners, and map/UI runners when test files share the same dependencies and runtime setup.
+- Put new core-only QTest files under `tests/core/` and add them to the shared `TherionCoreQTests` runner unless they require isolation for process, filesystem, timing, performance, or crash-containment reasons. Follow the same directory/runner pattern for future app-service, text-editor, and map-editor QTest groups.
+- When touching existing hand-rolled tests, prefer migrating the affected test file or newly added cases to the appropriate QTest runner where practical. Migrations should be incremental and should preserve focused dependency boundaries rather than forcing unrelated tests into one executable.
+- Keep large, slow, flaky, UI-heavy, process/integration, or special-resource tests as separate CTest executables when isolation is more valuable than reducing executable count.
 - Before proposing a commit or opening a PR, run `python3 scripts/check_structure_constraints.py` locally and fix any violations in the same change.
 - If a change affects externally visible behavior, verify it against the acceptance criteria in the specification.
 - If automated verification is not possible, document a concrete manual verification pass with specific user workflows or scenarios.

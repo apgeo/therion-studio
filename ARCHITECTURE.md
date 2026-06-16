@@ -30,6 +30,7 @@ Rules:
 - Widgets and scene items may orchestrate interactions, but shall not own parsing, serialization, persistence, command-catalog rules, process execution, platform-path decisions, or source rewrite logic.
 - Production infrastructure shall be composed at explicit boundaries such as `main.cpp`, `MainWindow` bootstrap code, or a future composition root.
 - Tests should pass fakes or explicit test adapters for IO, settings, sessions, catalogs, and process execution.
+- C++ tests should use QTest for new coverage while CTest remains the repository-level orchestrator. QTest executables should be grouped by dependency and runtime boundary: core-only logic, app services, text-editor/widget support, map-editor/offscreen UI, and special integration/process tests. Prefer aggregate runners for many small same-boundary tests, but keep tests isolated when they are slow, flaky, UI-heavy, process-backed, resource-sensitive, or useful as crash-containment boundaries.
 - Static/global access is acceptable only for deterministic, stateless transformations with no hidden IO, mutable cache, settings, resource, or platform dependency.
 
 ## Source Model Direction

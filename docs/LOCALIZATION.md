@@ -261,7 +261,7 @@ The AppImage uses a staged AppDir. Ensure Qt translation catalogs needed by stan
 10. Run `cmake --build build --target update_translations`.
 11. Translate with Qt Linguist.
 12. Run `release_translations`, build, tests, and the review checklist.
-13. Update `docs/USER_MANUAL.md`, `QtReimplementationSpecification.md`, and release/packaging docs if the supported language set changes.
+13. Update `docs/USER_MANUAL.md`, `SPECIFICATION.md`, and release/packaging docs if the supported language set changes.
 
 Do not add a language to the Settings dialog until its application catalog is complete enough for normal use.
 

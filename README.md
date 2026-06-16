@@ -25,7 +25,7 @@ is easier to maintain and more comfortable on modern desktop systems, especially
 
 The project is under active development. Its development has been orchestrated with significant help from AI-assisted software engineering tools.
 
-See [`QtReimplementationSpecification.md`](QtReimplementationSpecification.md) for detailed
+See [`SPECIFICATION.md`](SPECIFICATION.md) for detailed
 requirements.
 
 ## Installation

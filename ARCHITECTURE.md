@@ -2,7 +2,7 @@
 
 This document records the intended architecture of Therion Studio. It is a design guardrail, not a product specification and not a task backlog.
 
-The product source of truth remains `QtReimplementationSpecification.md`. The active implementation roadmap remains `WORKLOG.md`. When architecture, implementation, and specification diverge, resolve the divergence explicitly instead of silently choosing one.
+The product source of truth remains `SPECIFICATION.md`. The active short-form implementation roadmap remains `WORKLOG.md`, with detailed working plans kept under `plans/`. When architecture, implementation, and specification diverge, resolve the divergence explicitly instead of silently choosing one.
 
 Therion language compatibility rules that affect parsing, namespaces, references, source preservation, validation, and project indexing are maintained in `docs/THERION_COMPATIBILITY.md`. Architecture and implementation changes that touch Therion semantics should align with that document or update it with focused verification.
 

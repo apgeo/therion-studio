@@ -6,13 +6,13 @@ These instructions apply to the whole repository.
 
 ## Project State
 
-- This repository is currently specification-first. The primary source of truth is [QtReimplementationSpecification.md](/Users/ladislav.blazek/Local/Code/personal/therion-studio/Therion%20Studio/QtReimplementationSpecification.md).
+- This repository is currently specification-first. The primary source of truth is [SPECIFICATION.md](SPECIFICATION.md).
 - Treat the specification as implementation-grade requirements for a Qt reimplementation of Therion Studio.
 - Treat [ARCHITECTURE.md](ARCHITECTURE.md) as the current architecture direction and boundary contract. It does not override product requirements in the specification, but implementation choices should align with it unless the divergence is explicit and documented.
 - Treat [docs/THERION_COMPATIBILITY.md](docs/THERION_COMPATIBILITY.md) as the current Therion language compatibility guardrail for parser, validator, project-index, source-range, namespace, reference-resolution, completion, highlighting, and map/source synchronization work.
 - Do not invent product behavior that conflicts with the specification. If a requested change requires behavior not covered by the specification, update the specification as part of the same change or clearly flag the gap.
 - If implementation, tests, architecture, and the specification diverge, prefer bringing them back into alignment explicitly rather than silently choosing one source of truth.
-- Treat [REVIEW_CODEX.md](REVIEW_CODEX.md) as the current architecture review record. It is not a product specification, but actionable findings from it should be reflected in `AGENTS.md`, `WORKLOG.md`, focused tests, or the specification before being treated as resolved.
+- Treat [plans/REVIEW_CODEX.md](plans/REVIEW_CODEX.md) as the current architecture review record. It is not a product specification, but actionable findings from it should be reflected in `AGENTS.md`, `WORKLOG.md`, focused tests, or the specification before being treated as resolved.
 
 ## Specification Editing Rules
 
@@ -31,7 +31,7 @@ These instructions apply to the whole repository.
 
 - Default technology assumptions should match the specification: Qt 6, cross-platform desktop, shared core logic across macOS, Windows, and Linux.
 - Follow established best practices and relevant platform standards for modern Qt and C++ desktop application development unless the specification explicitly requires a different approach.
-- Treat [WORKLOG.md](WORKLOG.md) as the active implementation roadmap and backlog. Keep stable architectural principles in [ARCHITECTURE.md](ARCHITECTURE.md), and keep `WORKLOG.md` focused on current/open work.
+- Treat [WORKLOG.md](WORKLOG.md) as the active short-form implementation roadmap and backlog. Keep stable architectural principles in [ARCHITECTURE.md](ARCHITECTURE.md), keep detailed working plans in [plans/](plans/), and keep `WORKLOG.md` focused on current/open work.
 - Preserve separation of concerns:
   - domain model, parsing, serialization, and editing rules stay outside UI classes
   - widgets, views, and scene items should not own file I/O or document parsing
@@ -180,7 +180,7 @@ These instructions apply to the whole repository.
 ## Change Discipline
 
 - Keep changes tightly scoped to the request.
-- Maintain a living [QtReimplementationSpecification.md](QtReimplementationSpecification.md): whenever important behavior, workflow, constraints, acceptance criteria, or architecture assumptions change, update the specification in the same change.
+- Maintain a living [SPECIFICATION.md](SPECIFICATION.md): whenever important behavior, workflow, constraints, acceptance criteria, or architecture assumptions change, update the specification in the same change.
 - Maintain a living [ARCHITECTURE.md](ARCHITECTURE.md): whenever architectural direction, ownership boundaries, source model strategy, transaction policy, or UI surface ownership changes, update it in the same change.
 - Prefer specification wording that is framework-agnostic where practical so future reimplementations can reuse it as product/source-of-truth guidance.
 - Update documentation when behavior, architecture, packaging, or verification expectations change.
@@ -193,7 +193,7 @@ These instructions apply to the whole repository.
 - Surface ambiguities instead of silently choosing a product behavior that could ripple through the spec.
 - When code is added later, prefer file and module names that reflect responsibility clearly.
 - Document progress in the repository itself, not only in chat. Update [WORKLOG.md](WORKLOG.md) after every change so the current implementation state stays visible in the repo.
-- Keep [WORKLOG.md](WORKLOG.md) focused on planned/open/in-progress work (for example: `In progress`, `Next up`, `Risks / blockers`, `Phase plan`, `Backlog`) when practical.
+- Keep [WORKLOG.md](WORKLOG.md) focused on short-form planned/open/in-progress work (for example: `Current Focus`, `Active Work`, `Blocked / Needs Input`, `Backlog`) when practical. Put long phase plans and review plans in [plans/](plans/) instead of expanding `WORKLOG.md`.
 - Do not keep completed-task items in [WORKLOG.md](WORKLOG.md); move completed history to archive files when needed.
 
 ## Commit Message Discipline

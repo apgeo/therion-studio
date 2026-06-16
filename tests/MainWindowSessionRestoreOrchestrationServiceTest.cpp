@@ -1,20 +1,20 @@
 #include "../src/app/MainWindowSessionRestoreOrchestrationService.h"
 
-#include <vector>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class MainWindowSessionRestoreOrchestrationServiceTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
+
+private slots:
+    void buildsRestoredPlan();
+    void buildsSkippedProtectedPlan();
+    void buildsNoProjectPlan();
+};
 
 MainWindowSessionProjectService::ProjectRestoreDecision makeDecision(MainWindowSessionProjectService::ProjectRestoreStatus status,
                                                                      const QString &path)
@@ -25,7 +25,7 @@ MainWindowSessionProjectService::ProjectRestoreDecision makeDecision(MainWindowS
     return decision;
 }
 
-int runRestoredPlanTest()
+void MainWindowSessionRestoreOrchestrationServiceTest::buildsRestoredPlan()
 {
     const auto plan = MainWindowSessionRestoreOrchestrationService::buildPlan(
         makeDecision(MainWindowSessionProjectService::ProjectRestoreStatus::Restored,
@@ -41,15 +41,10 @@ int runRestoredPlanTest()
         MainWindowSessionRestoreOrchestrationService::Step::UpdateProjectActionState,
         MainWindowSessionRestoreOrchestrationService::Step::RestoreOpenDocuments};
 
-    if (!expect(plan.steps == expected,
-                "Restored-project session restore plan steps changed unexpectedly.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY2(plan.steps == expected, "Restored-project session restore plan steps changed unexpectedly.");
 }
 
-int runSkippedProtectedPlanTest()
+void MainWindowSessionRestoreOrchestrationServiceTest::buildsSkippedProtectedPlan()
 {
     const auto plan = MainWindowSessionRestoreOrchestrationService::buildPlan(
         makeDecision(MainWindowSessionProjectService::ProjectRestoreStatus::SkippedProtectedFolder,
@@ -61,15 +56,10 @@ int runSkippedProtectedPlanTest()
         MainWindowSessionRestoreOrchestrationService::Step::UpdateProjectActionState,
         MainWindowSessionRestoreOrchestrationService::Step::RestoreOpenDocuments};
 
-    if (!expect(plan.steps == expected,
-                "Skipped-protected session restore plan steps changed unexpectedly.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY2(plan.steps == expected, "Skipped-protected session restore plan steps changed unexpectedly.");
 }
 
-int runNoProjectPlanTest()
+void MainWindowSessionRestoreOrchestrationServiceTest::buildsNoProjectPlan()
 {
     const auto plan = MainWindowSessionRestoreOrchestrationService::buildPlan(
         makeDecision(MainWindowSessionProjectService::ProjectRestoreStatus::NotRestored,
@@ -80,26 +70,14 @@ int runNoProjectPlanTest()
         MainWindowSessionRestoreOrchestrationService::Step::UpdateProjectActionState,
         MainWindowSessionRestoreOrchestrationService::Step::RestoreOpenDocuments};
 
-    if (!expect(plan.steps == expected,
-                "No-project session restore plan steps changed unexpectedly.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY2(plan.steps == expected, "No-project session restore plan steps changed unexpectedly.");
 }
 }
 
-int main()
+int runMainWindowSessionRestoreOrchestrationServiceTest(int argc, char **argv)
 {
-    if (runRestoredPlanTest() != 0) {
-        return 1;
-    }
-    if (runSkippedProtectedPlanTest() != 0) {
-        return 1;
-    }
-    if (runNoProjectPlanTest() != 0) {
-        return 1;
-    }
-
-    return 0;
+    MainWindowSessionRestoreOrchestrationServiceTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "MainWindowSessionRestoreOrchestrationServiceTest.moc"

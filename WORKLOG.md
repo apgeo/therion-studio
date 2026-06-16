@@ -31,6 +31,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 
 - Use QTest for new C++ tests while keeping CTest as the runner.
 - Keep `tests/core/` and `TherionCoreQTests` as the baseline pattern for small core-only QTest cases.
+- Keep `MainWindowServiceQTests` as the baseline pattern for small MainWindow project/session service tests that share `therion_app` dependencies.
 - Continue migrating touched hand-rolled tests to QTest where the dependency/runtime boundary is already clear.
 - Keep `python3 scripts/check_structure_constraints.py` green and preserve guardrails against map-editor source mutation bypasses.
 - Keep the explicit user-confirmation gate before every `git commit`.

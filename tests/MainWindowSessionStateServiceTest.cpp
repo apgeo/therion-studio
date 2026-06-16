@@ -1,24 +1,22 @@
 #include "../src/app/MainWindowSessionStateService.h"
 #include "FakeSessionStore.h"
 
-#include <QByteArray>
-#include <QStringList>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class MainWindowSessionStateServiceTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
 
-int runMainWindowStatePersistTest()
+private slots:
+    void persistsMainWindowState();
+    void persistsOpenDocuments();
+};
+
+void MainWindowSessionStateServiceTest::persistsMainWindowState()
 {
     FakeSessionStore sessionStore;
 
@@ -34,43 +32,17 @@ int runMainWindowStatePersistTest()
 
     MainWindowSessionStateService::persistMainWindowState(sessionStore, snapshot);
 
-    if (!expect(sessionStore.mainWindowGeometry() == snapshot.windowGeometry,
-                "Window geometry should persist into session store.")) {
-        return 1;
-    }
-    if (!expect(sessionStore.mainWindowState() == snapshot.windowState,
-                "Window state should persist into session store.")) {
-        return 1;
-    }
-    if (!expect(sessionStore.lastProjectPath() == snapshot.projectRootPath,
-                "Project path should persist into session store.")) {
-        return 1;
-    }
-    if (!expect(sessionStore.therionExecutablePath() == snapshot.therionExecutablePath,
-                "Therion executable path should persist into session store.")) {
-        return 1;
-    }
-    if (!expect(sessionStore.therionWorkingDirectory() == snapshot.therionWorkingDirectory,
-                "Therion working directory should persist into session store.")) {
-        return 1;
-    }
-    if (!expect(sessionStore.therionRunTargetMode() == snapshot.therionRunTargetMode,
-                "Therion run target mode should persist into session store.")) {
-        return 1;
-    }
-    if (!expect(sessionStore.therionTargetConfigPath() == snapshot.therionTargetConfigPath,
-                "Therion target config path should persist into session store.")) {
-        return 1;
-    }
-    if (!expect(sessionStore.structureNameOverrides() == snapshot.structureNameOverridesJson,
-                "Structure name overrides JSON should persist into session store.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(sessionStore.mainWindowGeometry(), snapshot.windowGeometry);
+    QCOMPARE(sessionStore.mainWindowState(), snapshot.windowState);
+    QCOMPARE(sessionStore.lastProjectPath(), snapshot.projectRootPath);
+    QCOMPARE(sessionStore.therionExecutablePath(), snapshot.therionExecutablePath);
+    QCOMPARE(sessionStore.therionWorkingDirectory(), snapshot.therionWorkingDirectory);
+    QCOMPARE(sessionStore.therionRunTargetMode(), snapshot.therionRunTargetMode);
+    QCOMPARE(sessionStore.therionTargetConfigPath(), snapshot.therionTargetConfigPath);
+    QCOMPARE(sessionStore.structureNameOverrides(), snapshot.structureNameOverridesJson);
 }
 
-int runOpenDocumentsPersistTest()
+void MainWindowSessionStateServiceTest::persistsOpenDocuments()
 {
     FakeSessionStore sessionStore;
 
@@ -82,27 +54,15 @@ int runOpenDocumentsPersistTest()
 
     MainWindowSessionStateService::persistOpenDocuments(sessionStore, snapshot);
 
-    if (!expect(sessionStore.openDocumentPaths() == snapshot.openDocumentPaths,
-                "Open document paths should persist into session store.")) {
-        return 1;
-    }
-    if (!expect(sessionStore.activeDocumentPath() == snapshot.activeDocumentPath,
-                "Active document path should persist into session store.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(sessionStore.openDocumentPaths(), snapshot.openDocumentPaths);
+    QCOMPARE(sessionStore.activeDocumentPath(), snapshot.activeDocumentPath);
 }
 }
 
-int main()
+int runMainWindowSessionStateServiceTest(int argc, char **argv)
 {
-    if (runMainWindowStatePersistTest() != 0) {
-        return 1;
-    }
-    if (runOpenDocumentsPersistTest() != 0) {
-        return 1;
-    }
-
-    return 0;
+    MainWindowSessionStateServiceTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "MainWindowSessionStateServiceTest.moc"

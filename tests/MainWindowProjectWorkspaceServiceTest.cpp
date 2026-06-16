@@ -1,82 +1,51 @@
 #include "../src/app/MainWindowProjectWorkspaceService.h"
 
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class MainWindowProjectWorkspaceServiceTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
 
-int runOpenProjectWorkspaceStateTest()
+private slots:
+    void buildsOpenProjectWorkspaceState();
+    void buildsCloseProjectWorkspaceState();
+};
+
+void MainWindowProjectWorkspaceServiceTest::buildsOpenProjectWorkspaceState()
 {
     const auto noTabs = MainWindowProjectWorkspaceService::buildOpenProjectWorkspaceState(
         QStringLiteral("/tmp/project"), true, false);
-    if (!expect(noTabs.projectRootPath == QStringLiteral("/tmp/project"),
-                "Open-project workspace state should preserve project root path.")) {
-        return 1;
-    }
-    if (!expect(noTabs.sessionLastProjectPath == QStringLiteral("/tmp/project"),
-                "Open-project workspace state should persist the same session project path.")) {
-        return 1;
-    }
-    if (!expect(noTabs.shouldEnsureWelcomeTab,
-                "Open-project workspace state should request welcome tab when no tabs exist.")) {
-        return 1;
-    }
+    QCOMPARE(noTabs.projectRootPath, QStringLiteral("/tmp/project"));
+    QCOMPARE(noTabs.sessionLastProjectPath, QStringLiteral("/tmp/project"));
+    QVERIFY(noTabs.shouldEnsureWelcomeTab);
 
     const auto hasWelcome = MainWindowProjectWorkspaceService::buildOpenProjectWorkspaceState(
         QStringLiteral("/tmp/project"), false, true);
-    if (!expect(hasWelcome.shouldEnsureWelcomeTab,
-                "Open-project workspace state should request welcome tab when welcome tab already exists.")) {
-        return 1;
-    }
+    QVERIFY(hasWelcome.shouldEnsureWelcomeTab);
 
     const auto hasRegularTabs = MainWindowProjectWorkspaceService::buildOpenProjectWorkspaceState(
         QStringLiteral("/tmp/project"), false, false);
-    if (!expect(!hasRegularTabs.shouldEnsureWelcomeTab,
-                "Open-project workspace state should not request welcome tab when regular tabs are present.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY(!hasRegularTabs.shouldEnsureWelcomeTab);
 }
 
-int runCloseProjectWorkspaceStateTest()
+void MainWindowProjectWorkspaceServiceTest::buildsCloseProjectWorkspaceState()
 {
     const auto close = MainWindowProjectWorkspaceService::buildCloseProjectWorkspaceState(
         QStringLiteral("/tmp/project"));
-    if (!expect(close.projectRootPath.isEmpty(),
-                "Close-project workspace state should clear current project root path.")) {
-        return 1;
-    }
-    if (!expect(close.sessionLastProjectPath.isEmpty(),
-                "Close-project workspace state should clear session project path.")) {
-        return 1;
-    }
-    if (!expect(close.closedProjectPath == QStringLiteral("/tmp/project"),
-                "Close-project workspace state should preserve closed path for logging.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY(close.projectRootPath.isEmpty());
+    QVERIFY(close.sessionLastProjectPath.isEmpty());
+    QCOMPARE(close.closedProjectPath, QStringLiteral("/tmp/project"));
 }
 }
 
-int main()
+int runMainWindowProjectWorkspaceServiceTest(int argc, char **argv)
 {
-    if (runOpenProjectWorkspaceStateTest() != 0) {
-        return 1;
-    }
-    if (runCloseProjectWorkspaceStateTest() != 0) {
-        return 1;
-    }
-
-    return 0;
+    MainWindowProjectWorkspaceServiceTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "MainWindowProjectWorkspaceServiceTest.moc"

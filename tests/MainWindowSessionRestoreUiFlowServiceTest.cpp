@@ -1,48 +1,35 @@
 #include "../src/app/MainWindowSessionRestoreUiFlowService.h"
 
-#include <QCoreApplication>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class MainWindowSessionRestoreUiFlowServiceTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
 
-int runConsoleLinePresentationTest()
+private slots:
+    void presentsConsoleLines();
+};
+
+void MainWindowSessionRestoreUiFlowServiceTest::presentsConsoleLines()
 {
     const QString restored = MainWindowSessionRestoreUiFlowService::restoredProjectRootConsoleLine(
         QStringLiteral("/tmp/project"));
-    if (!expect(restored == QStringLiteral("Restored project root /tmp/project"),
-                "Restored-project console line changed unexpectedly.")) {
-        return 1;
-    }
+    QCOMPARE(restored, QStringLiteral("Restored project root /tmp/project"));
 
     const QString skipped = MainWindowSessionRestoreUiFlowService::skippedProtectedProjectConsoleLine(
         QStringLiteral("/tmp/protected"));
-    if (!expect(skipped == QStringLiteral("Skipped automatic project restore for protected folder /tmp/protected"),
-                "Skipped-protected console line changed unexpectedly.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(skipped, QStringLiteral("Skipped automatic project restore for protected folder /tmp/protected"));
 }
 }
 
-int main(int argc, char **argv)
+int runMainWindowSessionRestoreUiFlowServiceTest(int argc, char **argv)
 {
-    QCoreApplication app(argc, argv);
-
-    if (runConsoleLinePresentationTest() != 0) {
-        return 1;
-    }
-
-    return 0;
+    MainWindowSessionRestoreUiFlowServiceTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "MainWindowSessionRestoreUiFlowServiceTest.moc"

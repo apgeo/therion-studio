@@ -3,59 +3,42 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <QTemporaryDir>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class MainWindowSessionProjectServiceTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
 
-int runMissingProjectRestoreDecisionTest()
+private slots:
+    void decidesMissingProjectRestore();
+    void decidesRestorableProject();
+    void detectsProtectedFolders();
+};
+
+void MainWindowSessionProjectServiceTest::decidesMissingProjectRestore()
 {
     const auto emptyDecision = MainWindowSessionProjectService::decideProjectRestore(QString());
-    if (!expect(emptyDecision.status == MainWindowSessionProjectService::ProjectRestoreStatus::NotRestored,
-                "Empty project path should not restore any project.")) {
-        return 1;
-    }
+    QCOMPARE(emptyDecision.status, MainWindowSessionProjectService::ProjectRestoreStatus::NotRestored);
 
     const auto missingDecision = MainWindowSessionProjectService::decideProjectRestore(QStringLiteral("/definitely/missing/path"));
-    if (!expect(missingDecision.status == MainWindowSessionProjectService::ProjectRestoreStatus::NotRestored,
-                "Missing project path should not restore any project.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(missingDecision.status, MainWindowSessionProjectService::ProjectRestoreStatus::NotRestored);
 }
 
-int runRestorableProjectDecisionTest()
+void MainWindowSessionProjectServiceTest::decidesRestorableProject()
 {
     QTemporaryDir tempDir;
-    if (!expect(tempDir.isValid(), "Temporary directory creation failed.")) {
-        return 1;
-    }
+    QVERIFY2(tempDir.isValid(), "Temporary directory creation failed.");
 
     const auto decision = MainWindowSessionProjectService::decideProjectRestore(tempDir.path());
-    if (!expect(decision.status == MainWindowSessionProjectService::ProjectRestoreStatus::Restored,
-                "Existing project path outside protected roots should be restorable.")) {
-        return 1;
-    }
-    if (!expect(decision.projectPath == tempDir.path(),
-                "Restorable decision should preserve the input project path.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(decision.status, MainWindowSessionProjectService::ProjectRestoreStatus::Restored);
+    QCOMPARE(decision.projectPath, tempDir.path());
 }
 
-int runProtectedFolderDetectionTest()
+void MainWindowSessionProjectServiceTest::detectsProtectedFolders()
 {
     const QStringList protectedRoots = {
         QStandardPaths::writableLocation(QStandardPaths::DesktopLocation),
@@ -74,41 +57,25 @@ int runProtectedFolderDetectionTest()
     }
 
     if (protectedRoot.isEmpty()) {
-        return 0;
+        QSKIP("No protected user folder exists on this test host.");
     }
 
-    if (!expect(MainWindowSessionProjectService::isProtectedMacUserFolder(protectedRoot),
-                "Known protected root should be detected as protected.")) {
-        return 1;
-    }
+    QVERIFY2(MainWindowSessionProjectService::isProtectedMacUserFolder(protectedRoot),
+             "Known protected root should be detected as protected.");
 
     const QString childPath = QDir(protectedRoot).filePath(QStringLiteral("therion-studio-test-child"));
-    if (!expect(MainWindowSessionProjectService::isProtectedMacUserFolder(childPath),
-                "Path under a protected root should be detected as protected.")) {
-        return 1;
-    }
+    QVERIFY2(MainWindowSessionProjectService::isProtectedMacUserFolder(childPath),
+             "Path under a protected root should be detected as protected.");
 
     const auto decision = MainWindowSessionProjectService::decideProjectRestore(protectedRoot);
-    if (!expect(decision.status == MainWindowSessionProjectService::ProjectRestoreStatus::SkippedProtectedFolder,
-                "Protected folder should be skipped during automatic restore.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(decision.status, MainWindowSessionProjectService::ProjectRestoreStatus::SkippedProtectedFolder);
 }
 }
 
-int main()
+int runMainWindowSessionProjectServiceTest(int argc, char **argv)
 {
-    if (runMissingProjectRestoreDecisionTest() != 0) {
-        return 1;
-    }
-    if (runRestorableProjectDecisionTest() != 0) {
-        return 1;
-    }
-    if (runProtectedFolderDetectionTest() != 0) {
-        return 1;
-    }
-
-    return 0;
+    MainWindowSessionProjectServiceTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "MainWindowSessionProjectServiceTest.moc"

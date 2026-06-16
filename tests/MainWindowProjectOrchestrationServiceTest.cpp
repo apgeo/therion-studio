@@ -1,22 +1,21 @@
 #include "../src/app/MainWindowProjectOrchestrationService.h"
 
-#include <vector>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class MainWindowProjectOrchestrationServiceTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
 
-int runOpenProjectStepsTest()
+private slots:
+    void buildsOpenProjectSteps();
+    void buildsCloseProjectSteps();
+};
+
+void MainWindowProjectOrchestrationServiceTest::buildsOpenProjectSteps()
 {
     const std::vector<MainWindowProjectOrchestrationService::OpenProjectStep> withWelcome =
         MainWindowProjectOrchestrationService::buildOpenProjectSteps(true);
@@ -29,10 +28,8 @@ int runOpenProjectStepsTest()
         MainWindowProjectOrchestrationService::OpenProjectStep::RefreshTherionConfigDisplay,
         MainWindowProjectOrchestrationService::OpenProjectStep::UpdateProjectActionState,
         MainWindowProjectOrchestrationService::OpenProjectStep::EnsureWelcomeTab};
-    if (!expect(withWelcome == expectedWithWelcome,
-                "Open-project orchestration steps with welcome tab changed unexpectedly.")) {
-        return 1;
-    }
+    QVERIFY2(withWelcome == expectedWithWelcome,
+             "Open-project orchestration steps with welcome tab changed unexpectedly.");
 
     const std::vector<MainWindowProjectOrchestrationService::OpenProjectStep> withoutWelcome =
         MainWindowProjectOrchestrationService::buildOpenProjectSteps(false);
@@ -44,15 +41,11 @@ int runOpenProjectStepsTest()
         MainWindowProjectOrchestrationService::OpenProjectStep::RebuildStructureSidebar,
         MainWindowProjectOrchestrationService::OpenProjectStep::RefreshTherionConfigDisplay,
         MainWindowProjectOrchestrationService::OpenProjectStep::UpdateProjectActionState};
-    if (!expect(withoutWelcome == expectedWithoutWelcome,
-                "Open-project orchestration steps without welcome tab changed unexpectedly.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY2(withoutWelcome == expectedWithoutWelcome,
+             "Open-project orchestration steps without welcome tab changed unexpectedly.");
 }
 
-int runCloseProjectStepsTest()
+void MainWindowProjectOrchestrationServiceTest::buildsCloseProjectSteps()
 {
     const std::vector<MainWindowProjectOrchestrationService::CloseProjectStep> steps =
         MainWindowProjectOrchestrationService::buildCloseProjectSteps();
@@ -65,23 +58,14 @@ int runCloseProjectStepsTest()
         MainWindowProjectOrchestrationService::CloseProjectStep::RebuildStructureSidebar,
         MainWindowProjectOrchestrationService::CloseProjectStep::RefreshTherionConfigDisplay,
         MainWindowProjectOrchestrationService::CloseProjectStep::UpdateProjectActionState};
-    if (!expect(steps == expected,
-                "Close-project orchestration steps changed unexpectedly.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY2(steps == expected, "Close-project orchestration steps changed unexpectedly.");
 }
 }
 
-int main()
+int runMainWindowProjectOrchestrationServiceTest(int argc, char **argv)
 {
-    if (runOpenProjectStepsTest() != 0) {
-        return 1;
-    }
-    if (runCloseProjectStepsTest() != 0) {
-        return 1;
-    }
-
-    return 0;
+    MainWindowProjectOrchestrationServiceTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "MainWindowProjectOrchestrationServiceTest.moc"

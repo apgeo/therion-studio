@@ -1,22 +1,23 @@
 #include "../src/app/MainWindowSessionDocumentService.h"
 
-#include <QStringList>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class MainWindowSessionDocumentServiceTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
 
-int runRestoreEntriesBuildTest()
+private slots:
+    void buildsRestoreEntries();
+    void mergesOpenDocumentPaths();
+    void buildsOpenDocumentsState();
+    void detectsMapDocuments();
+};
+
+void MainWindowSessionDocumentServiceTest::buildsRestoreEntries()
 {
     const QStringList openDocumentPaths = {
         QString(),
@@ -27,32 +28,16 @@ int runRestoreEntriesBuildTest()
     const std::vector<MainWindowSessionDocumentService::RestoreEntry> entries =
         MainWindowSessionDocumentService::buildRestoreEntries(openDocumentPaths);
 
-    if (!expect(entries.size() == 3, "Restore entries should skip empty paths.")) {
-        return 1;
-    }
-
-    if (!expect(entries.at(0).filePath == QStringLiteral("/tmp/survey.th")
-                    && entries.at(0).target == MainWindowSessionDocumentService::RestoreTarget::TextEditor,
-                "Therion source file should target the text editor restore path.")) {
-        return 1;
-    }
-
-    if (!expect(entries.at(1).filePath == QStringLiteral("/tmp/map.TH2")
-                    && entries.at(1).target == MainWindowSessionDocumentService::RestoreTarget::MapEditor,
-                "TH2 file should target the map editor restore path.")) {
-        return 1;
-    }
-
-    if (!expect(entries.at(2).filePath == QStringLiteral("/tmp/log.txt")
-                    && entries.at(2).target == MainWindowSessionDocumentService::RestoreTarget::TextEditor,
-                "Non-map file should target the text editor restore path.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(entries.size(), size_t{3});
+    QCOMPARE(entries.at(0).filePath, QStringLiteral("/tmp/survey.th"));
+    QCOMPARE(entries.at(0).target, MainWindowSessionDocumentService::RestoreTarget::TextEditor);
+    QCOMPARE(entries.at(1).filePath, QStringLiteral("/tmp/map.TH2"));
+    QCOMPARE(entries.at(1).target, MainWindowSessionDocumentService::RestoreTarget::MapEditor);
+    QCOMPARE(entries.at(2).filePath, QStringLiteral("/tmp/log.txt"));
+    QCOMPARE(entries.at(2).target, MainWindowSessionDocumentService::RestoreTarget::TextEditor);
 }
 
-int runOpenDocumentPathMergeTest()
+void MainWindowSessionDocumentServiceTest::mergesOpenDocumentPaths()
 {
     const QStringList tabDocumentPaths = {
         QStringLiteral("/tmp/a.th"),
@@ -71,15 +56,10 @@ int runOpenDocumentPathMergeTest()
         QStringLiteral("/tmp/a.th"),
         QStringLiteral("/tmp/b.th"),
         QStringLiteral("/tmp/c.th2")};
-    if (!expect(merged == expected,
-                "Merged document paths should keep first-seen tab order and append unique detached map paths.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(merged, expected);
 }
 
-int runOpenDocumentsStateBuildTest()
+void MainWindowSessionDocumentServiceTest::buildsOpenDocumentsState()
 {
     const QStringList tabDocumentPaths = {
         QStringLiteral("/tmp/a.th"),
@@ -97,61 +77,29 @@ int runOpenDocumentsStateBuildTest()
         QStringLiteral("/tmp/a.th"),
         QStringLiteral("/tmp/b.th"),
         QStringLiteral("/tmp/c.th2")};
-    if (!expect(detachedActiveState.openDocumentPaths == expectedOpenPaths,
-                "Open-documents state should merge tab and detached paths.")) {
-        return 1;
-    }
-    if (!expect(detachedActiveState.activeDocumentPath == QStringLiteral("/tmp/c.th2"),
-                "Detached active document should take precedence for active document path.")) {
-        return 1;
-    }
+    QCOMPARE(detachedActiveState.openDocumentPaths, expectedOpenPaths);
+    QCOMPARE(detachedActiveState.activeDocumentPath, QStringLiteral("/tmp/c.th2"));
 
     const MainWindowSessionDocumentService::OpenDocumentsState currentActiveState =
         MainWindowSessionDocumentService::buildOpenDocumentsState(tabDocumentPaths,
                                                                   detachedMapDocumentPaths,
                                                                   {},
                                                                   QStringLiteral("/tmp/b.th"));
-    if (!expect(currentActiveState.activeDocumentPath == QStringLiteral("/tmp/b.th"),
-                "Current tab document should be used when no detached window is active.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(currentActiveState.activeDocumentPath, QStringLiteral("/tmp/b.th"));
 }
 
-int runMapDocumentDetectionTest()
+void MainWindowSessionDocumentServiceTest::detectsMapDocuments()
 {
-    if (!expect(MainWindowSessionDocumentService::isMapDocumentPath(QStringLiteral("/tmp/map.th2")),
-                ".th2 extension should be treated as a map document.")) {
-        return 1;
-    }
-    if (!expect(MainWindowSessionDocumentService::isMapDocumentPath(QStringLiteral("/tmp/map.TH2")),
-                "Map document detection should be case-insensitive.")) {
-        return 1;
-    }
-    if (!expect(!MainWindowSessionDocumentService::isMapDocumentPath(QStringLiteral("/tmp/survey.th")),
-                "Non-.th2 extension should not be treated as a map document.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY(MainWindowSessionDocumentService::isMapDocumentPath(QStringLiteral("/tmp/map.th2")));
+    QVERIFY(MainWindowSessionDocumentService::isMapDocumentPath(QStringLiteral("/tmp/map.TH2")));
+    QVERIFY(!MainWindowSessionDocumentService::isMapDocumentPath(QStringLiteral("/tmp/survey.th")));
 }
 }
 
-int main()
+int runMainWindowSessionDocumentServiceTest(int argc, char **argv)
 {
-    if (runRestoreEntriesBuildTest() != 0) {
-        return 1;
-    }
-    if (runOpenDocumentPathMergeTest() != 0) {
-        return 1;
-    }
-    if (runOpenDocumentsStateBuildTest() != 0) {
-        return 1;
-    }
-    if (runMapDocumentDetectionTest() != 0) {
-        return 1;
-    }
-
-    return 0;
+    MainWindowSessionDocumentServiceTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "MainWindowSessionDocumentServiceTest.moc"

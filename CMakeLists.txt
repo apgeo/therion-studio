@@ -1145,17 +1145,20 @@ therion_add_app_unit_test(MainWindowSessionControllerTest
 therion_add_app_unit_test(MainWindowProjectControllerTest
     tests/MainWindowProjectControllerTest.cpp)
 
-therion_add_app_unit_test(MainWindowProjectLifecycleServiceTest
-    tests/MainWindowProjectLifecycleServiceTest.cpp)
+qt_add_executable(MainWindowServiceQTests
+    tests/MainWindowServiceQTestMain.cpp
+    tests/MainWindowProjectLifecycleServiceTest.cpp
+    tests/MainWindowProjectOrchestrationServiceTest.cpp
+    tests/MainWindowProjectUiFlowServiceTest.cpp
+    tests/MainWindowProjectWorkspaceServiceTest.cpp
+    tests/MainWindowSessionDocumentServiceTest.cpp
+    tests/MainWindowSessionProjectServiceTest.cpp
+    tests/MainWindowSessionRestoreOrchestrationServiceTest.cpp
+    tests/MainWindowSessionRestoreUiFlowServiceTest.cpp
+    tests/MainWindowSessionStateServiceTest.cpp
+    tests/MainWindowSessionWindowRestoreServiceTest.cpp)
 
-therion_add_app_unit_test(MainWindowProjectOrchestrationServiceTest
-    tests/MainWindowProjectOrchestrationServiceTest.cpp)
-
-therion_add_app_unit_test(MainWindowProjectUiFlowServiceTest
-    tests/MainWindowProjectUiFlowServiceTest.cpp)
-
-therion_add_app_unit_test(MainWindowProjectWorkspaceServiceTest
-    tests/MainWindowProjectWorkspaceServiceTest.cpp)
+target_link_libraries(MainWindowServiceQTests PRIVATE therion_app Qt6::Test)
 
 therion_add_app_unit_test(ProjectTemplateServiceTest
     tests/ProjectTemplateServiceTest.cpp)
@@ -1165,21 +1168,6 @@ therion_add_app_unit_test(MainWindowRecentProjectsServiceTest
 
 therion_add_app_unit_test(MainWindowRecentFilesServiceTest
     tests/MainWindowRecentFilesServiceTest.cpp)
-
-therion_add_app_unit_test(MainWindowSessionProjectServiceTest
-    tests/MainWindowSessionProjectServiceTest.cpp)
-
-therion_add_app_unit_test(MainWindowSessionRestoreOrchestrationServiceTest
-    tests/MainWindowSessionRestoreOrchestrationServiceTest.cpp)
-
-therion_add_app_unit_test(MainWindowSessionRestoreUiFlowServiceTest
-    tests/MainWindowSessionRestoreUiFlowServiceTest.cpp)
-
-therion_add_app_unit_test(MainWindowSessionStateServiceTest
-    tests/MainWindowSessionStateServiceTest.cpp)
-
-therion_add_app_unit_test(MainWindowSessionWindowRestoreServiceTest
-    tests/MainWindowSessionWindowRestoreServiceTest.cpp)
 
 therion_add_app_unit_test(MainWindowStructureNameOverridesServiceTest
     tests/MainWindowStructureNameOverridesServiceTest.cpp)
@@ -1460,6 +1448,7 @@ set(THERION_UNIT_TEST_TARGETS
     ProjectValidationScannerTest
     ProjectValidationControllerTest
     SessionStoreTest
+    MainWindowServiceQTests
     MainWindowSessionDocumentControllerTest
     MainWindowSessionControllerTest
     MainWindowProjectControllerTest

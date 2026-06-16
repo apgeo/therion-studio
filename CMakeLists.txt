@@ -1106,17 +1106,14 @@ therion_add_app_unit_test(ProjectValidationScannerTest
 therion_add_app_unit_test(ProjectValidationControllerTest
     tests/ProjectValidationControllerTest.cpp)
 
-therion_add_app_unit_test(TherionRunnerConfigResolverTest
-    tests/TherionRunnerConfigResolverTest.cpp)
-
-therion_add_app_unit_test(TherionRunnerConfigDisplayControllerTest
-    tests/TherionRunnerConfigDisplayControllerTest.cpp)
-
-therion_add_app_unit_test(TherionExecutableSelectionControllerTest
-    tests/TherionExecutableSelectionControllerTest.cpp)
-
-therion_add_app_unit_test(TherionRunnerPresenterTest
+qt_add_executable(TherionRunnerSupportQTests
+    tests/TherionRunnerSupportQTestMain.cpp
+    tests/TherionExecutableSelectionControllerTest.cpp
+    tests/TherionRunnerConfigDisplayControllerTest.cpp
+    tests/TherionRunnerConfigResolverTest.cpp
     tests/TherionRunnerPresenterTest.cpp)
+
+target_link_libraries(TherionRunnerSupportQTests PRIVATE therion_app Qt6::Test)
 
 therion_add_app_unit_test(TherionRunnerServiceTest
     tests/TherionRunnerServiceTest.cpp)
@@ -1443,10 +1440,7 @@ set(THERION_UNIT_TEST_TARGETS
     BlockEditorDocumentOutlineBuilderTest
     BlockEditorMoveSourceRewriterTest
     BlockEditorToolboxControllerTest
-    TherionExecutableSelectionControllerTest
-    TherionRunnerConfigDisplayControllerTest
-    TherionRunnerConfigResolverTest
-    TherionRunnerPresenterTest
+    TherionRunnerSupportQTests
     TherionRunnerServiceTest
     MainWindowValidationFixApplyServiceTest)
 

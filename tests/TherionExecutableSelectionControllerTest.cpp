@@ -5,20 +5,22 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QTemporaryDir>
-
-#include <iostream>
+#include <QtTest/QtTest>
 
 using namespace TherionStudio;
 
 namespace
 {
-bool expect(bool condition, const char *message)
+class TherionExecutableSelectionControllerTest : public QObject
 {
-    if (!condition) {
-        std::cerr << message << '\n';
-    }
-    return condition;
-}
+    Q_OBJECT
+
+private slots:
+    void computesInitialBrowsePath();
+    void rejectsEmptySelection();
+    void rejectsNonExecutableSelection();
+    void acceptsExecutableSelection();
+};
 
 bool writeTextFile(const QString &filePath, const QString &contents = QString())
 {
@@ -29,147 +31,73 @@ bool writeTextFile(const QString &filePath, const QString &contents = QString())
     return file.write(contents.toUtf8()) == contents.toUtf8().size();
 }
 
-int runInitialBrowsePathTest()
+void TherionExecutableSelectionControllerTest::computesInitialBrowsePath()
 {
     QTemporaryDir tempDir;
-    if (!expect(tempDir.isValid(), "Temporary directory creation failed.")) {
-        return 1;
-    }
+    QVERIFY2(tempDir.isValid(), "Temporary directory creation failed.");
 
     const QString filePath = QDir(tempDir.path()).filePath(QStringLiteral("candidate.txt"));
-    if (!expect(writeTextFile(filePath), "Temporary browse candidate could not be written.")) {
-        return 1;
-    }
+    QVERIFY2(writeTextFile(filePath), "Temporary browse candidate could not be written.");
 
-    if (!expect(TherionExecutableSelectionController::initialBrowsePath(QString()) == QDir::homePath(),
-                "Empty executable text should browse from the home directory.")) {
-        return 1;
-    }
-    if (!expect(TherionExecutableSelectionController::initialBrowsePath(QDir(tempDir.path()).filePath(QStringLiteral("missing")))
-                    == QDir::homePath(),
-                "Missing executable text should browse from the home directory.")) {
-        return 1;
-    }
-    if (!expect(TherionExecutableSelectionController::initialBrowsePath(filePath) == tempDir.path(),
-                "Existing file executable text should browse from the file parent directory.")) {
-        return 1;
-    }
-    if (!expect(TherionExecutableSelectionController::initialBrowsePath(tempDir.path()) == tempDir.path(),
-                "Existing directory executable text should browse from that directory.")) {
-        return 1;
-    }
-
-    return 0;
+    QCOMPARE(TherionExecutableSelectionController::initialBrowsePath(QString()), QDir::homePath());
+    QCOMPARE(TherionExecutableSelectionController::initialBrowsePath(QDir(tempDir.path()).filePath(QStringLiteral("missing"))),
+             QDir::homePath());
+    QCOMPARE(TherionExecutableSelectionController::initialBrowsePath(filePath), tempDir.path());
+    QCOMPARE(TherionExecutableSelectionController::initialBrowsePath(tempDir.path()), tempDir.path());
 }
 
-int runEmptySelectionTest()
+void TherionExecutableSelectionControllerTest::rejectsEmptySelection()
 {
     const TherionExecutableSelectionController::SelectionResult result =
         TherionExecutableSelectionController::evaluateSelection(QString());
 
-    if (!expect(!result.isAccepted, "Empty selection should not be accepted.")) {
-        return 1;
-    }
-    if (!expect(!result.showWarningDialog, "Empty selection should not show a warning.")) {
-        return 1;
-    }
-    if (!expect(!result.shouldUpdateExecutableText, "Empty selection should not update executable text.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY(!result.isAccepted);
+    QVERIFY(!result.showWarningDialog);
+    QVERIFY(!result.shouldUpdateExecutableText);
 }
 
-int runNonExecutableSelectionTest()
+void TherionExecutableSelectionControllerTest::rejectsNonExecutableSelection()
 {
     QTemporaryDir tempDir;
-    if (!expect(tempDir.isValid(), "Temporary directory creation failed.")) {
-        return 1;
-    }
+    QVERIFY2(tempDir.isValid(), "Temporary directory creation failed.");
 
     const QString filePath = QDir(tempDir.path()).filePath(QStringLiteral("not-executable.txt"));
-    if (!expect(writeTextFile(filePath, QStringLiteral("not executable\n")),
-                "Temporary non-executable candidate could not be written.")) {
-        return 1;
-    }
-    if (!expect(!QFileInfo(filePath).isExecutable(),
-                "Temporary text fixture unexpectedly appears executable on this platform.")) {
-        return 1;
-    }
+    QVERIFY2(writeTextFile(filePath, QStringLiteral("not executable\n")),
+             "Temporary non-executable candidate could not be written.");
+    QVERIFY2(!QFileInfo(filePath).isExecutable(),
+             "Temporary text fixture unexpectedly appears executable on this platform.");
 
     const TherionExecutableSelectionController::SelectionResult result =
         TherionExecutableSelectionController::evaluateSelection(filePath);
 
-    if (!expect(!result.isAccepted, "Non-executable selection should not be accepted.")) {
-        return 1;
-    }
-    if (!expect(result.showWarningDialog, "Non-executable selection should show a warning.")) {
-        return 1;
-    }
-    if (!expect(result.warningDialogTitle == QStringLiteral("Select Therion Executable"),
-                "Non-executable warning title is incorrect.")) {
-        return 1;
-    }
-    if (!expect(result.warningDialogMessage == QStringLiteral("The selected file is not executable."),
-                "Non-executable warning message is incorrect.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY(!result.isAccepted);
+    QVERIFY(result.showWarningDialog);
+    QCOMPARE(result.warningDialogTitle, QStringLiteral("Select Therion Executable"));
+    QCOMPARE(result.warningDialogMessage, QStringLiteral("The selected file is not executable."));
 }
 
-int runExecutableSelectionTest()
+void TherionExecutableSelectionControllerTest::acceptsExecutableSelection()
 {
     const QString applicationPath = QCoreApplication::applicationFilePath();
     const QFileInfo applicationInfo(applicationPath);
-    if (!expect(applicationInfo.isExecutable(), "The running test binary should be executable.")) {
-        return 1;
-    }
+    QVERIFY2(applicationInfo.isExecutable(), "The running test binary should be executable.");
 
     const TherionExecutableSelectionController::SelectionResult result =
         TherionExecutableSelectionController::evaluateSelection(applicationPath);
 
-    if (!expect(result.isAccepted, "Executable selection should be accepted.")) {
-        return 1;
-    }
-    if (!expect(result.shouldUpdateExecutableText, "Executable selection should update executable text.")) {
-        return 1;
-    }
-    if (!expect(result.updatedExecutableText == applicationInfo.absoluteFilePath(),
-                "Executable selection should normalize to the absolute file path.")) {
-        return 1;
-    }
-    if (!expect(result.shouldShowStatusBarMessage, "Executable selection should request a status-bar message.")) {
-        return 1;
-    }
-    if (!expect(result.statusBarMessage == QStringLiteral("Therion executable updated"),
-                "Executable selection status-bar message is incorrect.")) {
-        return 1;
-    }
-    if (!expect(result.statusBarTimeoutMs == 2000, "Executable selection status timeout is incorrect.")) {
-        return 1;
-    }
-
-    return 0;
+    QVERIFY(result.isAccepted);
+    QVERIFY(result.shouldUpdateExecutableText);
+    QCOMPARE(result.updatedExecutableText, applicationInfo.absoluteFilePath());
+    QVERIFY(result.shouldShowStatusBarMessage);
+    QCOMPARE(result.statusBarMessage, QStringLiteral("Therion executable updated"));
+    QCOMPARE(result.statusBarTimeoutMs, 2000);
 }
 }
 
-int main(int argc, char **argv)
+int runTherionExecutableSelectionControllerTest(int argc, char **argv)
 {
-    QCoreApplication app(argc, argv);
-
-    if (runInitialBrowsePathTest() != 0) {
-        return 1;
-    }
-    if (runEmptySelectionTest() != 0) {
-        return 1;
-    }
-    if (runNonExecutableSelectionTest() != 0) {
-        return 1;
-    }
-    if (runExecutableSelectionTest() != 0) {
-        return 1;
-    }
-
-    return 0;
+    TherionExecutableSelectionControllerTest test;
+    return QTest::qExec(&test, argc, argv);
 }
+
+#include "TherionExecutableSelectionControllerTest.moc"

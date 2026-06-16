@@ -4,7 +4,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 
 ## Current Focus
 
-1. Release readiness for `v2026.6.4`.
+1. Release readiness for `v2026.6.5`.
 2. Unified Source DOM and source transaction ownership.
 3. Test infrastructure hygiene and structure guardrails.
 
@@ -13,7 +13,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 ### Release Readiness
 
 - Run local validation before tagging or packaging handoff.
-- Keep release notes, package metadata, and CI artifact workflow aligned with `v2026.6.4`.
+- Keep release notes, package metadata, and CI artifact workflow aligned with `v2026.6.5`.
 
 ### Unified Source DOM / Transactions
 

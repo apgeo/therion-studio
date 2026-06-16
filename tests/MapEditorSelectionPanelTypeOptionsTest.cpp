@@ -89,6 +89,23 @@ bool visibleLabelStartingWith(QWidget *root, const QString &prefix)
     return false;
 }
 
+QLabel *visibleLabelContaining(QWidget *root, const QString &fragment)
+{
+    if (root == nullptr) {
+        return nullptr;
+    }
+
+    const QList<QLabel *> labels = root->findChildren<QLabel *>();
+    for (QLabel *label : labels) {
+        if (label != nullptr
+            && label->isVisible()
+            && label->text().contains(fragment)) {
+            return label;
+        }
+    }
+    return nullptr;
+}
+
 int formRowForLabelText(QWidget *root, const QString &labelText)
 {
     if (root == nullptr) {
@@ -257,6 +274,18 @@ int runSelectionPanelTypeValuesTest()
     }
     if (!expect(stylePreview->isVisible(),
                 "Text-cursor synchronized map selection should show the style preview.")) {
+        return 1;
+    }
+    hostWindow.resize(640, 720);
+    pumpEvents();
+    QLabel *metadataLabel = visibleLabelContaining(mapTab, QStringLiteral("Source line 4"));
+    if (!expect(metadataLabel != nullptr,
+                "Selection panel metadata label was not found after selecting a line object.")) {
+        return 1;
+    }
+    const QRect metadataRect = metadataLabel->geometry().translated(metadataLabel->parentWidget()->mapTo(mapTab, QPoint(0, 0)));
+    if (!expect(metadataRect.right() <= mapTab->rect().right(),
+                "Selection panel metadata label should wrap inside a narrow inspector instead of overflowing horizontally.")) {
         return 1;
     }
     mapView->scene()->clearSelection();

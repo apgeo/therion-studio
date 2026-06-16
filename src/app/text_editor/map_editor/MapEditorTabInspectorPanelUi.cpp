@@ -109,6 +109,8 @@ void MapEditorTab::buildInspectorPanelUi()
 
     objectDetailsUiState_.objectDetailsMetadataLabel_ = new QLabel(QStringLiteral("-"), objectDetailsUiState_.objectSelectionSection_);
     objectDetailsUiState_.objectDetailsMetadataLabel_->setTextFormat(Qt::PlainText);
+    objectDetailsUiState_.objectDetailsMetadataLabel_->setWordWrap(true);
+    objectDetailsUiState_.objectDetailsMetadataLabel_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     objectDetailsUiState_.objectDetailsMetadataLabel_->setStyleSheet(QStringLiteral("QLabel { color: palette(midlight); }"));
     objectSelectionLayout->addWidget(objectDetailsUiState_.objectDetailsMetadataLabel_);
 
@@ -117,6 +119,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.objectAreaReferenceLabel_->setTextInteractionFlags(Qt::TextBrowserInteraction);
     objectDetailsUiState_.objectAreaReferenceLabel_->setOpenExternalLinks(false);
     objectDetailsUiState_.objectAreaReferenceLabel_->setWordWrap(true);
+    objectDetailsUiState_.objectAreaReferenceLabel_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     objectDetailsUiState_.objectAreaReferenceLabel_->setStyleSheet(QStringLiteral("QLabel { color: palette(midlight); }"));
     connect(objectDetailsUiState_.objectAreaReferenceLabel_, &QLabel::linkActivated, this, [this](const QString &link) {
         bool ok = false;
@@ -132,6 +135,8 @@ void MapEditorTab::buildInspectorPanelUi()
     auto *objectQuickForm = new QFormLayout(objectDetailsUiState_.objectQuickFieldsEditor_);
     objectQuickForm->setContentsMargins(0, 0, 0, 0);
     objectQuickForm->setSpacing(kInspectorFormSpacing);
+    objectQuickForm->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
+    objectQuickForm->setRowWrapPolicy(QFormLayout::WrapLongRows);
     objectDetailsUiState_.objectQuickTypeCombo_ = new QComboBox(objectDetailsUiState_.objectQuickFieldsEditor_);
     configureSelectionEditableCombo(objectDetailsUiState_.objectQuickTypeCombo_, QStringLiteral("mapObjectQuickTypeCombo"));
     objectDetailsUiState_.objectQuickSubtypeCombo_ = new QComboBox(objectDetailsUiState_.objectQuickFieldsEditor_);

@@ -860,12 +860,12 @@ void MapEditorStylePreviewWidget::clearStyleSelection()
 
 QSize MapEditorStylePreviewWidget::minimumSizeHint() const
 {
-    return QSize(150, 72);
+    return QSize(96, 72);
 }
 
 QSize MapEditorStylePreviewWidget::sizeHint() const
 {
-    return QSize(260, 76);
+    return QSize(160, 76);
 }
 
 void MapEditorStylePreviewWidget::paintEvent(QPaintEvent *event)

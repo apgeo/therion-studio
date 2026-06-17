@@ -13,81 +13,110 @@ Rectangle {
         contentHeight: contentColumn.implicitHeight
         clip: true
 
-        Column {
+        ColumnLayout {
             id: contentColumn
             width: flick.width - 24
             x: 12
             y: 12
-            spacing: 18
+            spacing: 12
 
-            Column {
-                width: parent.width
-                spacing: 6
+            GroupBox {
+                Layout.fillWidth: true
+                title: qsTr("Scene")
 
-                Text {
-                    text: qsTr("Scene")
-                    font.bold: true
-                    font.pixelSize: 18
-                    color: "#202020"
-                }
-
-                Text {
+                ColumnLayout {
                     width: parent.width
-                    wrapMode: Text.WrapAnywhere
-                    text: inspectorState && inspectorState.filePath.length > 0
-                        ? inspectorState.filePath
-                        : qsTr("No file loaded.")
-                    color: "#404040"
-                }
+                    spacing: 8
 
-                GridLayout {
-                    columns: 2
-                    columnSpacing: 10
-                    rowSpacing: 4
-                    width: parent.width
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
 
-                    Text { text: qsTr("Surveys"); color: "#202020" }
-                    Text { text: inspectorState ? String(inspectorState.surveyCount) : "0"; color: "#202020" }
+                        Label {
+                            Layout.preferredWidth: 120
+                            text: qsTr("Mesh coloring")
+                            color: "#202020"
+                        }
 
-                    Text { text: qsTr("Stations"); color: "#202020" }
-                    Text { text: inspectorState ? String(inspectorState.stationCount) : "0"; color: "#202020" }
+                        ComboBox {
+                            Layout.fillWidth: true
+                            model: [qsTr("Survey"), qsTr("Depth")]
+                            currentIndex: inspectorState ? inspectorState.meshColorMode : 0
+                            onActivated: {
+                                if (inspectorState) {
+                                    inspectorState.meshColorMode = currentIndex
+                                }
+                            }
+                        }
+                    }
 
-                    Text { text: qsTr("Shots"); color: "#202020" }
-                    Text { text: inspectorState ? String(inspectorState.shotCount) : "0"; color: "#202020" }
+                    CheckBox {
+                        Layout.fillWidth: true
+                        text: qsTr("Measure points")
+                        checked: inspectorState ? inspectorState.measurementMode : false
+                        onToggled: {
+                            if (inspectorState) {
+                                inspectorState.measurementMode = checked
+                            }
+                        }
+                    }
 
-                    Text { text: qsTr("Meshes"); color: "#202020" }
-                    Text { text: inspectorState ? String(inspectorState.meshCount) : "0"; color: "#202020" }
+                    Label {
+                        Layout.fillWidth: true
+                        text: inspectorState && inspectorState.filePath.length > 0
+                            ? inspectorState.filePath
+                            : qsTr("No file loaded.")
+                        wrapMode: Text.WrapAnywhere
+                        color: "#404040"
+                    }
 
-                    Text { text: qsTr("Surfaces"); color: "#202020" }
-                    Text { text: inspectorState ? String(inspectorState.surfaceCount) : "0"; color: "#202020" }
+                    GridLayout {
+                        Layout.fillWidth: true
+                        columns: 2
+                        columnSpacing: 10
+                        rowSpacing: 4
+
+                        Label { text: qsTr("Surveys"); color: "#202020" }
+                        Label { text: inspectorState ? String(inspectorState.surveyCount) : "0"; color: "#202020" }
+
+                        Label { text: qsTr("Stations"); color: "#202020" }
+                        Label { text: inspectorState ? String(inspectorState.stationCount) : "0"; color: "#202020" }
+
+                        Label { text: qsTr("Shots"); color: "#202020" }
+                        Label { text: inspectorState ? String(inspectorState.shotCount) : "0"; color: "#202020" }
+
+                        Label { text: qsTr("Meshes"); color: "#202020" }
+                        Label { text: inspectorState ? String(inspectorState.meshCount) : "0"; color: "#202020" }
+
+                        Label { text: qsTr("Surfaces"); color: "#202020" }
+                        Label { text: inspectorState ? String(inspectorState.surfaceCount) : "0"; color: "#202020" }
+                    }
                 }
             }
 
-            Column {
-                width: parent.width
-                spacing: 8
+            GroupBox {
+                Layout.fillWidth: true
+                title: qsTr("Layers")
 
-                Text {
-                    text: qsTr("Layers")
-                    font.bold: true
-                    font.pixelSize: 18
-                    color: "#202020"
-                }
+                Column {
+                    width: parent.width
+                    spacing: 4
 
-                Repeater {
-                    model: layerModel
+                    Repeater {
+                        model: layerModel
 
-                    delegate: CheckBox {
-                        required property int layerIndex
-                        required property string label
-                        required property int layerChecked
+                        delegate: CheckBox {
+                            required property int layerIndex
+                            required property string label
+                            required property int layerChecked
 
-                        width: contentColumn.width
-                        checked: layerChecked === Qt.Checked
-                        text: label
-                        onToggled: {
-                            if (layerModel) {
-                                layerModel.setLayerVisible(layerIndex, checked)
+                            width: parent.width
+                            checked: layerChecked === Qt.Checked
+                            text: label
+                            onToggled: {
+                                if (layerModel) {
+                                    layerModel.setLayerVisible(layerIndex, checked)
+                                }
                             }
                         }
                     }

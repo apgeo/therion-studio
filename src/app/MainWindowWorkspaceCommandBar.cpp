@@ -309,12 +309,15 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     viewerLayout->setSpacing(4);
     workspaceThreeDViewerFitButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Fit 3D View"), QStringLiteral("scan"));
     workspaceThreeDViewerResetButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Reset 3D View"), QStringLiteral("locate-fixed"));
+    workspaceThreeDViewerMeasureButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Measure points"), QStringLiteral("ruler"));
+    workspaceThreeDViewerMeasureButton_->setCheckable(true);
     workspaceThreeDViewerTopViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Top View"), QStringLiteral("view-top"));
     workspaceThreeDViewerSideViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Side View"), QStringLiteral("view-side"));
     workspaceThreeDViewerRollLeftButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Left"), QStringLiteral("view-roll-left"));
     workspaceThreeDViewerRollRightButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Right"), QStringLiteral("view-roll-right"));
     viewerLayout->addWidget(workspaceThreeDViewerFitButton_);
     viewerLayout->addWidget(workspaceThreeDViewerResetButton_);
+    viewerLayout->addWidget(workspaceThreeDViewerMeasureButton_);
     viewerLayout->addWidget(workspaceThreeDViewerTopViewButton_);
     viewerLayout->addWidget(workspaceThreeDViewerSideViewButton_);
     viewerLayout->addWidget(workspaceThreeDViewerRollLeftButton_);
@@ -391,6 +394,11 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     connect(workspaceFitBackgroundButton_, &QToolButton::clicked, this, &MainWindow::triggerFitWithBackgroundForActiveDocument);
     connect(workspaceThreeDViewerFitButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerFitForActiveDocument);
     connect(workspaceThreeDViewerResetButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerResetForActiveDocument);
+    connect(workspaceThreeDViewerMeasureButton_, &QToolButton::toggled, this, [this](bool checked) {
+        if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+            viewerTab->setMeasurementMode(checked);
+        }
+    });
     connect(workspaceThreeDViewerTopViewButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerTopViewForActiveDocument);
     connect(workspaceThreeDViewerSideViewButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerSideViewForActiveDocument);
     connect(workspaceThreeDViewerRollLeftButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerRollLeftForActiveDocument);
@@ -483,6 +491,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspaceThreeDViewerGroup_ == nullptr
         || workspaceThreeDViewerFitButton_ == nullptr
         || workspaceThreeDViewerResetButton_ == nullptr
+        || workspaceThreeDViewerMeasureButton_ == nullptr
         || workspaceThreeDViewerTopViewButton_ == nullptr
         || workspaceThreeDViewerSideViewButton_ == nullptr
         || workspaceThreeDViewerRollLeftButton_ == nullptr
@@ -542,10 +551,17 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceZoomSeparator_->setVisible(showEditorActions && showZoomTools);
     workspaceThreeDViewerFitButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerResetButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerMeasureButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerTopViewButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerSideViewButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerRollLeftButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerRollRightButton_->setEnabled(showThreeDViewerModes);
+    {
+        const QSignalBlocker measureBlocker(workspaceThreeDViewerMeasureButton_);
+        workspaceThreeDViewerMeasureButton_->setChecked(showThreeDViewerModes
+                                                           && currentThreeDViewerTab() != nullptr
+                                                           && currentThreeDViewerTab()->measurementMode());
+    }
     workspaceMapToolsGroup_->setVisible(showEditorActions && showMapTools);
     workspaceSaveButton_->setVisible(showEditorActions);
     workspaceSaveButton_->setEnabled(showEditorActions && tabWidget != nullptr);
@@ -596,12 +612,14 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceSmartAreaButton_->setEnabled(showEditorActions && showMapTools && embeddedMapSurfaceActive);
     workspaceThreeDViewerFitButton_->setVisible(showThreeDViewerModes);
     workspaceThreeDViewerResetButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerMeasureButton_->setVisible(showThreeDViewerModes);
     workspaceThreeDViewerTopViewButton_->setVisible(showThreeDViewerModes);
     workspaceThreeDViewerSideViewButton_->setVisible(showThreeDViewerModes);
     workspaceThreeDViewerRollLeftButton_->setVisible(showThreeDViewerModes);
     workspaceThreeDViewerRollRightButton_->setVisible(showThreeDViewerModes);
     workspaceThreeDViewerFitButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerResetButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerMeasureButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerTopViewButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerSideViewButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerRollLeftButton_->setEnabled(showThreeDViewerModes);

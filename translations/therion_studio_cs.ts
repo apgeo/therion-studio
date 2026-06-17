@@ -72,6 +72,10 @@
         <translation type="vanished">Přizpůsobit včetně pozadí</translation>
     </message>
     <message>
+        <source>Measure points</source>
+        <translation type="unfinished">Měřit body</translation>
+    </message>
+    <message>
         <source>Select</source>
         <translation type="vanished">Vybrat</translation>
     </message>
@@ -5351,11 +5355,86 @@ subtype blocks</translation>
     </message>
 </context>
 <context>
+    <name>TherionStudio::ThreeDViewerViewportRenderer</name>
+    <message>
+        <source>No 3D data loaded.</source>
+        <translation type="unfinished">Žádná 3D data nejsou načtena.</translation>
+    </message>
+    <message>
+        <source>Altitude</source>
+        <translation type="unfinished">Výškopis</translation>
+    </message>
+    <message>
+        <source>Station</source>
+        <translation type="unfinished">Bod</translation>
+    </message>
+    <message>
+        <source>Survey</source>
+        <translation type="unfinished">Survey</translation>
+    </message>
+    <message>
+        <source>Depth</source>
+        <translation type="unfinished">Hloubka</translation>
+    </message>
+    <message>
+        <source>Measurement</source>
+        <translation type="unfinished">Měření</translation>
+    </message>
+    <message>
+        <source>Start</source>
+        <translation type="unfinished">Začátek</translation>
+    </message>
+    <message>
+        <source>End</source>
+        <translation type="unfinished">Konec</translation>
+    </message>
+    <message>
+        <source>Click another station to finish.</source>
+        <translation type="unfinished">Klikněte na další bod pro dokončení.</translation>
+    </message>
+    <message>
+        <source>Click a station to start measuring.</source>
+        <translation type="unfinished">Klikněte na bod pro zahájení měření.</translation>
+    </message>
+    <message>
+        <source>Distance</source>
+        <translation type="unfinished">Vzdálenost</translation>
+    </message>
+    <message>
+        <source>Azimuth</source>
+        <translation type="unfinished">Azimut</translation>
+    </message>
+    <message>
+        <source>Vertical difference</source>
+        <translation type="unfinished">Svislý rozdíl</translation>
+    </message>
+</context>
+<context>
     <name>ThreeDViewerInspector</name>
     <message>
         <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="16"/>
         <source>Scene</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="37"/>
+        <source>Mesh coloring</source>
+        <translation type="unfinished">Barvení sítě</translation>
+    </message>
+    <message>
+        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="51"/>
+        <source>Measure points</source>
+        <translation type="unfinished">Měřit body</translation>
+    </message>
+    <message>
+        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="43"/>
+        <source>Survey</source>
+        <translation type="unfinished">Survey</translation>
+    </message>
+    <message>
+        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="43"/>
+        <source>Depth</source>
+        <translation type="unfinished">Hloubka</translation>
     </message>
     <message>
         <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="24"/>

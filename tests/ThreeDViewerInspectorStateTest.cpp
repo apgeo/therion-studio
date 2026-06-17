@@ -10,6 +10,8 @@ class ThreeDViewerInspectorStateTest : public QObject
 
 private slots:
     void tracksFilePathAndSceneCounts();
+    void tracksMeshColorMode();
+    void tracksMeasurementMode();
 };
 
 void ThreeDViewerInspectorStateTest::tracksFilePathAndSceneCounts()
@@ -17,6 +19,8 @@ void ThreeDViewerInspectorStateTest::tracksFilePathAndSceneCounts()
     ThreeDViewerInspectorState state;
 
     QCOMPARE(state.filePath(), QString());
+    QCOMPARE(state.meshColorMode(), int(ThreeDViewerMeshColorMode::Survey));
+    QCOMPARE(state.measurementMode(), false);
     QCOMPARE(state.surveyCount(), 0);
     QCOMPARE(state.stationCount(), 0);
     QCOMPARE(state.shotCount(), 0);
@@ -39,6 +43,28 @@ void ThreeDViewerInspectorStateTest::tracksFilePathAndSceneCounts()
     QCOMPARE(state.shotCount(), 1);
     QCOMPARE(state.meshCount(), 1);
     QCOMPARE(state.surfaceCount(), 1);
+}
+
+void ThreeDViewerInspectorStateTest::tracksMeshColorMode()
+{
+    ThreeDViewerInspectorState state;
+    QSignalSpy spy(&state, &ThreeDViewerInspectorState::meshColorModeChanged);
+
+    state.setMeshColorMode(int(ThreeDViewerMeshColorMode::Depth));
+
+    QCOMPARE(state.meshColorMode(), int(ThreeDViewerMeshColorMode::Depth));
+    QCOMPARE(spy.count(), 1);
+}
+
+void ThreeDViewerInspectorStateTest::tracksMeasurementMode()
+{
+    ThreeDViewerInspectorState state;
+    QSignalSpy spy(&state, &ThreeDViewerInspectorState::measurementModeChanged);
+
+    state.setMeasurementMode(true);
+
+    QCOMPARE(state.measurementMode(), true);
+    QCOMPARE(spy.count(), 1);
 }
 
 int runThreeDViewerInspectorStateTest(int argc, char **argv)

@@ -139,6 +139,11 @@ TherionStudio::ThreeDViewerTab *MainWindow::openThreeDViewerTab(const QString &f
     connect(tab, &TherionStudio::ThreeDViewerTab::titleChanged, this, [this, tab]() {
         updateTabTitle(tab);
     });
+    connect(tab, &TherionStudio::ThreeDViewerTab::measurementModeChanged, this, [this, tab]() {
+        if (currentDocumentWidget() == tab) {
+            refreshWorkspaceModeSwitcher();
+        }
+    });
 
     const int tabIndex = editorTabs_->addTab(tab, tab->displayName());
     editorTabs_->setCurrentIndex(tabIndex);

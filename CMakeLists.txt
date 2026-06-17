@@ -245,16 +245,17 @@ set(THERION_APP_SOURCES
     src/app/three_d_viewer/ThreeDViewerTab.h
     src/app/three_d_viewer/ThreeDViewerInspectorState.cpp
     src/app/three_d_viewer/ThreeDViewerInspectorState.h
+    src/app/three_d_viewer/ThreeDViewerMeshColorMode.h
     src/app/three_d_viewer/ThreeDViewerInspectorWidget.cpp
     src/app/three_d_viewer/ThreeDViewerInspectorWidget.h
     src/app/three_d_viewer/ThreeDViewerLayerListModel.cpp
     src/app/three_d_viewer/ThreeDViewerLayerListModel.h
     src/app/three_d_viewer/ThreeDViewerViewportController.cpp
     src/app/three_d_viewer/ThreeDViewerViewportController.h
-    src/app/three_d_viewer/ThreeDViewerViewportRenderer.cpp
-    src/app/three_d_viewer/ThreeDViewerViewportRenderer.h
     src/app/three_d_viewer/ThreeDViewerProjection.cpp
     src/app/three_d_viewer/ThreeDViewerProjection.h
+    src/app/three_d_viewer/ThreeDViewerViewportItem.cpp
+    src/app/three_d_viewer/ThreeDViewerViewportItem.h
     src/app/three_d_viewer/ThreeDViewerViewportWidget.cpp
     src/app/three_d_viewer/ThreeDViewerViewportWidget.h)
 
@@ -706,6 +707,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/pencil-line.svg
     resources/icons/lucide/pentagon.svg
     resources/icons/lucide/puzzle.svg
+    resources/icons/lucide/ruler.svg
     resources/icons/lucide/redo-2.svg
     resources/icons/lucide/save.svg
     resources/icons/lucide/scan.svg
@@ -725,6 +727,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/view-roll-right.svg
     resources/icons/lucide/zoom-in.svg
     resources/icons/lucide/zoom-out.svg
+    resources/qml/three_d_viewer/ThreeDViewerViewport.qml
     resources/qml/three_d_viewer/ThreeDViewerInspector.qml)
 
 qt_add_resources(TherionStudio "TherionStudioResources"
@@ -1079,23 +1082,30 @@ qt_add_executable(ThreeDViewerQTests
     tests/ThreeDViewerLayerListModelTest.cpp
     tests/ThreeDViewerInspectorStateTest.cpp
     tests/ThreeDViewerInspectorWidgetTest.cpp
+    tests/ThreeDViewerViewportWidgetTest.cpp
     tests/ThreeDViewerViewportControllerTest.cpp
     src/app/three_d_viewer/ThreeDViewerLayerListModel.cpp
     src/app/three_d_viewer/ThreeDViewerLayerListModel.h
     src/app/three_d_viewer/ThreeDViewerInspectorState.cpp
     src/app/three_d_viewer/ThreeDViewerInspectorState.h
+    src/app/three_d_viewer/ThreeDViewerMeshColorMode.h
     src/app/three_d_viewer/ThreeDViewerInspectorWidget.cpp
     src/app/three_d_viewer/ThreeDViewerInspectorWidget.h
+    src/app/three_d_viewer/ThreeDViewerViewportItem.cpp
+    src/app/three_d_viewer/ThreeDViewerViewportItem.h
     src/app/three_d_viewer/ThreeDViewerViewportController.cpp
     src/app/three_d_viewer/ThreeDViewerViewportController.h
     src/app/three_d_viewer/ThreeDViewerProjection.cpp
-    src/app/three_d_viewer/ThreeDViewerProjection.h)
+    src/app/three_d_viewer/ThreeDViewerProjection.h
+    src/app/three_d_viewer/ThreeDViewerViewportWidget.cpp
+    src/app/three_d_viewer/ThreeDViewerViewportWidget.h)
 
 target_link_libraries(ThreeDViewerQTests PRIVATE therion_core Qt6::Gui Qt6::Svg Qt6::Widgets Qt6::Quick Qt6::QuickWidgets Qt6::Qml Qt6::QuickControls2 Qt6::Test)
 
 qt_add_resources(ThreeDViewerQTests ThreeDViewerQTestsResources
     PREFIX "/"
     FILES
+        resources/qml/three_d_viewer/ThreeDViewerViewport.qml
         resources/qml/three_d_viewer/ThreeDViewerInspector.qml)
 
 qt_add_executable(MapEditorObjectStyleCatalogTest

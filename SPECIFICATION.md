@@ -61,6 +61,10 @@ Required capabilities:
 - recognize common Therion-related file types such as `.th`, `.th2`, `thconfig`, `*.thconfig`, and `thconfig.*`, plus compiled 3D `.lox` artifacts
 - open files in editor tabs
 - opening a `.lox` file shall create a read-only 3D viewer tab with Fit/Reset, Top/Side view, and rotate-left/rotate-right controls, plus orbit, pan, zoom, and world-blue-axis rotation navigation
+- the 3D viewer shall let the user switch mesh coloring between survey-based coloring and depth-based coloring
+- the 3D viewer shall color centerline shots using the same survey-based or depth-based palette as the meshes
+- the 3D viewer shall render a bounding box around the loaded 3D scene extent
+- the 3D viewer shall show a screen-space compass, scale bar, and altitude legend when scene bounds are available
 - support file selection, multi-tab workflows, and recent project reopening
 - preserve folder expansion state where practical
 
@@ -293,6 +297,13 @@ The rules below define the expected day-to-day interaction model. If a later req
 - A supported Therion file row shall be shown with a Therion document icon; an unsupported file shall use a generic document icon.
 - A `.th2` file shall offer an explicit "Open in Map Editor" action.
 - A `.lox` file shall open in a read-only 3D viewer tab and shall not be offered for map editing.
+- The 3D viewer inspector shall expose a mesh-coloring control that allows switching between survey-based and depth-based coloring.
+- The 3D viewer shall apply the selected mesh-coloring mode to centerline shots as well as meshes.
+- The 3D viewer toolbar shall expose a measurement toggle with a ruler icon that activates station-to-station measurement.
+- The 3D viewer viewport shall draw a visible wireframe bounding box for the current scene extent when the scene has valid bounds.
+- The 3D viewer viewport shall show a compass, scale bar, and altitude legend as screen-space overlays when scene bounds are available.
+- The 3D viewer viewport shall show the full station reference and depth when the pointer hovers a station marker.
+- The 3D viewer inspector shall expose a measurement-mode control that lets the user click two station markers and inspect the 3D distance, azimuth, and vertical difference between them.
 - Unsupported files shall offer an "Open Externally" action.
 - File rows shall offer duplicate, rename, and delete actions; deleting an open file shall ask for confirmation, close the corresponding open document after any unsaved-change close prompt is resolved, and then delete the file.
 - Folder rows shall offer rename and delete actions.

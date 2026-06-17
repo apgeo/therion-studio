@@ -99,9 +99,9 @@ Deliverable: loadable scene data without a production viewport.
 
 ### Phase 3 - Minimal GPU Viewport
 
-- Add the inspector host in a narrow Qt Quick/QML surface first, then move the rendering surface toward Qt Quick/QML once the shell is stable.
-- Render centerline and station points first.
-- Add orbit, pan, zoom, fit, and reset controls.
+- Keep the inspector host in Qt Quick/QML and move the rendering surface to a QQuickItem-backed Qt Quick scene graph host.
+- Render centerline, stations, labels, and simple meshes/surfaces in batched scene-graph nodes where practical.
+- Add orbit, pan, zoom, fit, reset, and preset view controls.
 - Keep UI controls minimal and consistent with existing Therion Studio tool surfaces.
 - Verify the viewport on macOS first, then leave explicit Windows/Linux verification gates.
 
@@ -148,11 +148,11 @@ Deliverable: incremental 3D-viewer capabilities, still behind stable model and r
 
 Add the next viewport slice on top of the existing widget shell:
 
-- refine the current widget viewport into a more durable renderer/camera layer
+- keep the QQuickItem-backed scene-graph renderer as the active viewport path and keep the camera/controller boundary intact
 - keep `ThreeDViewerSceneModel` as the shared scene contract for surveys, stations, shots, mesh groups, surfaces, and bounds
 - keep `ThreeDViewerLoxLoader` as the `.lox` loader and structured error reporter
 - keep `ThreeDViewerTab` as the read-only shell with toolbar, inspector, and layer toggles
-- add QTest coverage for loader behavior, malformed input, empty files, and bounds calculation if a future renderer refactor needs it
+- add QTest coverage for viewport-host loading and controller behavior if the GPU viewport needs additional regression gates
 
 ## Release Position
 

@@ -125,6 +125,21 @@ void ThreeDViewerTab::rollViewRight()
     viewport_->rollRight();
 }
 
+void ThreeDViewerTab::setMeasurementMode(bool measurementMode)
+{
+    if (inspectorState_ != nullptr) {
+        inspectorState_->setMeasurementMode(measurementMode);
+    }
+    if (viewport_ != nullptr) {
+        viewport_->setMeasurementMode(measurementMode);
+    }
+}
+
+bool ThreeDViewerTab::measurementMode() const
+{
+    return inspectorState_ != nullptr ? inspectorState_->measurementMode() : false;
+}
+
 void ThreeDViewerTab::showFindBar(bool)
 {
 }
@@ -173,11 +188,27 @@ void ThreeDViewerTab::buildUi()
             viewport_->setLayerVisibility(layerModel_->layerVisibility());
         }
     });
+    connect(inspectorState_, &ThreeDViewerInspectorState::meshColorModeChanged, this, [this] {
+        if (viewport_ != nullptr && inspectorState_ != nullptr) {
+            viewport_->setMeshColorMode(static_cast<ThreeDViewerMeshColorMode>(inspectorState_->meshColorMode()));
+        }
+    });
+    connect(inspectorState_, &ThreeDViewerInspectorState::measurementModeChanged, this, [this] {
+        if (viewport_ != nullptr && inspectorState_ != nullptr) {
+            viewport_->setMeasurementMode(inspectorState_->measurementMode());
+        }
+        emit measurementModeChanged(inspectorState_ != nullptr ? inspectorState_->measurementMode() : false);
+    });
 
     inspectorWidget_ = new ThreeDViewerInspectorWidget(inspector);
     inspectorWidget_->setInspectorState(inspectorState_);
     inspectorWidget_->setLayerModel(layerModel_);
     inspectorLayout->addWidget(inspectorWidget_, 1);
+
+    if (viewport_ != nullptr && inspectorState_ != nullptr) {
+        viewport_->setMeshColorMode(static_cast<ThreeDViewerMeshColorMode>(inspectorState_->meshColorMode()));
+        viewport_->setMeasurementMode(inspectorState_->measurementMode());
+    }
 
     splitter_->addWidget(inspector);
     splitter_->setStretchFactor(0, 1);
@@ -208,6 +239,10 @@ void ThreeDViewerTab::loadSceneIntoView()
     if (layerModel_ != nullptr) {
         layerModel_->setSceneModel(sceneModel_);
         viewport_->setLayerVisibility(layerModel_->layerVisibility());
+    }
+    if (inspectorState_ != nullptr) {
+        viewport_->setMeshColorMode(static_cast<ThreeDViewerMeshColorMode>(inspectorState_->meshColorMode()));
+        viewport_->setMeasurementMode(inspectorState_->measurementMode());
     }
     viewport_->fitToScene();
 }

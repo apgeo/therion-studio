@@ -23,6 +23,39 @@ void ThreeDViewerInspectorState::setFilePath(const QString &filePath)
     emit filePathChanged();
 }
 
+int ThreeDViewerInspectorState::meshColorMode() const
+{
+    return int(meshColorMode_);
+}
+
+void ThreeDViewerInspectorState::setMeshColorMode(int meshColorMode)
+{
+    const auto newMode = meshColorMode == int(ThreeDViewerMeshColorMode::Depth)
+        ? ThreeDViewerMeshColorMode::Depth
+        : ThreeDViewerMeshColorMode::Survey;
+    if (meshColorMode_ == newMode) {
+        return;
+    }
+
+    meshColorMode_ = newMode;
+    emit meshColorModeChanged();
+}
+
+bool ThreeDViewerInspectorState::measurementMode() const
+{
+    return measurementMode_;
+}
+
+void ThreeDViewerInspectorState::setMeasurementMode(bool measurementMode)
+{
+    if (measurementMode_ == measurementMode) {
+        return;
+    }
+
+    measurementMode_ = measurementMode;
+    emit measurementModeChanged();
+}
+
 int ThreeDViewerInspectorState::surveyCount() const
 {
     return surveyCount_;

@@ -1,139 +1,147 @@
 #include "ThreeDViewerViewportWidget.h"
 
-#include "ThreeDViewerViewportRenderer.h"
+#include "ThreeDViewerViewportItem.h"
 
-#include <QMouseEvent>
-#include <QPainter>
-#include <QPaintEvent>
-#include <QResizeEvent>
-#include <QWheelEvent>
+#include <QQmlContext>
+#include <QQmlEngine>
+#include <QQuickItem>
+#include <QUrl>
 
 namespace TherionStudio
 {
+namespace
+{
+void registerViewportTypes()
+{
+    static const bool registered = [] {
+        qmlRegisterType<ThreeDViewerViewportItem>("TherionStudio.ThreeDViewer", 1, 0, "ThreeDViewerViewportItem");
+        return true;
+    }();
+    Q_UNUSED(registered);
+}
+} // namespace
 
 ThreeDViewerViewportWidget::ThreeDViewerViewportWidget(QWidget *parent)
-    : QWidget(parent)
+    : QQuickWidget(parent)
 {
-    setAutoFillBackground(false);
-    setMouseTracking(true);
-    setFocusPolicy(Qt::StrongFocus);
-    connect(&controller_, &ThreeDViewerViewportController::cameraChanged, this, QOverload<>::of(&QWidget::update));
+    registerViewportTypes();
+    setResizeMode(QQuickWidget::SizeRootObjectToView);
+    setClearColor(QColor(QStringLiteral("#000000")));
+    connect(this, &QQuickWidget::statusChanged, this, [this](QQuickWidget::Status) {
+        syncRootItem();
+    });
+    setSource(QUrl(QStringLiteral("qrc:/resources/qml/three_d_viewer/ThreeDViewerViewport.qml")));
+    syncRootItem();
 }
 
 void ThreeDViewerViewportWidget::setSceneModel(const ThreeDViewerSceneModel &sceneModel)
 {
     sceneModel_ = sceneModel;
-    controller_.fitToScene(sceneModel_);
+    syncRootItem();
 }
 
 void ThreeDViewerViewportWidget::setLayerVisibility(const std::array<bool, 5> &layerVisibility)
 {
     layerVisibility_ = layerVisibility;
-    update();
+    syncRootItem();
+}
+
+void ThreeDViewerViewportWidget::setMeshColorMode(ThreeDViewerMeshColorMode meshColorMode)
+{
+    meshColorMode_ = meshColorMode;
+    syncRootItem();
+}
+
+void ThreeDViewerViewportWidget::setMeasurementMode(bool measurementMode)
+{
+    measurementMode_ = measurementMode;
+    syncRootItem();
 }
 
 void ThreeDViewerViewportWidget::fitToScene()
 {
-    controller_.fitToScene(sceneModel_);
+    if (auto *item = rootViewportItem()) {
+        item->fitToScene();
+    } else {
+        pendingFitToScene_ = true;
+    }
 }
 
 void ThreeDViewerViewportWidget::resetView()
 {
-    controller_.resetView(sceneModel_);
+    if (auto *item = rootViewportItem()) {
+        item->resetView();
+    } else {
+        pendingResetView_ = true;
+    }
 }
 
 void ThreeDViewerViewportWidget::setViewPreset(ThreeDViewerViewPreset preset)
 {
-    controller_.setViewPreset(preset, sceneModel_);
+    if (auto *item = rootViewportItem()) {
+        item->setViewPreset(preset);
+    } else {
+        pendingViewPreset_ = preset;
+        hasPendingViewPreset_ = true;
+    }
 }
 
 void ThreeDViewerViewportWidget::rollLeft()
 {
-    controller_.rotateLeft();
+    if (auto *item = rootViewportItem()) {
+        item->rollLeft();
+    } else {
+        pendingRollLeft_ = true;
+    }
 }
 
 void ThreeDViewerViewportWidget::rollRight()
 {
-    controller_.rotateRight();
+    if (auto *item = rootViewportItem()) {
+        item->rollRight();
+    } else {
+        pendingRollRight_ = true;
+    }
 }
 
-void ThreeDViewerViewportWidget::paintEvent(QPaintEvent *event)
+void ThreeDViewerViewportWidget::syncRootItem()
 {
-    Q_UNUSED(event);
-
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setRenderHint(QPainter::TextAntialiasing, true);
-    painter.fillRect(rect(), palette().base());
-
-    if (sceneModel_.isEmpty()) {
-        ThreeDViewerViewportRenderer::paintEmptyState(painter, rect(), palette());
+    if (status() != QQuickWidget::Ready) {
         return;
     }
 
-    ThreeDViewerViewportRenderer::paintScene(painter, sceneModel_, controller_.camera(), layerVisibility_, palette(), width(), height());
+    if (auto *item = rootViewportItem()) {
+        item->setSceneModel(sceneModel_);
+        item->setLayerVisibility(layerVisibility_);
+        item->setMeshColorMode(meshColorMode_);
+        item->setMeasurementMode(measurementMode_);
+
+        if (pendingFitToScene_) {
+            pendingFitToScene_ = false;
+            item->fitToScene();
+        }
+        if (pendingResetView_) {
+            pendingResetView_ = false;
+            item->resetView();
+        }
+        if (hasPendingViewPreset_) {
+            hasPendingViewPreset_ = false;
+            item->setViewPreset(pendingViewPreset_);
+        }
+        if (pendingRollLeft_) {
+            pendingRollLeft_ = false;
+            item->rollLeft();
+        }
+        if (pendingRollRight_) {
+            pendingRollRight_ = false;
+            item->rollRight();
+        }
+    }
 }
 
-void ThreeDViewerViewportWidget::resizeEvent(QResizeEvent *event)
+ThreeDViewerViewportItem *ThreeDViewerViewportWidget::rootViewportItem() const
 {
-    QWidget::resizeEvent(event);
-    update();
-}
-
-void ThreeDViewerViewportWidget::mousePressEvent(QMouseEvent *event)
-{
-    if (event == nullptr) {
-        return;
-    }
-
-    if (controller_.mousePress(event->button(), event->pos())) {
-        event->accept();
-        return;
-    }
-
-    QWidget::mousePressEvent(event);
-}
-
-void ThreeDViewerViewportWidget::mouseMoveEvent(QMouseEvent *event)
-{
-    if (event == nullptr) {
-        QWidget::mouseMoveEvent(event);
-        return;
-    }
-
-    if (controller_.mouseMove(event->pos(), height())) {
-        event->accept();
-        return;
-    }
-
-    QWidget::mouseMoveEvent(event);
-}
-
-void ThreeDViewerViewportWidget::mouseReleaseEvent(QMouseEvent *event)
-{
-    if (event == nullptr) {
-        return;
-    }
-
-    if (controller_.mouseRelease(event->button())) {
-        event->accept();
-        return;
-    }
-
-    QWidget::mouseReleaseEvent(event);
-}
-
-void ThreeDViewerViewportWidget::wheelEvent(QWheelEvent *event)
-{
-    if (event == nullptr) {
-        return;
-    }
-
-    if (!controller_.wheel(event->angleDelta())) {
-        QWidget::wheelEvent(event);
-        return;
-    }
-    event->accept();
+    return qobject_cast<ThreeDViewerViewportItem *>(rootObject());
 }
 
 } // namespace TherionStudio

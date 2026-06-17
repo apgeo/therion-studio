@@ -33,6 +33,8 @@ public:
     void setSideView();
     void rollViewLeft();
     void rollViewRight();
+    void setMeasurementMode(bool measurementMode);
+    bool measurementMode() const;
     void showFindBar(bool replaceMode = false);
     void hideFindBar();
     void goToLine(int lineNumber);
@@ -40,6 +42,7 @@ public:
 
 signals:
     void titleChanged();
+    void measurementModeChanged(bool measurementMode);
 
 private:
     void buildUi();

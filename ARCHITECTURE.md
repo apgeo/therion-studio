@@ -158,10 +158,13 @@ The editor-mode layout is stable:
 - `src/app/three_d_viewer/` for the read-only 3D viewer shell and viewport host
 - `src/core/ThreeDViewerSceneModel.*` and `src/core/ThreeDViewerCamera.*` for the shared 3D viewer scene contract and camera state, including orbit, pan, zoom, fit, reset, preset views, and world-blue-axis rotation
 - `src/app/three_d_viewer/ThreeDViewerLayerListModel.*` for shared layer visibility and counts data that can drive both QWidget and QML surfaces
-- `src/app/three_d_viewer/ThreeDViewerInspectorState.*` for QML-ready scene summary data exposed to the 3D viewer inspector
+- `src/app/three_d_viewer/ThreeDViewerInspectorState.*` for QML-ready scene summary data and mesh-coloring mode exposed to the 3D viewer inspector
 - `src/app/three_d_viewer/ThreeDViewerInspectorWidget.*` for the QQuickWidget host that embeds the inspector shell into the Widgets application
+- `src/app/three_d_viewer/ThreeDViewerViewportItem.*` for the QQuickItem-based GPU-backed viewport surface that renders the shared scene model through the Qt Quick scene graph
+- `src/app/three_d_viewer/ThreeDViewerViewportItem.*` also owns the mesh-group scene-graph material choice, currently using Qt's built-in GPU vertex-color material for shaded triangle output
+- `src/app/three_d_viewer/ThreeDViewerViewportItem.*` also owns screen-space HUD overlays such as the scene bounding box, compass, scale bar, altitude legend, hover station details, and measurement readouts
+- `src/app/three_d_viewer/ThreeDViewerViewportWidget.*` for the QQuickWidget host that embeds the viewport item into the Widgets application
 - `src/app/three_d_viewer/ThreeDViewerProjection.*` for viewer-space projection math shared by the widget host and future render surfaces
-- `src/app/three_d_viewer/ThreeDViewerViewportRenderer.*` for shared widget/QML-ready scene painting over the model and projection helpers
 - `src/app/three_d_viewer/ThreeDViewerViewportController.*` for widget/QML-ready camera interaction, viewport command handling, and camera-change signaling
 
 Do not add new editor-mode implementation files back into legacy top-level `src/app/` paths when they belong to this layout.

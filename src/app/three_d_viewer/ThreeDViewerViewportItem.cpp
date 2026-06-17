@@ -283,18 +283,55 @@ void appendScaleBar(QSGNode *root,
                    QFont(QStringLiteral("Menlo"), 10));
 }
 
-void appendCompass(QSGNode *root,
-                   QQuickWindow *window,
-                   const ThreeDViewerBounds &bounds,
-                   const ThreeDViewerCamera &camera,
-                   int viewportWidth,
-                   int viewportHeight)
+double normalizeDegrees(double value)
+{
+    value = std::fmod(value, 360.0);
+    if (value < 0.0) {
+        value += 360.0;
+    }
+    return value;
+}
+
+double cameraHeadingDegrees(const ThreeDViewerCamera &camera)
+{
+    const ThreeDViewerVec3 forward = camera.forwardVector();
+    return normalizeDegrees(std::atan2(forward.x, forward.y) * 180.0 / kPi);
+}
+
+double cameraInclinationDegrees(const ThreeDViewerCamera &camera)
+{
+    const ThreeDViewerVec3 forward = camera.forwardVector();
+    return std::atan2(-forward.z, std::hypot(forward.x, forward.y)) * 180.0 / kPi;
+}
+
+QVector<QPointF> projectedArc(const QPointF &center, double radius, double startDegrees, double endDegrees, int segments = 20)
+{
+    QVector<QPointF> points;
+    points.reserve(segments + 1);
+    for (int index = 0; index <= segments; ++index) {
+        const double t = double(index) / double(segments);
+        const double angle = (startDegrees + (endDegrees - startDegrees) * t) * kPi / 180.0;
+        points.push_back(QPointF(center.x() + std::cos(angle) * radius, center.y() + std::sin(angle) * radius));
+    }
+    return points;
+}
+
+QVector<QPointF> projectedCircle(const QPointF &center, double radius, int segments);
+
+void appendCompassIndicator(QSGNode *root,
+                            QQuickWindow *window,
+                            const ThreeDViewerBounds &bounds,
+                            const ThreeDViewerCamera &camera,
+                            int viewportWidth,
+                            int viewportHeight,
+                            const QPointF &center)
 {
     if (window == nullptr || !bounds.valid) {
         return;
     }
 
-    const QPointF center(56.0, double(viewportHeight) - 112.0);
+    Q_UNUSED(viewportHeight);
+
     const ThreeDViewerVec3 worldNorth{0.0, 1.0, 0.0};
     const ThreeDViewerVec3 sceneCenter = boundsCenter(bounds);
     const ThreeDViewerVec3 northPoint{sceneCenter.x + worldNorth.x * 100.0, sceneCenter.y + worldNorth.y * 100.0, sceneCenter.z + worldNorth.z * 100.0};
@@ -312,6 +349,10 @@ void appendCompass(QSGNode *root,
         }
     }
 
+    const QVector<QPointF> disk = projectedCircle(center, 18.0, 24);
+    appendGeometryNode(root, disk, QSGGeometry::DrawTriangleFan, QColor(16, 32, 128, 230), 1.0);
+    appendClosedPolyline(root, disk, QColor(QStringLiteral("#2563eb")), 1.0);
+
     const QPointF tip = center + arrow;
     QVector<QPointF> shaft;
     shaft << center << tip;
@@ -328,27 +369,69 @@ void appendCompass(QSGNode *root,
     appendTextNode(root,
                    window,
                    QStringLiteral("N"),
-                   QPointF(center.x() - 5.0, center.y() - 42.0),
+                   QPointF(center.x() - 5.0, center.y() - 30.0),
                    QColor(QStringLiteral("#f8fafc")),
                    QFont(QStringLiteral("Menlo"), 12, QFont::Bold));
     appendTextNode(root,
                    window,
                    QStringLiteral("S"),
-                   QPointF(center.x() - 5.0, center.y() + 26.0),
+                   QPointF(center.x() - 5.0, center.y() + 20.0),
                    QColor(QStringLiteral("#94a3b8")),
                    QFont(QStringLiteral("Menlo"), 9));
+    appendTextNode(root,
+                   window,
+                   QLocale::system().toString(cameraHeadingDegrees(camera), 'f', 0) + QStringLiteral("°"),
+                   QPointF(center.x() - 14.0, center.y() + 34.0),
+                   QColor(QStringLiteral("#67e8f9")),
+                   QFont(QStringLiteral("Menlo"), 8));
+}
+
+void appendViewAngleIndicator(QSGNode *root,
+                              QQuickWindow *window,
+                              const ThreeDViewerCamera &camera,
+                              const QPointF &center)
+{
+    if (window == nullptr) {
+        return;
+    }
+
+    const double viewAngle = std::clamp(cameraInclinationDegrees(camera), 0.0, 90.0);
+    const QVector<QPointF> arc = projectedArc(center, 16.0, 200.0, 340.0, 18);
+    appendGeometryNode(root, arc, QSGGeometry::DrawLineStrip, QColor(QStringLiteral("#2563eb")), 1.8);
+
+    const double radians = (200.0 + (340.0 - 200.0) * (viewAngle / 90.0)) * kPi / 180.0;
+    const QPointF tip(center.x() + std::cos(radians) * 16.0,
+                      center.y() + std::sin(radians) * 16.0);
+    QVector<QPointF> indicator;
+    indicator << center << tip;
+    appendGeometryNode(root, indicator, QSGGeometry::DrawLines, QColor(QStringLiteral("#f59e0b")), 2.2);
+
+    const QPointF headLeft(-std::sin(radians) * 0.14 * 16.0, std::cos(radians) * 0.14 * 16.0);
+    const QPointF headRight(std::sin(radians) * 0.14 * 16.0, -std::cos(radians) * 0.14 * 16.0);
+    QVector<QPointF> head;
+    head << tip
+         << tip + headLeft
+         << tip + headRight;
+    appendGeometryNode(root, head, QSGGeometry::DrawTriangles, QColor(QStringLiteral("#f97316")), 1.0);
+
+    appendTextNode(root,
+                   window,
+                   QLocale::system().toString(viewAngle, 'f', 0) + QStringLiteral("°"),
+                   QPointF(center.x() - 14.0, center.y() + 30.0),
+                   QColor(QStringLiteral("#67e8f9")),
+                   QFont(QStringLiteral("Menlo"), 8));
 }
 
 void appendAltitudeLegend(QSGNode *root,
                           QQuickWindow *window,
                           const ThreeDViewerBounds &bounds,
-                          int viewportHeight)
+                          const QPointF &origin)
 {
     if (window == nullptr || !bounds.valid) {
         return;
     }
 
-    const QRectF legendRect(20.0, double(viewportHeight) - 280.0, 18.0, 180.0);
+    const QRectF legendRect(origin, QSizeF(18.0, 180.0));
     const int steps = 24;
     for (int index = 0; index < steps; ++index) {
         const double top = legendRect.top() + legendRect.height() * double(index) / double(steps);
@@ -1291,8 +1374,10 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
 
     appendBoundingBox(root, camera, bounds, viewportWidth, viewportHeight, QColor(QStringLiteral("#ff0000")));
     appendScaleBar(root, window(), camera, bounds, viewportWidth, viewportHeight);
-    appendCompass(root, window(), bounds, camera, viewportWidth, viewportHeight);
-    appendAltitudeLegend(root, window(), bounds, viewportHeight);
+    const QPointF altitudeOrigin(20.0, double(viewportHeight) - 280.0);
+    appendAltitudeLegend(root, window(), bounds, altitudeOrigin);
+    appendCompassIndicator(root, window(), bounds, camera, viewportWidth, viewportHeight, QPointF(34.0, altitudeOrigin.y() + 212.0));
+    appendViewAngleIndicator(root, window(), camera, QPointF(94.0, altitudeOrigin.y() + 212.0));
     appendSceneStatisticsOverlay(root, window(), current.sceneModel, viewportWidth, viewportHeight);
 
     const QFont cardTitleFont(QStringLiteral("Menlo"), 11, QFont::Bold);

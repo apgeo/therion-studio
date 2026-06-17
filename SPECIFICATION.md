@@ -301,7 +301,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The 3D viewer shall apply the selected mesh-coloring mode to centerline shots as well as meshes.
 - The 3D viewer toolbar shall expose a measurement toggle with a ruler icon that activates station-to-station measurement.
 - The 3D viewer viewport shall draw a visible wireframe bounding box for the current scene extent when the scene has valid bounds.
-- The 3D viewer viewport shall show a compass, scale bar, and altitude legend as screen-space overlays when scene bounds are available.
+- The 3D viewer viewport shall show a compass, view-angle indicator, scale bar, and altitude legend as screen-space overlays when scene bounds are available, with the compass and view-angle indicator placed together below the altitude legend.
 - The 3D viewer viewport shall show the full station reference and depth when the pointer hovers a station marker.
 - The 3D viewer viewport shall show a cave length and cave depth summary overlay for the loaded scene, derived from underground centerline shots only and excluding surface, splay, and duplicate shots as well as surface geometry.
 - The 3D viewer inspector shall expose a measurement-mode control that lets the user click two station markers and inspect the 3D distance, azimuth, and vertical difference between them.

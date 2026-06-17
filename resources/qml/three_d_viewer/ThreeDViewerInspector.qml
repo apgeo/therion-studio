@@ -69,28 +69,6 @@ Rectangle {
                         wrapMode: Text.WrapAnywhere
                         color: "#404040"
                     }
-
-                    GridLayout {
-                        Layout.fillWidth: true
-                        columns: 2
-                        columnSpacing: 10
-                        rowSpacing: 4
-
-                        Label { text: qsTr("Surveys"); color: "#202020" }
-                        Label { text: inspectorState ? String(inspectorState.surveyCount) : "0"; color: "#202020" }
-
-                        Label { text: qsTr("Stations"); color: "#202020" }
-                        Label { text: inspectorState ? String(inspectorState.stationCount) : "0"; color: "#202020" }
-
-                        Label { text: qsTr("Shots"); color: "#202020" }
-                        Label { text: inspectorState ? String(inspectorState.shotCount) : "0"; color: "#202020" }
-
-                        Label { text: qsTr("Meshes"); color: "#202020" }
-                        Label { text: inspectorState ? String(inspectorState.meshCount) : "0"; color: "#202020" }
-
-                        Label { text: qsTr("Surfaces"); color: "#202020" }
-                        Label { text: inspectorState ? String(inspectorState.surfaceCount) : "0"; color: "#202020" }
-                    }
                 }
             }
 

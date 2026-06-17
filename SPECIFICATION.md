@@ -303,6 +303,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The 3D viewer viewport shall draw a visible wireframe bounding box for the current scene extent when the scene has valid bounds.
 - The 3D viewer viewport shall show a compass, scale bar, and altitude legend as screen-space overlays when scene bounds are available.
 - The 3D viewer viewport shall show the full station reference and depth when the pointer hovers a station marker.
+- The 3D viewer viewport shall show a cave length and cave depth summary overlay for the loaded scene, derived from underground centerline shots only and excluding surface, splay, and duplicate shots as well as surface geometry.
 - The 3D viewer inspector shall expose a measurement-mode control that lets the user click two station markers and inspect the 3D distance, azimuth, and vertical difference between them.
 - Unsupported files shall offer an "Open Externally" action.
 - File rows shall offer duplicate, rename, and delete actions; deleting an open file shall ask for confirmation, close the corresponding open document after any unsaved-change close prompt is resolved, and then delete the file.

@@ -16,11 +16,13 @@ class ThreeDViewerInspectorState final : public QObject
     Q_PROPERTY(QString filePath READ filePath WRITE setFilePath NOTIFY filePathChanged)
     Q_PROPERTY(int meshColorMode READ meshColorMode WRITE setMeshColorMode NOTIFY meshColorModeChanged)
     Q_PROPERTY(bool measurementMode READ measurementMode WRITE setMeasurementMode NOTIFY measurementModeChanged)
-    Q_PROPERTY(int surveyCount READ surveyCount NOTIFY sceneCountsChanged)
-    Q_PROPERTY(int stationCount READ stationCount NOTIFY sceneCountsChanged)
-    Q_PROPERTY(int shotCount READ shotCount NOTIFY sceneCountsChanged)
-    Q_PROPERTY(int meshCount READ meshCount NOTIFY sceneCountsChanged)
-    Q_PROPERTY(int surfaceCount READ surfaceCount NOTIFY sceneCountsChanged)
+    Q_PROPERTY(QString caveLengthText READ caveLengthText NOTIFY sceneMetricsChanged)
+    Q_PROPERTY(QString caveDepthText READ caveDepthText NOTIFY sceneMetricsChanged)
+    Q_PROPERTY(int surveyCount READ surveyCount NOTIFY sceneMetricsChanged)
+    Q_PROPERTY(int stationCount READ stationCount NOTIFY sceneMetricsChanged)
+    Q_PROPERTY(int shotCount READ shotCount NOTIFY sceneMetricsChanged)
+    Q_PROPERTY(int meshCount READ meshCount NOTIFY sceneMetricsChanged)
+    Q_PROPERTY(int surfaceCount READ surfaceCount NOTIFY sceneMetricsChanged)
 
 public:
     explicit ThreeDViewerInspectorState(QObject *parent = nullptr);
@@ -34,6 +36,8 @@ public:
     bool measurementMode() const;
     void setMeasurementMode(bool measurementMode);
 
+    QString caveLengthText() const;
+    QString caveDepthText() const;
     int surveyCount() const;
     int stationCount() const;
     int shotCount() const;
@@ -46,12 +50,14 @@ signals:
     void filePathChanged();
     void meshColorModeChanged();
     void measurementModeChanged();
-    void sceneCountsChanged();
+    void sceneMetricsChanged();
 
 private:
     QString filePath_;
     ThreeDViewerMeshColorMode meshColorMode_ = ThreeDViewerMeshColorMode::Survey;
     bool measurementMode_ = false;
+    QString caveLengthText_;
+    QString caveDepthText_;
     int surveyCount_ = 0;
     int stationCount_ = 0;
     int shotCount_ = 0;

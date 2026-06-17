@@ -5408,13 +5408,25 @@ subtype blocks</translation>
         <source>Vertical difference</source>
         <translation type="unfinished">Zvislý rozdiel</translation>
     </message>
+    <message>
+        <source>Scene</source>
+        <translation type="unfinished">Scéna</translation>
+    </message>
+    <message>
+        <source>Cave length</source>
+        <translation type="unfinished">Dĺžka jaskyne</translation>
+    </message>
+    <message>
+        <source>Cave depth</source>
+        <translation type="unfinished">Hĺbka jaskyne</translation>
+    </message>
 </context>
 <context>
     <name>ThreeDViewerInspector</name>
     <message>
         <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="16"/>
         <source>Scene</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Scéna</translation>
     </message>
     <message>
         <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="37"/>

@@ -2,6 +2,8 @@
 
 #include "ThreeDViewerProjection.h"
 
+#include "../../core/ThreeDViewerSceneStatistics.h"
+
 #include <QCoreApplication>
 #include <QHoverEvent>
 #include <QFont>
@@ -391,6 +393,89 @@ qreal appendTextCard(QSGNode *root,
                      const QString &title,
                      const QString &body,
                      const QPointF &position,
+                     qreal width);
+
+QString formatMeters(double value)
+{
+    return QLocale::system().toString(value, 'f', std::abs(value) < 10.0 ? 1 : 0) + QStringLiteral(" m");
+}
+
+qreal measureTextCardHeight(const QString &title, const QString &body)
+{
+    const QStringList lines = body.split(QLatin1Char('\n'));
+    const QFont titleFont(QStringLiteral("Menlo"), 11, QFont::Bold);
+    const QFont bodyFont(QStringLiteral("Menlo"), 10);
+    const QFontMetrics titleMetrics(titleFont);
+    const QFontMetrics bodyMetrics(bodyFont);
+    const qreal paddingTop = 12.0;
+    const qreal paddingBottom = 12.0;
+    const qreal titleGap = 9.0;
+    const qreal bodyLineHeight = bodyMetrics.height();
+    qreal bodyHeight = 0.0;
+    for (const QString &line : lines) {
+        bodyHeight += line.isEmpty() ? bodyLineHeight * 0.7 : bodyLineHeight;
+    }
+    return paddingTop + titleMetrics.height() + titleGap + bodyHeight + paddingBottom;
+}
+
+void appendSceneStatisticsOverlay(QSGNode *root,
+                                  QQuickWindow *window,
+                                  const ThreeDViewerSceneModel &sceneModel,
+                                  int viewportWidth,
+                                  int viewportHeight)
+{
+    Q_UNUSED(viewportWidth);
+    Q_UNUSED(viewportHeight);
+
+    const ThreeDViewerSceneStatistics statistics = computeThreeDViewerSceneStatistics(sceneModel);
+    if (sceneModel.isEmpty() || (statistics.caveLengthMeters <= 0.0 && statistics.caveDepthMeters <= 0.0)) {
+        return;
+    }
+
+    const QString title = statistics.sceneTitle.isEmpty()
+        ? QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Scene")
+        : statistics.sceneTitle;
+    const QFont titleFont(QStringLiteral("Menlo"), 9, QFont::Bold);
+    const QFont bodyFont(QStringLiteral("Menlo"), 8);
+    const QColor accentColor(QStringLiteral("#38bdf8"));
+    const QColor bodyColor(QStringLiteral("#cbd5e1"));
+    const qreal left = 20.0;
+    const qreal top = 20.0;
+    qreal currentY = top;
+
+    appendTextNode(root,
+                   window,
+                   title,
+                   QPointF(left, currentY),
+                   accentColor,
+                   titleFont);
+    currentY += 18.0;
+
+    appendTextNode(root,
+                   window,
+                   QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Cave length")
+                       + QStringLiteral(": ")
+                       + formatMeters(statistics.caveLengthMeters),
+                   QPointF(left, currentY),
+                   bodyColor,
+                   bodyFont);
+    currentY += 14.0;
+
+    appendTextNode(root,
+                   window,
+                   QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Cave depth")
+                       + QStringLiteral(": ")
+                       + formatMeters(statistics.caveDepthMeters),
+                   QPointF(left, currentY),
+                   bodyColor,
+                   bodyFont);
+}
+
+qreal appendTextCard(QSGNode *root,
+                     QQuickWindow *window,
+                     const QString &title,
+                     const QString &body,
+                     const QPointF &position,
                      qreal width)
 {
     if (window == nullptr || title.isEmpty() || body.isEmpty()) {
@@ -744,6 +829,7 @@ void ThreeDViewerViewportItem::setSceneModel(const ThreeDViewerSceneModel &scene
         sceneModel_ = sceneModel;
         hoveredStationId_ = 0;
         hasHoveredStation_ = false;
+        hoveredStationScreenPosition_ = QPointF();
         measurementStartStationId_ = 0;
         hasMeasurementStartStation_ = false;
         measurementEndStationId_ = 0;
@@ -818,13 +904,16 @@ void ThreeDViewerViewportItem::hoverMoveEvent(QHoverEvent *event)
                                                                std::max(1, int(height())));
     const quint32 hoveredStationId = station != nullptr ? station->id : 0;
     const bool hasHoveredStation = station != nullptr;
+    const QPointF hoveredStationScreenPosition = event->position();
 
     bool changed = false;
     {
         QMutexLocker locker(&mutex_);
-        if (hasHoveredStation_ != hasHoveredStation || hoveredStationId_ != hoveredStationId) {
+        if (hasHoveredStation_ != hasHoveredStation || hoveredStationId_ != hoveredStationId
+            || hoveredStationScreenPosition_ != hoveredStationScreenPosition) {
             hoveredStationId_ = hoveredStationId;
             hasHoveredStation_ = hasHoveredStation;
+            hoveredStationScreenPosition_ = hoveredStationScreenPosition;
             changed = true;
         }
     }
@@ -843,6 +932,7 @@ void ThreeDViewerViewportItem::hoverLeaveEvent(QHoverEvent *event)
         if (hasHoveredStation_ || hoveredStationId_ != 0) {
             hoveredStationId_ = 0;
             hasHoveredStation_ = false;
+            hoveredStationScreenPosition_ = QPointF();
             changed = true;
         }
     }
@@ -1203,6 +1293,7 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
     appendScaleBar(root, window(), camera, bounds, viewportWidth, viewportHeight);
     appendCompass(root, window(), bounds, camera, viewportWidth, viewportHeight);
     appendAltitudeLegend(root, window(), bounds, viewportHeight);
+    appendSceneStatisticsOverlay(root, window(), current.sceneModel, viewportWidth, viewportHeight);
 
     const QFont cardTitleFont(QStringLiteral("Menlo"), 11, QFont::Bold);
     const QFont cardBodyFont(QStringLiteral("Menlo"), 10);
@@ -1238,18 +1329,26 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
                          + QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Click another station to finish.")
                    : QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Click a station to start measuring."))
         : QString();
-    const qreal cardWidth = std::max(stationBody.isEmpty() ? 280.0 : cardWidthForText(stationTitle, stationBody),
-                                     measurementBody.isEmpty() ? 280.0 : cardWidthForText(measurementTitle, measurementBody));
+    const qreal stationCardWidth = stationBody.isEmpty() ? 280.0 : cardWidthForText(stationTitle, stationBody);
+    const qreal measurementCardWidth = measurementBody.isEmpty() ? 280.0 : cardWidthForText(measurementTitle, measurementBody);
+    const qreal cardWidth = std::max(stationCardWidth, measurementCardWidth);
     const qreal cardX = std::max(20.0, double(viewportWidth) - cardWidth - 20.0);
 
     qreal nextCardY = 20.0;
     if (!stationBody.isEmpty()) {
-        nextCardY += appendTextCard(root,
-                                    window(),
-                                    stationTitle,
-                                    stationBody,
-                                    QPointF(cardX, nextCardY),
-                                    cardWidth) + 12.0;
+        const qreal stationCardHeight = measureTextCardHeight(stationTitle, stationBody);
+        const qreal hoverX = std::clamp(current.hoveredStationScreenPosition.x() + 18.0,
+                                        20.0,
+                                        double(viewportWidth) - stationCardWidth - 20.0);
+        const qreal hoverY = std::clamp(current.hoveredStationScreenPosition.y() + 18.0,
+                                        20.0,
+                                        double(viewportHeight) - stationCardHeight - 20.0);
+        appendTextCard(root,
+                       window(),
+                       stationTitle,
+                       stationBody,
+                       QPointF(hoverX, hoverY),
+                       stationCardWidth);
     }
 
     if (current.measurementMode) {
@@ -1259,21 +1358,21 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
                                         measurementTitle,
                                         measurementBody,
                                         QPointF(cardX, nextCardY),
-                                        cardWidth) + 12.0;
+                                        measurementCardWidth) + 12.0;
         } else if (measurementStartStation != nullptr) {
             nextCardY += appendTextCard(root,
                                         window(),
                                         measurementTitle,
                                         measurementBody,
                                         QPointF(cardX, nextCardY),
-                                        cardWidth) + 12.0;
+                                        measurementCardWidth) + 12.0;
         } else {
             nextCardY += appendTextCard(root,
                                         window(),
                                         measurementTitle,
                                         measurementBody,
                                         QPointF(cardX, nextCardY),
-                                        cardWidth) + 12.0;
+                                        measurementCardWidth) + 12.0;
         }
     }
 
@@ -1374,6 +1473,7 @@ ThreeDViewerViewportItem::Snapshot ThreeDViewerViewportItem::snapshot() const
     current.measurementMode = measurementMode_;
     current.hasHoveredStation = hasHoveredStation_;
     current.hoveredStationId = hoveredStationId_;
+    current.hoveredStationScreenPosition = hoveredStationScreenPosition_;
     current.hasMeasurementStartStation = hasMeasurementStartStation_;
     current.measurementStartStationId = measurementStartStationId_;
     current.hasMeasurementEndStation = hasMeasurementEndStation_;

@@ -1,11 +1,23 @@
 #include "ThreeDViewerInspectorState.h"
 
+#include <QLocale>
+#include "../../core/ThreeDViewerSceneStatistics.h"
+
+#include <cmath>
+
 namespace TherionStudio
 {
+
+QString formatMeters(double value)
+{
+    return QLocale::system().toString(value, 'f', std::abs(value) < 10.0 ? 1 : 0) + QStringLiteral(" m");
+}
 
 ThreeDViewerInspectorState::ThreeDViewerInspectorState(QObject *parent)
     : QObject(parent)
 {
+    caveLengthText_ = formatMeters(0.0);
+    caveDepthText_ = formatMeters(0.0);
 }
 
 QString ThreeDViewerInspectorState::filePath() const
@@ -56,6 +68,16 @@ void ThreeDViewerInspectorState::setMeasurementMode(bool measurementMode)
     emit measurementModeChanged();
 }
 
+QString ThreeDViewerInspectorState::caveLengthText() const
+{
+    return caveLengthText_;
+}
+
+QString ThreeDViewerInspectorState::caveDepthText() const
+{
+    return caveDepthText_;
+}
+
 int ThreeDViewerInspectorState::surveyCount() const
 {
     return surveyCount_;
@@ -83,23 +105,29 @@ int ThreeDViewerInspectorState::surfaceCount() const
 
 void ThreeDViewerInspectorState::setSceneModel(const ThreeDViewerSceneModel &sceneModel)
 {
+    const ThreeDViewerSceneStatistics statistics = computeThreeDViewerSceneStatistics(sceneModel);
     const int newSurveyCount = sceneModel.surveys.size();
     const int newStationCount = sceneModel.stations.size();
     const int newShotCount = sceneModel.shots.size();
     const int newMeshCount = sceneModel.meshGroups.size();
     const int newSurfaceCount = sceneModel.surfaces.size();
+    const QString newCaveLengthText = formatMeters(statistics.caveLengthMeters);
+    const QString newCaveDepthText = formatMeters(statistics.caveDepthMeters);
 
     if (surveyCount_ == newSurveyCount && stationCount_ == newStationCount && shotCount_ == newShotCount &&
-        meshCount_ == newMeshCount && surfaceCount_ == newSurfaceCount) {
+        meshCount_ == newMeshCount && surfaceCount_ == newSurfaceCount &&
+        caveLengthText_ == newCaveLengthText && caveDepthText_ == newCaveDepthText) {
         return;
     }
 
+    caveLengthText_ = newCaveLengthText;
+    caveDepthText_ = newCaveDepthText;
     surveyCount_ = newSurveyCount;
     stationCount_ = newStationCount;
     shotCount_ = newShotCount;
     meshCount_ = newMeshCount;
     surfaceCount_ = newSurfaceCount;
-    emit sceneCountsChanged();
+    emit sceneMetricsChanged();
 }
 
 } // namespace TherionStudio

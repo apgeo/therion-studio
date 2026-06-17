@@ -5,6 +5,7 @@
 #include "ThreeDViewerViewportController.h"
 
 #include <QMutex>
+#include <QPointF>
 #include <QQuickItem>
 
 #include <array>
@@ -52,6 +53,7 @@ private:
         bool measurementMode = false;
         bool hasHoveredStation = false;
         quint32 hoveredStationId = 0;
+        QPointF hoveredStationScreenPosition;
         bool hasMeasurementStartStation = false;
         quint32 measurementStartStationId = 0;
         bool hasMeasurementEndStation = false;
@@ -71,6 +73,7 @@ private:
     ThreeDViewerViewportController controller_;
     quint32 hoveredStationId_ = 0;
     bool hasHoveredStation_ = false;
+    QPointF hoveredStationScreenPosition_;
     quint32 measurementStartStationId_ = 0;
     bool hasMeasurementStartStation_ = false;
     quint32 measurementEndStationId_ = 0;

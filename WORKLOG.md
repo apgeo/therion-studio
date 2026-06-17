@@ -73,7 +73,10 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - The 3D viewer station markers are now smaller and less visually noisy on dense views.
 - The 3D viewer viewport now shows hover details for station markers, including full station reference, and supports a ruler-toggle measurement mode for station-to-station distance, azimuth, and vertical difference.
 - The 3D viewer hover card layout now uses a more even padding balance and larger typography for station details.
-- The 3D viewer viewport now overlays cave length and cave depth, computed from underground centerline shots only and excluding surface, splay, duplicate, and surface geometry contributions. The altitude legend now has the compass and view-angle indicators grouped beneath it like Loch.
+- The 3D viewer viewport now overlays cave length and cave depth, computed from underground centerline shots only and excluding surface, splay, duplicate, and surface geometry contributions. The altitude legend now has a simplified compass and a view-angle indicator grouped beneath it like Loch, the view-angle semicircle uses a horizontal split and signed upper/lower motion, the scale bar is a simple line with end ticks, and the altitude legend includes more intermediate labels.
+- The 3D viewer scene statistics overlay now uses larger typography for the project title and cave length/depth summary.
+- The 3D viewer HUD scale bar is aligned to the compass row with a matching gap to the view-angle indicator.
+- The 3D viewer toolbar now uses arrow-based icons for `Top View` and `Side View`.
 - The transitional QWidget viewport renderer has been removed now that the scene-graph viewport is the sole active render path.
 - The viewport controller is now split out from the widget shell so camera interaction and camera-change signaling can be reused by future render surfaces.
 - The layer inspector is now backed by a shared list model so the QWidget view and future QML UI can use the same visibility/count state.

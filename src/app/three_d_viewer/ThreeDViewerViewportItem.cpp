@@ -170,6 +170,14 @@ void appendTextNodeWithShadow(QSGNode *root,
     appendTextNode(root, window, text, position, color, font);
 }
 
+QPointF centeredTextOrigin(const QFont &font, const QString &text, const QPointF &center)
+{
+    const QFontMetricsF metrics(font);
+    const QRectF bounds = metrics.boundingRect(text);
+    return QPointF(center.x() - bounds.width() * 0.5,
+                   center.y() - bounds.height() * 0.5);
+}
+
 QVector<QPointF> projectPolyline(const ThreeDViewerCamera &camera,
                                  const QVector<ThreeDViewerVec3> &points,
                                  int viewportWidth,
@@ -247,6 +255,7 @@ void appendScaleBar(QSGNode *root,
                     QQuickWindow *window,
                     const ThreeDViewerCamera &camera,
                     const ThreeDViewerBounds &bounds,
+                    const QPointF &origin,
                     int viewportWidth,
                     int viewportHeight)
 {
@@ -267,18 +276,30 @@ void appendScaleBar(QSGNode *root,
     const double targetPixels = std::clamp(double(viewportWidth) * 0.18, 80.0, 180.0);
     const double scaleLength = niceScaleLength(worldPerPixel * targetPixels);
     const double barPixels = scaleLength / std::max(0.000001, worldPerPixel);
-    const QRectF barRect(56.0, double(viewportHeight) - 56.0, barPixels, 6.0);
+    const QPointF barLeft(origin.x(), origin.y() + 20.0);
+    const QPointF barRight(origin.x() + barPixels, origin.y() + 20.0);
+    const QPointF barTickTopLeft(origin.x(), origin.y() + 14.0);
+    const QPointF barTickBottomLeft(origin.x(), origin.y() + 26.0);
+    const QPointF barTickTopRight(origin.x() + barPixels, origin.y() + 14.0);
+    const QPointF barTickBottomRight(origin.x() + barPixels, origin.y() + 26.0);
 
-    appendSolidRect(root, barRect, QColor(QStringLiteral("#1d4ed8")));
-    QVector<QPointF> barBorder;
-    barBorder << barRect.topLeft() << barRect.topRight() << barRect.bottomRight() << barRect.bottomLeft();
-    appendClosedPolyline(root, barBorder, QColor(QStringLiteral("#60a5fa")), 1.0);
+    QVector<QPointF> barLine;
+    barLine << barLeft << barRight;
+    appendGeometryNode(root, barLine, QSGGeometry::DrawLines, QColor(QStringLiteral("#1d4ed8")), 2.0);
+
+    QVector<QPointF> leftTick;
+    leftTick << barTickTopLeft << barTickBottomLeft;
+    appendGeometryNode(root, leftTick, QSGGeometry::DrawLines, QColor(QStringLiteral("#60a5fa")), 1.0);
+
+    QVector<QPointF> rightTick;
+    rightTick << barTickTopRight << barTickBottomRight;
+    appendGeometryNode(root, rightTick, QSGGeometry::DrawLines, QColor(QStringLiteral("#60a5fa")), 1.0);
 
     const QString label = QLocale::system().toString(scaleLength, 'f', scaleLength < 10.0 ? 1 : 0) + QStringLiteral(" m");
     appendTextNode(root,
                    window,
                    label,
-                   QPointF(barRect.left(), barRect.top() - 16.0),
+                   centeredTextOrigin(QFont(QStringLiteral("Menlo"), 10), label, QPointF(barLeft.x() + barPixels * 0.5, barLeft.y() - 10.0)),
                    QColor(QStringLiteral("#38bdf8")),
                    QFont(QStringLiteral("Menlo"), 10));
 }
@@ -350,40 +371,36 @@ void appendCompassIndicator(QSGNode *root,
     }
 
     const QVector<QPointF> disk = projectedCircle(center, 18.0, 24);
-    appendGeometryNode(root, disk, QSGGeometry::DrawTriangleFan, QColor(16, 32, 128, 230), 1.0);
     appendClosedPolyline(root, disk, QColor(QStringLiteral("#2563eb")), 1.0);
+
+    QVector<QPointF> crossHorizontal;
+    crossHorizontal << QPointF(center.x() - 18.0, center.y())
+                    << QPointF(center.x() + 18.0, center.y());
+    appendGeometryNode(root, crossHorizontal, QSGGeometry::DrawLines, QColor(QStringLiteral("#2563eb")), 1.0);
+
+    QVector<QPointF> crossVertical;
+    crossVertical << QPointF(center.x(), center.y() - 18.0)
+                  << QPointF(center.x(), center.y() + 18.0);
+    appendGeometryNode(root, crossVertical, QSGGeometry::DrawLines, QColor(QStringLiteral("#2563eb")), 1.0);
 
     const QPointF tip = center + arrow;
     QVector<QPointF> shaft;
     shaft << center << tip;
-    appendGeometryNode(root, shaft, QSGGeometry::DrawLines, QColor(QStringLiteral("#f59e0b")), 2.2);
-
-    QVector<QPointF> head;
-    const QPointF leftHead(-arrow.y() * 0.18, arrow.x() * 0.18);
-    const QPointF rightHead(arrow.y() * 0.18, -arrow.x() * 0.18);
-    head << tip
-         << tip + leftHead
-         << tip + rightHead;
-    appendGeometryNode(root, head, QSGGeometry::DrawTriangles, QColor(QStringLiteral("#f97316")), 1.0);
+    appendGeometryNode(root, shaft, QSGGeometry::DrawLines, QColor(QStringLiteral("#f59e0b")), 2.4);
 
     appendTextNode(root,
                    window,
                    QStringLiteral("N"),
-                   QPointF(center.x() - 5.0, center.y() - 30.0),
+                   centeredTextOrigin(QFont(QStringLiteral("Menlo"), 12, QFont::Bold), QStringLiteral("N"), QPointF(center.x(), center.y() - 28.0)),
                    QColor(QStringLiteral("#f8fafc")),
                    QFont(QStringLiteral("Menlo"), 12, QFont::Bold));
+    const QString headingText = QLocale::system().toString(cameraHeadingDegrees(camera), 'f', 0) + QStringLiteral("°");
     appendTextNode(root,
                    window,
-                   QStringLiteral("S"),
-                   QPointF(center.x() - 5.0, center.y() + 20.0),
-                   QColor(QStringLiteral("#94a3b8")),
-                   QFont(QStringLiteral("Menlo"), 9));
-    appendTextNode(root,
-                   window,
-                   QLocale::system().toString(cameraHeadingDegrees(camera), 'f', 0) + QStringLiteral("°"),
-                   QPointF(center.x() - 14.0, center.y() + 34.0),
+                   headingText,
+                   centeredTextOrigin(QFont(QStringLiteral("Menlo"), 9), headingText, QPointF(center.x(), center.y() + 30.0)),
                    QColor(QStringLiteral("#67e8f9")),
-                   QFont(QStringLiteral("Menlo"), 8));
+                   QFont(QStringLiteral("Menlo"), 9));
 }
 
 void appendViewAngleIndicator(QSGNode *root,
@@ -395,19 +412,30 @@ void appendViewAngleIndicator(QSGNode *root,
         return;
     }
 
-    const double viewAngle = std::clamp(cameraInclinationDegrees(camera), 0.0, 90.0);
-    const QVector<QPointF> arc = projectedArc(center, 16.0, 200.0, 340.0, 18);
+    const double signedViewAngle = std::clamp(cameraInclinationDegrees(camera), -90.0, 90.0);
+    const QVector<QPointF> arc = projectedArc(center, 18.0, -90.0, 90.0, 18);
     appendGeometryNode(root, arc, QSGGeometry::DrawLineStrip, QColor(QStringLiteral("#2563eb")), 1.8);
 
-    const double radians = (200.0 + (340.0 - 200.0) * (viewAngle / 90.0)) * kPi / 180.0;
-    const QPointF tip(center.x() + std::cos(radians) * 16.0,
-                      center.y() + std::sin(radians) * 16.0);
+    QVector<QPointF> closure;
+    closure << QPointF(center.x(), center.y() - 18.0)
+            << QPointF(center.x(), center.y() + 18.0);
+    appendGeometryNode(root, closure, QSGGeometry::DrawLines, QColor(QStringLiteral("#2563eb")), 1.0);
+
+    QVector<QPointF> axis;
+    axis << QPointF(center.x(), center.y())
+         << QPointF(center.x() + 18.0, center.y());
+    appendGeometryNode(root, axis, QSGGeometry::DrawLines, QColor(QStringLiteral("#2563eb")), 1.0);
+
+    const double radians = -signedViewAngle * kPi / 180.0;
+    const double needleLength = 26.0;
+    const QPointF tip(center.x() + std::cos(radians) * needleLength,
+                      center.y() + std::sin(radians) * needleLength);
     QVector<QPointF> indicator;
     indicator << center << tip;
-    appendGeometryNode(root, indicator, QSGGeometry::DrawLines, QColor(QStringLiteral("#f59e0b")), 2.2);
+    appendGeometryNode(root, indicator, QSGGeometry::DrawLines, QColor(QStringLiteral("#f59e0b")), 2.4);
 
-    const QPointF headLeft(-std::sin(radians) * 0.14 * 16.0, std::cos(radians) * 0.14 * 16.0);
-    const QPointF headRight(std::sin(radians) * 0.14 * 16.0, -std::cos(radians) * 0.14 * 16.0);
+    const QPointF headLeft(-std::sin(radians) * 0.14 * needleLength, std::cos(radians) * 0.14 * needleLength);
+    const QPointF headRight(std::sin(radians) * 0.14 * needleLength, -std::cos(radians) * 0.14 * needleLength);
     QVector<QPointF> head;
     head << tip
          << tip + headLeft
@@ -416,10 +444,10 @@ void appendViewAngleIndicator(QSGNode *root,
 
     appendTextNode(root,
                    window,
-                   QLocale::system().toString(viewAngle, 'f', 0) + QStringLiteral("°"),
-                   QPointF(center.x() - 14.0, center.y() + 30.0),
+                   QLocale::system().toString(signedViewAngle, 'f', 0) + QStringLiteral("°"),
+                   centeredTextOrigin(QFont(QStringLiteral("Menlo"), 9), QLocale::system().toString(signedViewAngle, 'f', 0) + QStringLiteral("°"), QPointF(center.x(), center.y() + 30.0)),
                    QColor(QStringLiteral("#67e8f9")),
-                   QFont(QStringLiteral("Menlo"), 8));
+                   QFont(QStringLiteral("Menlo"), 9));
 }
 
 void appendAltitudeLegend(QSGNode *root,
@@ -431,7 +459,7 @@ void appendAltitudeLegend(QSGNode *root,
         return;
     }
 
-    const QRectF legendRect(origin, QSizeF(18.0, 180.0));
+    const QRectF legendRect(origin, QSizeF(16.0, 180.0));
     const int steps = 24;
     for (int index = 0; index < steps; ++index) {
         const double top = legendRect.top() + legendRect.height() * double(index) / double(steps);
@@ -454,13 +482,24 @@ void appendAltitudeLegend(QSGNode *root,
     const QFont labelFont(QStringLiteral("Menlo"), 8);
     const double minimum = bounds.minimum.z;
     const double maximum = bounds.maximum.z;
-    const double mid = (minimum + maximum) * 0.5;
-    const std::array<std::pair<double, QPointF>, 3> labels = {
-        std::make_pair(maximum, QPointF(legendRect.right() + 8.0, legendRect.top() - 4.0)),
-        std::make_pair(mid, QPointF(legendRect.right() + 8.0, legendRect.center().y() - 4.0)),
-        std::make_pair(minimum, QPointF(legendRect.right() + 8.0, legendRect.bottom() - 8.0)),
+    const double range = maximum - minimum;
+    const std::array<double, 5> values = {
+        maximum,
+        maximum - range * 0.25,
+        maximum - range * 0.50,
+        maximum - range * 0.75,
+        minimum,
     };
-    for (const auto &[value, position] : labels) {
+    const std::array<QPointF, 5> positions = {
+        QPointF(legendRect.right() + 8.0, legendRect.top() - 4.0),
+        QPointF(legendRect.right() + 8.0, legendRect.top() + legendRect.height() * 0.25 - 4.0),
+        QPointF(legendRect.right() + 8.0, legendRect.center().y() - 4.0),
+        QPointF(legendRect.right() + 8.0, legendRect.top() + legendRect.height() * 0.75 - 4.0),
+        QPointF(legendRect.right() + 8.0, legendRect.bottom() - 8.0),
+    };
+    for (size_t index = 0; index < values.size(); ++index) {
+        const double value = values[index];
+        const QPointF position = positions[index];
         const QString label = QLocale::system().toString(value, 'f', std::abs(value) < 10.0 ? 1 : 0) + QStringLiteral(" m");
         appendTextNode(root,
                        window,
@@ -518,8 +557,8 @@ void appendSceneStatisticsOverlay(QSGNode *root,
     const QString title = statistics.sceneTitle.isEmpty()
         ? QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Scene")
         : statistics.sceneTitle;
-    const QFont titleFont(QStringLiteral("Menlo"), 9, QFont::Bold);
-    const QFont bodyFont(QStringLiteral("Menlo"), 8);
+    const QFont titleFont(QStringLiteral("Menlo"), 11, QFont::Bold);
+    const QFont bodyFont(QStringLiteral("Menlo"), 10);
     const QColor accentColor(QStringLiteral("#38bdf8"));
     const QColor bodyColor(QStringLiteral("#cbd5e1"));
     const qreal left = 20.0;
@@ -532,7 +571,7 @@ void appendSceneStatisticsOverlay(QSGNode *root,
                    QPointF(left, currentY),
                    accentColor,
                    titleFont);
-    currentY += 18.0;
+    currentY += 22.0;
 
     appendTextNode(root,
                    window,
@@ -542,7 +581,7 @@ void appendSceneStatisticsOverlay(QSGNode *root,
                    QPointF(left, currentY),
                    bodyColor,
                    bodyFont);
-    currentY += 14.0;
+    currentY += 18.0;
 
     appendTextNode(root,
                    window,
@@ -1373,11 +1412,18 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
     }
 
     appendBoundingBox(root, camera, bounds, viewportWidth, viewportHeight, QColor(QStringLiteral("#ff0000")));
-    appendScaleBar(root, window(), camera, bounds, viewportWidth, viewportHeight);
-    const QPointF altitudeOrigin(20.0, double(viewportHeight) - 280.0);
+    const QPointF altitudeOrigin(20.0, double(viewportHeight) - 300.0);
     appendAltitudeLegend(root, window(), bounds, altitudeOrigin);
-    appendCompassIndicator(root, window(), bounds, camera, viewportWidth, viewportHeight, QPointF(34.0, altitudeOrigin.y() + 212.0));
-    appendViewAngleIndicator(root, window(), camera, QPointF(94.0, altitudeOrigin.y() + 212.0));
+    const double hudRowY = altitudeOrigin.y() + 240.0;
+    appendCompassIndicator(root, window(), bounds, camera, viewportWidth, viewportHeight, QPointF(36.0, hudRowY));
+    appendViewAngleIndicator(root, window(), camera, QPointF(98.0, hudRowY));
+    appendScaleBar(root,
+                   window(),
+                   camera,
+                   bounds,
+                   QPointF(160.0, hudRowY - 20.0),
+                   viewportWidth,
+                   viewportHeight);
     appendSceneStatisticsOverlay(root, window(), current.sceneModel, viewportWidth, viewportHeight);
 
     const QFont cardTitleFont(QStringLiteral("Menlo"), 11, QFont::Bold);

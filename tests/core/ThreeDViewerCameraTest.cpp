@@ -15,6 +15,7 @@ private slots:
     void resetRestoresDefaultOrientation();
     void appliesViewPresets();
     void turnsAroundBlueAxis();
+    void pitchSignFlipsForwardVectorZ();
     void orbitPanAndZoomModifyState();
 };
 
@@ -85,6 +86,16 @@ void ThreeDViewerCameraTest::turnsAroundBlueAxis()
     QCOMPARE(after.target.x, before.target.x);
     QCOMPARE(after.target.y, before.target.y);
     QCOMPARE(after.target.z, before.target.z);
+}
+
+void ThreeDViewerCameraTest::pitchSignFlipsForwardVectorZ()
+{
+    ThreeDViewerCamera camera;
+    camera.setState({{0.0, 0.0, 0.0}, 0.0, 0.6, 20.0});
+    QVERIFY(camera.forwardVector().z < 0.0);
+
+    camera.setState({{0.0, 0.0, 0.0}, 0.0, -0.6, 20.0});
+    QVERIFY(camera.forwardVector().z > 0.0);
 }
 
 void ThreeDViewerCameraTest::orbitPanAndZoomModifyState()

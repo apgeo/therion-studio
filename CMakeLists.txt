@@ -723,6 +723,8 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/trash-2.svg
     resources/icons/lucide/undo-2.svg
     resources/icons/lucide/play.svg
+    resources/icons/lucide/arrow-big-down.svg
+    resources/icons/lucide/arrow-big-right.svg
     resources/icons/lucide/view-top.svg
     resources/icons/lucide/view-side.svg
     resources/icons/lucide/view-roll-left.svg

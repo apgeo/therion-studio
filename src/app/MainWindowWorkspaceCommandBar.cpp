@@ -311,8 +311,8 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceThreeDViewerResetButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Reset 3D View"), QStringLiteral("locate-fixed"));
     workspaceThreeDViewerMeasureButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Measure points"), QStringLiteral("ruler"));
     workspaceThreeDViewerMeasureButton_->setCheckable(true);
-    workspaceThreeDViewerTopViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Top View"), QStringLiteral("view-top"));
-    workspaceThreeDViewerSideViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Side View"), QStringLiteral("view-side"));
+    workspaceThreeDViewerTopViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Top View"), QStringLiteral("arrow-big-down"));
+    workspaceThreeDViewerSideViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Side View"), QStringLiteral("arrow-big-right"));
     workspaceThreeDViewerRollLeftButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Left"), QStringLiteral("view-roll-left"));
     workspaceThreeDViewerRollRightButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Right"), QStringLiteral("view-roll-right"));
     viewerLayout->addWidget(workspaceThreeDViewerFitButton_);

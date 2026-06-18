@@ -583,7 +583,10 @@ qreal measureTextCardHeight(const QString &title, const QString &body)
     for (const QString &line : lines) {
         bodyHeight += line.isEmpty() ? bodyLineHeight * 0.7 : bodyLineHeight;
     }
-    return paddingTop + titleMetrics.height() + titleGap + bodyHeight + paddingBottom;
+
+    const qreal titleHeight = title.isEmpty() ? 0.0 : titleMetrics.height();
+    const qreal titleSpacing = title.isEmpty() ? 0.0 : titleGap;
+    return paddingTop + titleHeight + titleSpacing + bodyHeight + paddingBottom;
 }
 
 void appendSceneStatisticsOverlay(QSGNode *root,
@@ -656,7 +659,6 @@ qreal appendTextCard(QSGNode *root,
     const QFontMetrics titleMetrics(titleFont);
     const QFontMetrics bodyMetrics(bodyFont);
     const qreal paddingLeft = 12.0;
-    const qreal paddingRight = 12.0;
     const qreal paddingTop = 12.0;
     const qreal paddingBottom = 12.0;
     const qreal titleGap = 9.0;
@@ -681,6 +683,7 @@ qreal appendTextCard(QSGNode *root,
                    titleFont);
 
     qreal bodyY = paddingTop + titleMetrics.height() + titleGap;
+    const qreal textX = cardRect.left() + paddingLeft;
     for (const QString &line : lines) {
         if (line.isEmpty()) {
             bodyY += bodyLineHeight * 0.7;
@@ -690,7 +693,7 @@ qreal appendTextCard(QSGNode *root,
         appendTextNode(root,
                        window,
                        line,
-                       cardRect.topLeft() + QPointF(paddingLeft, bodyY),
+                       QPointF(textX, cardRect.top() + bodyY),
                        QColor(QStringLiteral("#e2e8f0")),
                        bodyFont);
         bodyY += bodyLineHeight;

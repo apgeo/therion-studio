@@ -23,6 +23,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Keep point `-align` rendering anchored like Therion so map canvas placement matches saved point options.
 - Clear pending Selection inspector insert state when Smart Area confirmation returns to Select mode.
 - Keep release notes, package metadata, and CI artifact workflow aligned with `v2026.6.5`.
+- Keep Linux CI and package-builder Qt dependency lists aligned with the Qt Quick/QML-backed 3D viewer surface.
 
 ### Unified Source DOM / Transactions
 

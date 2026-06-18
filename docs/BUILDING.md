@@ -275,7 +275,7 @@ which builds and smoke-tests generated release artifacts in containers.
 On supported Ubuntu and Debian-family systems, install the development dependencies with:
 
 ```sh
-sudo apt-get install qt6-base-dev qt6-base-dev-tools qt6-svg-dev qt6-tools-dev qt6-tools-dev-tools
+sudo apt-get install qt6-base-dev qt6-base-dev-tools qt6-declarative-dev qt6-svg-dev qt6-tools-dev qt6-tools-dev-tools
 ```
 
 Then use the same CMake configure/build flow as macOS.

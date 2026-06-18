@@ -1,7 +1,6 @@
 #include "MainWindow.h"
 
 #include "MainWindowDocumentHelpers.h"
-#include "LucideIconFactory.h"
 #include "../core/TherionFileTypes.h"
 
 #include <QAbstractItemDelegate>
@@ -115,13 +114,8 @@ protected:
             return;
         }
 
-        if (TherionStudio::isThreeDViewerArtifactFilePath(filePath)) {
-            ensureThreeDViewerIcon(option->widget);
-            option->icon = threeDViewerFileIcon_;
-        } else {
-            ensureTherionIcon(option->widget);
-            option->icon = therionFileIcon_;
-        }
+        ensureTherionIcon(option->widget);
+        option->icon = therionFileIcon_;
     }
 
 private:
@@ -137,23 +131,9 @@ private:
         therionIconInitialized_ = true;
     }
 
-    void ensureThreeDViewerIcon(const QWidget *widget) const
-    {
-        if (threeDViewerIconInitialized_) {
-            return;
-        }
-
-        const QPalette palette = widget != nullptr ? widget->palette() : QApplication::palette();
-        const qreal devicePixelRatio = widget != nullptr ? widget->devicePixelRatioF() : 1.0;
-        threeDViewerFileIcon_ = TherionStudio::themedLucideIcon(QStringLiteral("blender"), palette, 16, devicePixelRatio);
-        threeDViewerIconInitialized_ = true;
-    }
-
     const QFileSystemModel *model_ = nullptr;
     mutable bool therionIconInitialized_ = false;
     mutable QIcon therionFileIcon_;
-    mutable bool threeDViewerIconInitialized_ = false;
-    mutable QIcon threeDViewerFileIcon_;
 };
 
 QString duplicateFilePath(const QString &sourcePath)

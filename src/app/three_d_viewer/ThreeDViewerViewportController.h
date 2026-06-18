@@ -28,6 +28,7 @@ public:
     void rotateLeft();
     void rotateRight();
     void rotateByRadians(double radians);
+    void adjustTiltDegrees(double deltaDegrees);
     void setFacingDegrees(double degrees);
     void setTiltDegrees(double degrees);
     void setDistanceMeters(double distanceMeters);

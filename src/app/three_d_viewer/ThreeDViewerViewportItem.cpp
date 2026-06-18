@@ -10,6 +10,7 @@
 #include <QFontMetrics>
 #include <QFontMetricsF>
 #include <QGuiApplication>
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QQuickWindow>
 #include <QRectF>
@@ -39,6 +40,7 @@ constexpr int kSurfacesLayer = 4;
 constexpr double kPi = 3.14159265358979323846;
 constexpr int kAutoRotationIntervalMs = 16;
 constexpr qint64 kMaxAutoRotationStepMs = 100;
+constexpr double kKeyboardTiltStepDegrees = 5.0;
 constexpr qreal kStationLabelOffsetX = 8.0;
 constexpr qreal kStationLabelOffsetY = -8.0;
 constexpr qreal kStationLabelPadding = 4.0;
@@ -1007,6 +1009,16 @@ ThreeDViewerVec3 subtract(const ThreeDViewerVec3 &left, const ThreeDViewerVec3 &
     return {left.x - right.x, left.y - right.y, left.z - right.z};
 }
 
+ThreeDViewerVec3 add(const ThreeDViewerVec3 &left, const ThreeDViewerVec3 &right)
+{
+    return {left.x + right.x, left.y + right.y, left.z + right.z};
+}
+
+ThreeDViewerVec3 scaled(const ThreeDViewerVec3 &value, double factor)
+{
+    return {value.x * factor, value.y * factor, value.z * factor};
+}
+
 double dot(const ThreeDViewerVec3 &left, const ThreeDViewerVec3 &right)
 {
     return left.x * right.x + left.y * right.y + left.z * right.z;
@@ -1037,7 +1049,7 @@ ThreeDViewerVec3 normalizedOrFallback(const ThreeDViewerVec3 &value, const Three
 
 QColor scaledColor(const QColor &baseColor, double factor, int alpha)
 {
-    const double clampedFactor = std::clamp(factor, 0.0, 1.0);
+    const double clampedFactor = std::clamp(factor, 0.0, 1.35);
     QColor color;
     color.setRgbF(std::clamp(baseColor.redF() * clampedFactor, 0.0, 1.0),
                   std::clamp(baseColor.greenF() * clampedFactor, 0.0, 1.0),
@@ -1049,7 +1061,7 @@ QColor scaledColor(const QColor &baseColor, double factor, int alpha)
 struct MeshTriangleRender
 {
     std::array<QPointF, 3> screenPoints;
-    QColor color;
+    std::array<QColor, 3> colors;
     double depth = 0.0;
 };
 
@@ -1071,9 +1083,26 @@ QColor sceneColorForMode(ThreeDViewerMeshColorMode mode,
                          const ThreeDViewerBounds &bounds)
 {
     if (mode == ThreeDViewerMeshColorMode::None) {
-        return QColor(210, 214, 220, 210);
+        return QColor(226, 232, 240, 225);
     }
     return depthColor(depth, bounds);
+}
+
+QColor shadedMeshVertexColor(ThreeDViewerMeshColorMode mode,
+                             const ThreeDViewerVec3 &vertex,
+                             const ThreeDViewerVec3 &normal,
+                             const ThreeDViewerVec3 &cameraPosition,
+                             const ThreeDViewerVec3 &lightDirection,
+                             const ThreeDViewerVec3 &fillLightDirection,
+                             const ThreeDViewerBounds &bounds)
+{
+    const ThreeDViewerVec3 viewDirection = normalizedOrFallback(subtract(cameraPosition, vertex), {0.0, 0.0, 1.0});
+    const double diffuse = std::pow(std::clamp(std::abs(dot(normal, lightDirection)), 0.0, 1.0), 1.35);
+    const double fill = std::clamp(std::abs(dot(normal, fillLightDirection)), 0.0, 1.0);
+    const double rim = std::pow(1.0 - std::clamp(std::abs(dot(normal, viewDirection)), 0.0, 1.0), 2.0);
+    const double shade = std::clamp(0.42 + diffuse * 0.58 + fill * 0.08 + rim * 0.16, 0.38, 1.24);
+    const int alpha = mode == ThreeDViewerMeshColorMode::None ? 225 : 205;
+    return scaledColor(sceneColorForMode(mode, vertex.z, bounds), shade, alpha);
 }
 
 QSGGeometryNode *createMeshNode(const QVector<MeshTriangleRender> &triangles)
@@ -1088,11 +1117,13 @@ QSGGeometryNode *createMeshNode(const QVector<MeshTriangleRender> &triangles)
 
     int vertexIndex = 0;
     for (const MeshTriangleRender &triangle : triangles) {
-        const uchar red = static_cast<uchar>(triangle.color.red());
-        const uchar green = static_cast<uchar>(triangle.color.green());
-        const uchar blue = static_cast<uchar>(triangle.color.blue());
-        const uchar alpha = static_cast<uchar>(triangle.color.alpha());
-        for (const QPointF &point : triangle.screenPoints) {
+        for (qsizetype pointIndex = 0; pointIndex < qsizetype(triangle.screenPoints.size()); ++pointIndex) {
+            const QPointF &point = triangle.screenPoints.at(pointIndex);
+            const QColor &color = triangle.colors.at(pointIndex);
+            const uchar red = static_cast<uchar>(color.red());
+            const uchar green = static_cast<uchar>(color.green());
+            const uchar blue = static_cast<uchar>(color.blue());
+            const uchar alpha = static_cast<uchar>(color.alpha());
             vertexData[vertexIndex++].set(float(point.x()), float(point.y()), red, green, blue, alpha);
         }
     }
@@ -1112,8 +1143,10 @@ ThreeDViewerViewportItem::ThreeDViewerViewportItem(QQuickItem *parent)
     : QQuickItem(parent)
 {
     setFlag(ItemHasContents, true);
+    setFlag(ItemIsFocusScope, true);
     setAcceptedMouseButtons(Qt::AllButtons);
     setAcceptHoverEvents(true);
+    setActiveFocusOnTab(true);
     autoRotationTimer_.setInterval(kAutoRotationIntervalMs);
     autoRotationTimer_.setTimerType(Qt::PreciseTimer);
 
@@ -1365,6 +1398,41 @@ void ThreeDViewerViewportItem::hoverLeaveEvent(QHoverEvent *event)
     }
 }
 
+void ThreeDViewerViewportItem::keyPressEvent(QKeyEvent *event)
+{
+    if (event == nullptr) {
+        return;
+    }
+
+    if (event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) {
+        QQuickItem::keyPressEvent(event);
+        return;
+    }
+
+    switch (event->key()) {
+    case Qt::Key_Left:
+        controller_.rotateLeft();
+        event->accept();
+        return;
+    case Qt::Key_Right:
+        controller_.rotateRight();
+        event->accept();
+        return;
+    case Qt::Key_Up:
+        controller_.adjustTiltDegrees(-kKeyboardTiltStepDegrees);
+        event->accept();
+        return;
+    case Qt::Key_Down:
+        controller_.adjustTiltDegrees(kKeyboardTiltStepDegrees);
+        event->accept();
+        return;
+    default:
+        break;
+    }
+
+    QQuickItem::keyPressEvent(event);
+}
+
 void ThreeDViewerViewportItem::fitToScene()
 {
     controller_.fitToScene(snapshot().sceneModel,
@@ -1479,9 +1547,32 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
         QVector<MeshTriangleRender> triangles;
         triangles.reserve(256);
         const ThreeDViewerVec3 cameraPosition = camera.position();
-        const ThreeDViewerVec3 lightDirection = normalizedOrFallback(camera.forwardVector(), {0.0, 0.0, -1.0});
+        const ThreeDViewerVec3 lightDirection = normalizedOrFallback({-0.35, -0.55, 0.76}, {0.0, 0.0, 1.0});
+        const ThreeDViewerVec3 fillLightDirection = normalizedOrFallback(scaled(camera.forwardVector(), -1.0), {0.0, 0.0, 1.0});
 
         for (const ThreeDViewerMeshGroup &mesh : current.sceneModel.meshGroups) {
+            QVector<ThreeDViewerVec3> vertexNormals;
+            vertexNormals.resize(mesh.vertices.size());
+            for (ThreeDViewerVec3 &normal : vertexNormals) {
+                normal = {0.0, 0.0, 0.0};
+            }
+
+            for (const std::array<quint32, 3> &triangle : mesh.triangles) {
+                if (triangle[0] >= quint32(mesh.vertices.size())
+                    || triangle[1] >= quint32(mesh.vertices.size())
+                    || triangle[2] >= quint32(mesh.vertices.size())) {
+                    continue;
+                }
+
+                const ThreeDViewerVec3 &v0 = mesh.vertices.at(triangle[0]);
+                const ThreeDViewerVec3 &v1 = mesh.vertices.at(triangle[1]);
+                const ThreeDViewerVec3 &v2 = mesh.vertices.at(triangle[2]);
+                const ThreeDViewerVec3 faceNormal = normalizedOrFallback(cross(subtract(v1, v0), subtract(v2, v0)), {0.0, 0.0, 1.0});
+                vertexNormals[int(triangle[0])] = add(vertexNormals.at(int(triangle[0])), faceNormal);
+                vertexNormals[int(triangle[1])] = add(vertexNormals.at(int(triangle[1])), faceNormal);
+                vertexNormals[int(triangle[2])] = add(vertexNormals.at(int(triangle[2])), faceNormal);
+            }
+
             for (const std::array<quint32, 3> &triangle : mesh.triangles) {
                 if (triangle[0] >= quint32(mesh.vertices.size())
                     || triangle[1] >= quint32(mesh.vertices.size())
@@ -1499,14 +1590,15 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
                     continue;
                 }
 
-                const ThreeDViewerVec3 normal = normalizedOrFallback(cross(subtract(v1, v0), subtract(v2, v0)), {0.0, 0.0, 1.0});
-                const double diffuse = std::clamp(std::abs(dot(normal, lightDirection)), 0.0, 1.0);
-                const double averageDepth = (v0.z + v1.z + v2.z) / 3.0;
-                const QColor baseColor = sceneColorForMode(current.meshColorMode, averageDepth, bounds);
-                const QColor color = scaledColor(baseColor, 0.45 + diffuse * 0.55, 190);
+                const ThreeDViewerVec3 faceNormal = normalizedOrFallback(cross(subtract(v1, v0), subtract(v2, v0)), {0.0, 0.0, 1.0});
+                const ThreeDViewerVec3 n0 = normalizedOrFallback(vertexNormals.at(int(triangle[0])), faceNormal);
+                const ThreeDViewerVec3 n1 = normalizedOrFallback(vertexNormals.at(int(triangle[1])), faceNormal);
+                const ThreeDViewerVec3 n2 = normalizedOrFallback(vertexNormals.at(int(triangle[2])), faceNormal);
                 triangles.push_back(MeshTriangleRender{
                     {p0.screenPosition, p1.screenPosition, p2.screenPosition},
-                    color,
+                    {shadedMeshVertexColor(current.meshColorMode, v0, n0, cameraPosition, lightDirection, fillLightDirection, bounds),
+                     shadedMeshVertexColor(current.meshColorMode, v1, n1, cameraPosition, lightDirection, fillLightDirection, bounds),
+                     shadedMeshVertexColor(current.meshColorMode, v2, n2, cameraPosition, lightDirection, fillLightDirection, bounds)},
                     (dot(subtract(v0, cameraPosition), camera.forwardVector())
                      + dot(subtract(v1, cameraPosition), camera.forwardVector())
                      + dot(subtract(v2, cameraPosition), camera.forwardVector())) / 3.0,
@@ -1852,6 +1944,8 @@ void ThreeDViewerViewportItem::mousePressEvent(QMouseEvent *event)
     if (event == nullptr) {
         return;
     }
+
+    forceActiveFocus(Qt::MouseFocusReason);
 
     if (event->button() == Qt::LeftButton) {
         const Snapshot current = snapshot();

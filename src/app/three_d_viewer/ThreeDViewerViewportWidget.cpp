@@ -25,6 +25,7 @@ ThreeDViewerViewportWidget::ThreeDViewerViewportWidget(QWidget *parent)
     : QQuickWidget(parent)
 {
     registerViewportTypes();
+    setFocusPolicy(Qt::StrongFocus);
     setResizeMode(QQuickWidget::SizeRootObjectToView);
     setClearColor(QColor(QStringLiteral("#000000")));
     connect(this, &QQuickWidget::statusChanged, this, [this](QQuickWidget::Status) {

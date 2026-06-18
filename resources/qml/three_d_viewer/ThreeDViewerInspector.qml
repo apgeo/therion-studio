@@ -4,7 +4,20 @@ import QtQuick.Layouts
 
 Rectangle {
     id: root
-    color: "#f6f6f6"
+    color: pagePalette.base
+
+    SystemPalette {
+        id: pagePalette
+        colorGroup: SystemPalette.Active
+    }
+
+    readonly property color sectionColor: pagePalette.base
+    readonly property color textColor: pagePalette.text
+    readonly property color mutedTextColor: pagePalette.mid
+    readonly property color borderColor: pagePalette.mid
+    readonly property int outerMargin: 0
+    readonly property int sectionPadding: 12
+    readonly property int sectionHeaderHeight: 32
 
     function distanceToSlider(distance) {
         return Math.log(Math.max(4, distance)) / Math.LN10
@@ -18,23 +31,40 @@ Rectangle {
         id: flick
         anchors.fill: parent
         contentWidth: width
-        contentHeight: contentColumn.implicitHeight
+        contentHeight: contentColumn.implicitHeight + root.outerMargin * 2
         clip: true
 
         ColumnLayout {
             id: contentColumn
-            width: flick.width - 24
-            x: 12
-            y: 12
+            width: flick.width - root.outerMargin * 2
+            x: root.outerMargin
+            y: root.outerMargin
             spacing: 12
 
-            GroupBox {
+            Rectangle {
                 Layout.fillWidth: true
-                title: qsTr("Camera")
+                Layout.preferredHeight: cameraContent.implicitHeight + root.sectionHeaderHeight + root.sectionPadding
+                color: root.sectionColor
+                border.color: root.borderColor
+                border.width: 1
+
+                Label {
+                    x: root.sectionPadding
+                    y: 10
+                    text: qsTr("Camera")
+                    color: root.textColor
+                    font.bold: true
+                }
 
                 ColumnLayout {
-                    width: parent.width
-                    spacing: 8
+                    id: cameraContent
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.leftMargin: root.sectionPadding
+                    anchors.rightMargin: root.sectionPadding
+                    anchors.topMargin: root.sectionHeaderHeight
+                    spacing: 10
 
                     RowLayout {
                         Layout.fillWidth: true
@@ -43,7 +73,7 @@ Rectangle {
                         Label {
                             Layout.preferredWidth: 120
                             text: qsTr("Compass")
-                            color: "#202020"
+                            color: root.textColor
                         }
 
                         Slider {
@@ -65,7 +95,7 @@ Rectangle {
                             Layout.preferredWidth: 64
                             horizontalAlignment: Text.AlignRight
                             text: qsTr("%1°").arg(Math.round(cameraFacingSlider.value))
-                            color: "#202020"
+                            color: root.textColor
                         }
                     }
 
@@ -76,7 +106,7 @@ Rectangle {
                         Label {
                             Layout.preferredWidth: 120
                             text: qsTr("Tilt")
-                            color: "#202020"
+                            color: root.textColor
                         }
 
                         Slider {
@@ -98,7 +128,7 @@ Rectangle {
                             Layout.preferredWidth: 64
                             horizontalAlignment: Text.AlignRight
                             text: qsTr("%1°").arg(Math.round(cameraTiltSlider.value))
-                            color: "#202020"
+                            color: root.textColor
                         }
                     }
 
@@ -109,7 +139,7 @@ Rectangle {
                         Label {
                             Layout.preferredWidth: 120
                             text: qsTr("Distance")
-                            color: "#202020"
+                            color: root.textColor
                         }
 
                         Slider {
@@ -131,7 +161,7 @@ Rectangle {
                             Layout.preferredWidth: 64
                             horizontalAlignment: Text.AlignRight
                             text: qsTr("%1 m").arg(Math.round(root.sliderToDistance(cameraDistanceSlider.value)))
-                            color: "#202020"
+                            color: root.textColor
                         }
                     }
 
@@ -143,7 +173,7 @@ Rectangle {
                         Label {
                             Layout.preferredWidth: 120
                             text: qsTr("Focal Length")
-                            color: "#202020"
+                            color: root.textColor
                         }
 
                         Slider {
@@ -167,7 +197,7 @@ Rectangle {
                             enabled: cameraFocalLengthSlider.enabled
                             horizontalAlignment: Text.AlignRight
                             text: qsTr("%1 mm").arg(Math.round(cameraFocalLengthSlider.value))
-                            color: "#202020"
+                            color: root.textColor
                         }
                     }
 
@@ -177,19 +207,36 @@ Rectangle {
                         visible: inspectorState ? inspectorState.orthographicProjection : false
                         text: qsTr("Focal length is disabled in orthographic projection.")
                         wrapMode: Text.WordWrap
-                        color: "#606060"
+                        color: root.mutedTextColor
                         font.pointSize: Math.max(8, Qt.application.font.pointSize - 1)
                     }
                 }
             }
 
-            GroupBox {
+            Rectangle {
                 Layout.fillWidth: true
-                title: qsTr("Layers")
+                Layout.preferredHeight: layersContent.implicitHeight + root.sectionHeaderHeight + root.sectionPadding
+                color: root.sectionColor
+                border.color: root.borderColor
+                border.width: 1
+
+                Label {
+                    x: root.sectionPadding
+                    y: 10
+                    text: qsTr("Layers")
+                    color: root.textColor
+                    font.bold: true
+                }
 
                 Column {
-                    width: parent.width
-                    spacing: 4
+                    id: layersContent
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.leftMargin: root.sectionPadding
+                    anchors.rightMargin: root.sectionPadding
+                    anchors.topMargin: root.sectionHeaderHeight
+                    spacing: 6
 
                     Repeater {
                         model: layerModel
@@ -206,6 +253,8 @@ Rectangle {
                             tristate: hasChildren
                             checkState: layerChecked
                             text: label
+                            palette.text: root.textColor
+                            palette.buttonText: root.textColor
                             nextCheckState: function() {
                                 return checkState === Qt.Checked ? Qt.Unchecked : Qt.Checked
                             }
@@ -219,13 +268,30 @@ Rectangle {
                 }
             }
 
-            GroupBox {
+            Rectangle {
                 Layout.fillWidth: true
-                title: qsTr("Scene Settings")
+                Layout.preferredHeight: sceneSettingsContent.implicitHeight + root.sectionHeaderHeight + root.sectionPadding
+                color: root.sectionColor
+                border.color: root.borderColor
+                border.width: 1
+
+                Label {
+                    x: root.sectionPadding
+                    y: 10
+                    text: qsTr("Scene Settings")
+                    color: root.textColor
+                    font.bold: true
+                }
 
                 ColumnLayout {
-                    width: parent.width
-                    spacing: 8
+                    id: sceneSettingsContent
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.leftMargin: root.sectionPadding
+                    anchors.rightMargin: root.sectionPadding
+                    anchors.topMargin: root.sectionHeaderHeight
+                    spacing: 10
 
                     RowLayout {
                         Layout.fillWidth: true
@@ -234,7 +300,7 @@ Rectangle {
                         Label {
                             Layout.preferredWidth: 120
                             text: qsTr("Model Coloring")
-                            color: "#202020"
+                            color: root.textColor
                         }
 
                         ComboBox {
@@ -251,6 +317,8 @@ Rectangle {
 
                     CheckBox {
                         text: qsTr("Show Bounding Box")
+                        palette.text: root.textColor
+                        palette.buttonText: root.textColor
                         checked: inspectorState ? inspectorState.showBoundingBox : true
                         onToggled: {
                             if (inspectorState) {
@@ -261,6 +329,8 @@ Rectangle {
 
                     CheckBox {
                         text: qsTr("Show Head-Up Display")
+                        palette.text: root.textColor
+                        palette.buttonText: root.textColor
                         checked: inspectorState ? inspectorState.showHud : true
                         onToggled: {
                             if (inspectorState) {
@@ -271,6 +341,8 @@ Rectangle {
 
                     CheckBox {
                         text: qsTr("Show Title & Stats")
+                        palette.text: root.textColor
+                        palette.buttonText: root.textColor
                         checked: inspectorState ? inspectorState.showInfo : true
                         onToggled: {
                             if (inspectorState) {
@@ -286,7 +358,7 @@ Rectangle {
                         Label {
                             Layout.preferredWidth: 120
                             text: qsTr("Rotation Speed")
-                            color: "#202020"
+                            color: root.textColor
                         }
 
                         Slider {
@@ -308,7 +380,7 @@ Rectangle {
                             Layout.preferredWidth: 64
                             horizontalAlignment: Text.AlignRight
                             text: qsTr("%1°/s").arg(Math.round(rotationSpeedSlider.value))
-                            color: "#202020"
+                            color: root.textColor
                         }
                     }
                 }

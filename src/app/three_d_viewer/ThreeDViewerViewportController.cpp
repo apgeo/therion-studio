@@ -13,6 +13,11 @@ double degreesToRadians(double degrees)
     return degrees * kPi / 180.0;
 }
 
+double radiansToDegrees(double radians)
+{
+    return radians * 180.0 / kPi;
+}
+
 double headingDegreesToYawRadians(double headingDegrees)
 {
     const double headingRadians = degreesToRadians(headingDegrees);
@@ -73,6 +78,15 @@ void ThreeDViewerViewportController::rotateByRadians(double radians)
 
     camera_.yawByRadians(radians);
     emitCameraChanged();
+}
+
+void ThreeDViewerViewportController::adjustTiltDegrees(double deltaDegrees)
+{
+    if (deltaDegrees == 0.0) {
+        return;
+    }
+
+    setTiltDegrees(radiansToDegrees(camera_.state().pitch) + deltaDegrees);
 }
 
 void ThreeDViewerViewportController::setFacingDegrees(double degrees)

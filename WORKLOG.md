@@ -95,6 +95,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - The 3D viewer viewport no longer draws standalone world X/Y/Z axis guide lines over the scene.
 - The 3D viewer Layers default now starts with Stations and Labels hidden, while underground centerline, meshes, and surfaces remain visible.
 - The 3D viewer inspector now uses consistent Title Case for English field and layer labels.
+- The 3D viewer now supports arrow-key yaw/tilt navigation, higher-contrast per-vertex mesh lighting, and a palette-aware QML inspector surface styled closer to the existing QWidget inspectors.
+- The project File sidebar now uses the same Therion badged document icon for `.lox` files as for `.th`, `.th2`, and `thconfig` files.
 - Continue the renderer refinement and the broader Qt Quick/QML shell migration once the GPU-backed viewport proves out the document-open workflow.
 
 ## Blocked / Needs Input

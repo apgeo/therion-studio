@@ -317,8 +317,8 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceThreeDViewerAutoRotateButton_->setCheckable(true);
     workspaceThreeDViewerTopViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Top View"), QStringLiteral("arrow-big-down"));
     workspaceThreeDViewerSideViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Side View"), QStringLiteral("arrow-big-right"));
-    workspaceThreeDViewerRollLeftButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Left"), QStringLiteral("rotate-ccw"));
-    workspaceThreeDViewerRollRightButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Right"), QStringLiteral("rotate-cw"));
+    workspaceThreeDViewerRollLeftButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Left"), QStringLiteral("rotate-cw"));
+    workspaceThreeDViewerRollRightButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Right"), QStringLiteral("rotate-ccw"));
     viewerLayout->addWidget(workspaceThreeDViewerResetButton_);
     viewerLayout->addWidget(workspaceThreeDViewerFitButton_);
     viewerLayout->addWidget(createWorkspaceToolbarSeparator(workspaceThreeDViewerGroup_));

@@ -256,6 +256,7 @@ void MainWindow::changeEvent(QEvent *event)
     case QEvent::ApplicationPaletteChange:
     case QEvent::PaletteChange:
     case QEvent::StyleChange:
+        refreshWorkspaceModeSwitcher();
         refreshWorkspaceIconTheme();
         rebuildStructureSidebar();
         rebuildMapObjectsTree();

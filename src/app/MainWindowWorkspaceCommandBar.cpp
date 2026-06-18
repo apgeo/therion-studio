@@ -248,7 +248,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceModeSwitcher_ = new QWidget(workspaceHost);
     workspaceModeSwitcher_->setObjectName(QStringLiteral("workspaceCommandBar"));
     workspaceModeSwitcher_->setAttribute(Qt::WA_StyledBackground, true);
-    workspaceModeSwitcher_->setStyleSheet(TherionStudio::workspaceCommandBarStyleSheet(palette().color(QPalette::Base),
+    workspaceModeSwitcher_->setStyleSheet(TherionStudio::workspaceCommandBarStyleSheet(palette().color(QPalette::Window),
                                                                                         false,
                                                                                         false));
     auto *hostLayout = new WorkspaceCommandFlowLayout(workspaceModeSwitcher_);
@@ -551,7 +551,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         && mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Visual;
     const bool showZoomTools = showMapModes && !mapPaneDetached;
     const bool showMapTools = showMapModes && !mapPaneDetached;
-    QColor commandBarBackground = palette().color(QPalette::Base);
+    QColor commandBarBackground = palette().color(QPalette::Window);
     if (showTextModes && textTab != nullptr) {
         const QColor sourceSurface = textTab->sourceSurfaceColor();
         if (sourceSurface.isValid()) {

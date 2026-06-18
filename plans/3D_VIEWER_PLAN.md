@@ -50,8 +50,8 @@ The old Therion Loch sources in `therion/loch` remain useful as a behavioral ref
 
 - Compare centerline, mesh, surface, station, label, altitude legend, compass, view-angle indicator, scale bar, and bounding-box rendering against Loch on a small set of known `.lox` files.
 - Add targeted fixes for visual mismatches that affect navigation or interpretation, not cosmetic Loch parity for its own sake.
-- Improve label legibility and density handling. The likely first slice is a user-facing label mode or decluttering policy (`Auto`, `All`, `None`) rather than always drawing every label.
-- Evaluate station marker rendering for dense caves and keep hover/picking usable when stations and labels are hidden.
+- Continue improving station marker and fully qualified label legibility beyond the current automatic overlap suppression, including priority ranking if dense real projects still hide important stations.
+- Evaluate station marker rendering for dense caves and keep hover/picking usable when stations and labels are hidden or decluttered.
 - Decide whether terrain surface rendering should stay enabled by default when large or visually dominant.
 
 ### 2. Performance And Scalability
@@ -60,7 +60,7 @@ The old Therion Loch sources in `therion/loch` remain useful as a behavioral ref
 - Track frame time, load time, memory footprint, node count, vertex count, and label count.
 - Batch or cache static geometry where profiling shows repeated scene-graph rebuild cost.
 - Add spatial or screen-space indexing for station hover and measurement picking if dense projects make linear picking visibly slow.
-- Add label decluttering or level-of-detail before attempting expensive text rendering for every station in large scenes.
+- Extend label level-of-detail only if automatic overlap suppression is insufficient on large scenes.
 - Keep GPU-dependent performance tests separate from fast core/service tests.
 
 ### 3. Data Semantics And Loader Coverage
@@ -110,7 +110,7 @@ The old Therion Loch sources in `therion/loch` remain useful as a behavioral ref
 ## Recommended Next Slices
 
 1. Add or generate a real Therion-exported `.lox` fixture that contains terrain surface chunks and, if available, surface bitmap chunks.
-2. Add a label-density strategy for large scenes, starting with a simple user-facing label mode or automatic declutter.
+2. Profile automatic station marker and label decluttering on dense real projects and add priority ranking if important stations are hidden.
 3. Profile the current Qt Quick scene-graph renderer on a large real cave and record the first concrete bottleneck before refactoring.
 4. Add project-aware generated-artifact discovery only after the desired compile/open workflow is specified.
 

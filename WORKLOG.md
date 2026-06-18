@@ -70,6 +70,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - The 3D viewer canvas now uses a black background to match the Loch-style presentation.
 - The 3D viewer centerline, stations, and labels now use higher-contrast rendering on the black viewport background.
 - The 3D viewer station markers are now smaller and less visually noisy on dense views.
+- The 3D viewer station markers and fully qualified station labels now use automatic screen-space decluttering instead of drawing every overlapping station annotation.
 - The 3D viewer viewport now shows hover details for station markers, including full station reference, and supports a ruler-toggle measurement mode for station-to-station distance, azimuth, and vertical difference.
 - The 3D viewer hover card layout now uses a more even padding balance and larger typography for station details.
 - The 3D viewer viewport now overlays cave length and cave depth, computed from underground centerline shots only and excluding surface, splay, duplicate, and surface geometry contributions. The altitude legend now has a simplified compass and a view-angle indicator grouped beneath it like Loch, the view-angle semicircle uses a horizontal split and signed upper/lower motion, the scale bar is a simple line with end ticks, and the altitude legend includes more intermediate labels.
@@ -98,7 +99,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Broader Therion corpus regression tests for parsing, serialization, source rewrites, indexing, and map/text synchronization.
 - Add old-project integration fixtures for Therion/Metapost runner failures once a fixture exists.
 - Bounded `.xvi` cache policy for very large projects.
-- Station-label declutter: add overlap suppression/priority ranking and optional user-facing `Auto/All/None` label mode.
+- Station marker/label priority ranking follow-up: tune automatic decluttering if dense projects hide important stations.
 - Make line guide-spine rendering explicit in style JSON (`guide_spine_visible`) and remove the fallback when catalog coverage allows it.
 - Apple Pencil/freehand stroke UX and shape-sensitive simplification polish.
 - Additional map-style catalog tuning and SVG-backed symbol evaluation.

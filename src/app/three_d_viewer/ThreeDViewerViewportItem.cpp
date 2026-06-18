@@ -8,9 +8,11 @@
 #include <QHoverEvent>
 #include <QFont>
 #include <QFontMetrics>
+#include <QFontMetricsF>
 #include <QGuiApplication>
 #include <QMouseEvent>
 #include <QQuickWindow>
+#include <QRectF>
 #include <QMutexLocker>
 #include <QSGFlatColorMaterial>
 #include <QSGGeometryNode>
@@ -34,6 +36,10 @@ constexpr int kLabelsLayer = 2;
 constexpr int kMeshesLayer = 3;
 constexpr int kSurfacesLayer = 4;
 constexpr double kPi = 3.14159265358979323846;
+constexpr qreal kStationLabelOffsetX = 8.0;
+constexpr qreal kStationLabelOffsetY = -8.0;
+constexpr qreal kStationLabelPadding = 4.0;
+constexpr qreal kStationMarkerDeclutterRadius = 5.5;
 
 QColor translucentColor(const QColor &color, int alpha)
 {
@@ -167,6 +173,35 @@ void appendTextNodeWithShadow(QSGNode *root,
                    QColor(0, 0, 0, 220),
                    font);
     appendTextNode(root, window, text, position, color, font);
+}
+
+QRectF textBoundsAt(const QString &text, const QFont &font, const QPointF &position)
+{
+    const QFontMetricsF metrics(font);
+    QRectF bounds = metrics.boundingRect(text);
+    bounds.moveTopLeft(position);
+    return bounds.adjusted(-kStationLabelPadding,
+                           -kStationLabelPadding,
+                           kStationLabelPadding,
+                           kStationLabelPadding);
+}
+
+bool intersectsAny(const QRectF &candidate, const QVector<QRectF> &occupied)
+{
+    for (const QRectF &rect : occupied) {
+        if (candidate.intersects(rect)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QRectF markerBoundsAt(const QPointF &center)
+{
+    return QRectF(center.x() - kStationMarkerDeclutterRadius,
+                  center.y() - kStationMarkerDeclutterRadius,
+                  kStationMarkerDeclutterRadius * 2.0,
+                  kStationMarkerDeclutterRadius * 2.0);
 }
 
 QPointF centeredTextOrigin(const QFont &font, const QString &text, const QPointF &center)
@@ -1251,6 +1286,8 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
             return QColor();
         };
 
+        QVector<QRectF> occupiedStationBounds;
+        occupiedStationBounds.reserve(std::min(current.sceneModel.stations.size(), qsizetype(512)));
         for (const ThreeDViewerStation &station : current.sceneModel.stations) {
             const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight);
             if (!projected.visible) {
@@ -1258,6 +1295,13 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
             }
 
             const QColor accentColor = stationAccentColor(station);
+            const bool priorityStation = accentColor.isValid();
+            const QRectF stationBounds = markerBoundsAt(projected.screenPosition);
+            if (!priorityStation && intersectsAny(stationBounds, occupiedStationBounds)) {
+                continue;
+            }
+            occupiedStationBounds.append(stationBounds);
+
             if (accentColor.isValid()) {
                 const QVector<QPointF> outerCircle = projectedCircle(projected.screenPosition, 5.2);
                 appendGeometryNode(root,
@@ -1311,8 +1355,11 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
             return font;
         }();
 
+        QVector<QRectF> occupiedLabelBounds;
+        occupiedLabelBounds.reserve(std::min(current.sceneModel.stations.size(), qsizetype(512)));
         for (const ThreeDViewerStation &station : current.sceneModel.stations) {
-            if (station.name.isEmpty()) {
+            const QString label = current.sceneModel.stationQualifiedName(station);
+            if (label.isEmpty()) {
                 continue;
             }
 
@@ -1321,10 +1368,17 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
                 continue;
             }
 
+            const QPointF labelPosition = projected.screenPosition + QPointF(kStationLabelOffsetX, kStationLabelOffsetY);
+            const QRectF labelBounds = textBoundsAt(label, labelFont, labelPosition);
+            if (intersectsAny(labelBounds, occupiedLabelBounds)) {
+                continue;
+            }
+            occupiedLabelBounds.append(labelBounds);
+
             appendTextNodeWithShadow(root,
                                      window(),
-                                     station.name,
-                                     projected.screenPosition + QPointF(8.0, -8.0),
+                                     label,
+                                     labelPosition,
                                      QColor(QStringLiteral("#f8fafc")),
                                      labelFont);
         }

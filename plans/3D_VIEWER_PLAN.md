@@ -15,7 +15,7 @@ The old Therion Loch sources in `therion/loch` remain useful as a behavioral ref
 - The model coloring mode supports survey and depth palettes and applies consistently to meshes and centerline.
 - The measurement workflow is toolbar-driven with station hover highlighting and station-to-station distance, azimuth, and vertical difference output.
 - The viewport overlays cave length and cave depth computed from underground centerline shots while excluding surface, splay, duplicate, and surface geometry contributions, and shows the altitude legend only when model coloring is set to depth.
-- The inspector is intentionally narrow: model-coloring control plus layer visibility toggles.
+- The inspector is intentionally narrow: model-coloring control plus layer visibility toggles with clean layer names, no visible item counts, data-driven centerline sublayers defaulting to underground-only visibility, disjoint station sublayers only when multiple station classes are present, and one labels toggle. Station markers and labels are constrained to stations attached to currently visible centerline shots.
 - Focused QTest coverage exists for loader behavior, camera math, scene statistics, projection, inspector state/widget, layer model, viewport widget loading, and viewport controller behavior.
 
 ## Goals

@@ -4,6 +4,7 @@
 
 #include <QAbstractListModel>
 #include <QIcon>
+#include <QVector>
 
 #include <array>
 
@@ -33,7 +34,39 @@ public:
         LayerRole,
         VisibleRole,
         CountRole,
-        LabelRole
+        LabelRole,
+        IndentRole,
+        HasChildrenRole,
+        RowRole
+    };
+
+    enum class Feature
+    {
+        Regular = 0,
+        Surface,
+        Splay,
+        Duplicate,
+        Hidden,
+        Entrance,
+        Fixed,
+        Continuation,
+        OtherStation,
+        Count
+    };
+
+    static constexpr int kFeatureCount = static_cast<int>(Feature::Count);
+
+    struct FeatureVisibility
+    {
+        std::array<bool, kFeatureCount> centerline = {
+            true, false, false, false, false, false, false, false, false
+        };
+        std::array<bool, kFeatureCount> stations = {
+            false, false, false, false, false, false, true, false, true
+        };
+        std::array<bool, kFeatureCount> labels = {
+            false, false, false, false, false, false, false, false, false
+        };
     };
 
     explicit ThreeDViewerLayerListModel(QObject *parent = nullptr);
@@ -52,11 +85,27 @@ public:
     void setLayerVisible(Layer layer, bool visible);
     Q_INVOKABLE void setLayerVisible(int layerIndex, bool visible);
     std::array<bool, static_cast<int>(Layer::Count)> layerVisibility() const;
+    FeatureVisibility featureVisibility() const;
 
 signals:
     void layerVisibilityChanged(int layerIndex, bool visible);
 
 private:
+    enum class EntryKind
+    {
+        Layer,
+        CenterlineFeature,
+        StationFeature,
+        LabelFeature
+    };
+
+    struct Entry
+    {
+        EntryKind kind = EntryKind::Layer;
+        Layer layer = Layer::Centerline;
+        Feature feature = Feature::Regular;
+    };
+
     static constexpr int layerCount()
     {
         return kLayerCount;
@@ -69,12 +118,26 @@ private:
 
     QModelIndex layerModelIndex(Layer layer) const;
 
+    void rebuildEntries();
+    int entryIndexForLayer(Layer layer) const;
+    bool entryHasChildren(const Entry &entry) const;
+    Qt::CheckState entryCheckState(const Entry &entry) const;
+    void setEntryVisible(const Entry &entry, bool visible);
+    bool entryVisible(const Entry &entry) const;
+    int entryItemCount(const Entry &entry) const;
+    QString entryLabel(const Entry &entry) const;
+    QString featureLabel(Layer layer, Feature feature) const;
+    bool featurePresentForLayer(Layer layer, Feature feature) const;
+    int featureItemCount(Layer layer, Feature feature) const;
+
     QString layerLabel(Layer layer) const;
     QString layerIconName(Layer layer) const;
     int layerItemCount(Layer layer) const;
 
     ThreeDViewerSceneModel sceneModel_;
     std::array<bool, kLayerCount> layerVisibility_ = {true, true, true, true, true};
+    FeatureVisibility featureVisibility_;
+    QVector<Entry> entries_;
 };
 
 } // namespace TherionStudio

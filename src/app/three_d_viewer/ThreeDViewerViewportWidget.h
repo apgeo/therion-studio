@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../core/ThreeDViewerSceneModel.h"
+#include "ThreeDViewerLayerListModel.h"
 #include "ThreeDViewerMeshColorMode.h"
 #include "ThreeDViewerViewportController.h"
 
@@ -22,6 +23,7 @@ public:
 
     void setSceneModel(const ThreeDViewerSceneModel &sceneModel);
     void setLayerVisibility(const std::array<bool, 5> &layerVisibility);
+    void setFeatureVisibility(const ThreeDViewerLayerListModel::FeatureVisibility &featureVisibility);
     void setMeshColorMode(ThreeDViewerMeshColorMode meshColorMode);
     void setMeasurementMode(bool measurementMode);
     void fitToScene();
@@ -36,6 +38,7 @@ private:
 
     ThreeDViewerSceneModel sceneModel_;
     std::array<bool, 5> layerVisibility_ = {true, true, true, true, true};
+    ThreeDViewerLayerListModel::FeatureVisibility featureVisibility_;
     ThreeDViewerMeshColorMode meshColorMode_ = ThreeDViewerMeshColorMode::Survey;
     bool measurementMode_ = false;
     bool pendingFitToScene_ = false;

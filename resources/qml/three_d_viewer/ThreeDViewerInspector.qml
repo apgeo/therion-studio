@@ -64,16 +64,23 @@ Rectangle {
                         model: layerModel
 
                         delegate: CheckBox {
-                            required property int layerIndex
+                            required property int rowIndex
+                            required property int indent
+                            required property bool hasChildren
                             required property string label
                             required property int layerChecked
 
-                            width: parent.width
-                            checked: layerChecked === Qt.Checked
+                            x: indent * 34
+                            width: parent.width - x
+                            tristate: hasChildren
+                            checkState: layerChecked
                             text: label
-                            onToggled: {
+                            nextCheckState: function() {
+                                return checkState === Qt.Checked ? Qt.Unchecked : Qt.Checked
+                            }
+                            onClicked: {
                                 if (layerModel) {
-                                    layerModel.setLayerVisible(layerIndex, checked)
+                                    layerModel.setLayerVisible(rowIndex, checkState === Qt.Checked)
                                 }
                             }
                         }

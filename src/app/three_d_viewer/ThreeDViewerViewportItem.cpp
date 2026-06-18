@@ -18,6 +18,7 @@
 #include <QSGGeometryNode>
 #include <QSGVertexColorMaterial>
 #include <QSGTextNode>
+#include <QSet>
 #include <QTextLayout>
 #include <QWheelEvent>
 #include <QLocale>
@@ -689,6 +690,7 @@ qreal appendTextCard(QSGNode *root,
 
 const ThreeDViewerStation *pickStationAtPosition(const ThreeDViewerSceneModel &sceneModel,
                                                  const ThreeDViewerCamera &camera,
+                                                 const QSet<quint32> &pickableStationIds,
                                                  const QPointF &screenPosition,
                                                  int viewportWidth,
                                                  int viewportHeight,
@@ -699,6 +701,10 @@ const ThreeDViewerStation *pickStationAtPosition(const ThreeDViewerSceneModel &s
     double bestDistanceSquared = maxDistanceSquared;
 
     for (const ThreeDViewerStation &station : sceneModel.stations) {
+        if (!pickableStationIds.contains(station.id)) {
+            continue;
+        }
+
         const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight);
         if (!projected.visible) {
             continue;
@@ -739,7 +745,7 @@ QString stationDetailsText(const ThreeDViewerSceneModel &sceneModel, const Three
         lines << qualifiedName;
     }
     lines << QString();
-    lines << QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Depth")
+    lines << QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Z")
           + QStringLiteral(": ")
           + QLocale::system().toString(station.position.z, 'f', std::abs(station.position.z) < 10.0 ? 1 : 0)
           + QStringLiteral(" m");
@@ -787,6 +793,110 @@ QString measurementText(const ThreeDViewerSceneModel &sceneModel,
           + QLocale::system().toString(dz, 'f', std::abs(dz) < 10.0 ? 2 : 1)
           + QStringLiteral(" m");
     return lines.join(QLatin1Char('\n'));
+}
+
+using LayerFeature = ThreeDViewerLayerListModel::Feature;
+
+LayerFeature featureForShot(const ThreeDViewerShot &shot)
+{
+    if (shot.duplicate) {
+        return LayerFeature::Duplicate;
+    }
+    if (shot.splay) {
+        return LayerFeature::Splay;
+    }
+    if (shot.surface) {
+        return LayerFeature::Surface;
+    }
+    if (shot.hidden) {
+        return LayerFeature::Hidden;
+    }
+    return LayerFeature::Regular;
+}
+
+bool featureEnabled(const std::array<bool, ThreeDViewerLayerListModel::kFeatureCount> &visibility, LayerFeature feature)
+{
+    return visibility[static_cast<int>(feature)];
+}
+
+bool centerlineShotVisible(const ThreeDViewerShot &shot,
+                           const std::array<bool, 5> &layerVisibility,
+                           const ThreeDViewerLayerListModel::FeatureVisibility &featureVisibility)
+{
+    return layerVisibility.at(kCenterlineLayer)
+        && featureEnabled(featureVisibility.centerline, featureForShot(shot));
+}
+
+QSet<quint32> visibleCenterlineStationIds(const ThreeDViewerSceneModel &sceneModel,
+                                          const std::array<bool, 5> &layerVisibility,
+                                          const ThreeDViewerLayerListModel::FeatureVisibility &featureVisibility)
+{
+    QSet<quint32> stationIds;
+    if (!layerVisibility.at(kCenterlineLayer)) {
+        return stationIds;
+    }
+
+    for (const ThreeDViewerShot &shot : sceneModel.shots) {
+        if (!centerlineShotVisible(shot, layerVisibility, featureVisibility)) {
+            continue;
+        }
+        stationIds.insert(shot.fromStationId);
+        stationIds.insert(shot.toStationId);
+    }
+    return stationIds;
+}
+
+bool stationFeatureEnabled(const ThreeDViewerStation &station,
+                           const std::array<bool, ThreeDViewerLayerListModel::kFeatureCount> &visibility)
+{
+    const LayerFeature stationFeature = station.entrance ? LayerFeature::Entrance
+        : station.fixed ? LayerFeature::Fixed
+        : LayerFeature::OtherStation;
+    return visibility[static_cast<int>(stationFeature)];
+}
+
+bool stationFeatureFiltersActive(const ThreeDViewerSceneModel &sceneModel)
+{
+    bool hasEntrance = false;
+    bool hasFixed = false;
+    bool hasOther = false;
+    for (const ThreeDViewerStation &station : sceneModel.stations) {
+        if (station.entrance) {
+            hasEntrance = true;
+        } else if (station.fixed) {
+            hasFixed = true;
+        } else {
+            hasOther = true;
+        }
+    }
+
+    return int(hasEntrance) + int(hasFixed) + int(hasOther) >= 2;
+}
+
+bool stationVisibleForLayer(const ThreeDViewerStation &station,
+                            const ThreeDViewerSceneModel &sceneModel,
+                            const std::array<bool, 5> &layerVisibility,
+                            const ThreeDViewerLayerListModel::FeatureVisibility &featureVisibility,
+                            const QSet<quint32> &visibleCenterlineStationIds)
+{
+    if (!visibleCenterlineStationIds.contains(station.id)) {
+        return false;
+    }
+
+    if (!layerVisibility.at(kStationsLayer)) {
+        return false;
+    }
+
+    return !stationFeatureFiltersActive(sceneModel)
+        || stationFeatureEnabled(station, featureVisibility.stations);
+}
+
+bool stationLabelVisibleForLayer(const ThreeDViewerStation &station,
+                                 const std::array<bool, 5> &layerVisibility,
+                                 const QSet<quint32> &visibleCenterlineStationIds)
+{
+    return layerVisibility.at(kLabelsLayer)
+        && visibleCenterlineStationIds.contains(station.id);
 }
 
 QVector<QPointF> projectedCircle(const QPointF &center, double radius, int segments = 20)
@@ -952,6 +1062,15 @@ void ThreeDViewerViewportItem::setLayerVisibility(const std::array<bool, 5> &lay
     scheduleUpdate();
 }
 
+void ThreeDViewerViewportItem::setFeatureVisibility(const ThreeDViewerLayerListModel::FeatureVisibility &featureVisibility)
+{
+    {
+        QMutexLocker locker(&mutex_);
+        featureVisibility_ = featureVisibility;
+    }
+    scheduleUpdate();
+}
+
 void ThreeDViewerViewportItem::setMeshColorMode(ThreeDViewerMeshColorMode meshColorMode)
 {
     {
@@ -1002,8 +1121,12 @@ void ThreeDViewerViewportItem::hoverMoveEvent(QHoverEvent *event)
     }
 
     const Snapshot current = snapshot();
+    const QSet<quint32> pickableStationIds = visibleCenterlineStationIds(current.sceneModel,
+                                                                        current.layerVisibility,
+                                                                        current.featureVisibility);
     const ThreeDViewerStation *station = pickStationAtPosition(current.sceneModel,
                                                                current.camera,
+                                                               pickableStationIds,
                                                                event->position(),
                                                                std::max(1, int(width())),
                                                                std::max(1, int(height())));
@@ -1217,7 +1340,10 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
         meshNode = createMeshNode(triangles);
     }
 
-    const ThreeDViewerStation *hoveredStation = current.hasHoveredStation
+    const QSet<quint32> visibleStationIds = visibleCenterlineStationIds(current.sceneModel,
+                                                                        current.layerVisibility,
+                                                                        current.featureVisibility);
+    const ThreeDViewerStation *hoveredStation = current.hasHoveredStation && visibleStationIds.contains(current.hoveredStationId)
         ? stationById(current.sceneModel, current.hoveredStationId)
         : nullptr;
     const ThreeDViewerStation *measurementStartStation = current.hasMeasurementStartStation
@@ -1229,6 +1355,10 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
 
     if (current.layerVisibility.at(kCenterlineLayer)) {
         for (const ThreeDViewerShot &shot : current.sceneModel.shots) {
+            if (!centerlineShotVisible(shot, current.layerVisibility, current.featureVisibility)) {
+                continue;
+            }
+
             const ThreeDViewerStation *fromStation = nullptr;
             const ThreeDViewerStation *toStation = nullptr;
             for (const ThreeDViewerStation &station : current.sceneModel.stations) {
@@ -1272,30 +1402,34 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
         }
     }
 
-    if (current.layerVisibility.at(kStationsLayer)) {
-        auto stationAccentColor = [&](const ThreeDViewerStation &station) {
-            if (measurementStartStation != nullptr && station.id == measurementStartStation->id) {
-                return QColor(QStringLiteral("#22c55e"));
-            }
-            if (measurementEndStation != nullptr && station.id == measurementEndStation->id) {
-                return QColor(QStringLiteral("#fb7185"));
-            }
-            if (hoveredStation != nullptr && station.id == hoveredStation->id) {
-                return QColor(QStringLiteral("#facc15"));
-            }
-            return QColor();
-        };
+    auto stationAccentColor = [&](const ThreeDViewerStation &station) {
+        if (measurementStartStation != nullptr && station.id == measurementStartStation->id) {
+            return QColor(QStringLiteral("#22c55e"));
+        }
+        if (measurementEndStation != nullptr && station.id == measurementEndStation->id) {
+            return QColor(QStringLiteral("#fb7185"));
+        }
+        if (hoveredStation != nullptr && station.id == hoveredStation->id) {
+            return QColor(QStringLiteral("#facc15"));
+        }
+        return QColor();
+    };
 
+    if (current.layerVisibility.at(kStationsLayer)) {
         QVector<QRectF> occupiedStationBounds;
         occupiedStationBounds.reserve(std::min(current.sceneModel.stations.size(), qsizetype(512)));
         for (const ThreeDViewerStation &station : current.sceneModel.stations) {
+            const QColor accentColor = stationAccentColor(station);
+            const bool priorityStation = accentColor.isValid();
+            if (!stationVisibleForLayer(station, current.sceneModel, current.layerVisibility, current.featureVisibility, visibleStationIds)) {
+                continue;
+            }
+
             const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight);
             if (!projected.visible) {
                 continue;
             }
 
-            const QColor accentColor = stationAccentColor(station);
-            const bool priorityStation = accentColor.isValid();
             const QRectF stationBounds = markerBoundsAt(projected.screenPosition);
             if (!priorityStation && intersectsAny(stationBounds, occupiedStationBounds)) {
                 continue;
@@ -1358,6 +1492,10 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
         QVector<QRectF> occupiedLabelBounds;
         occupiedLabelBounds.reserve(std::min(current.sceneModel.stations.size(), qsizetype(512)));
         for (const ThreeDViewerStation &station : current.sceneModel.stations) {
+            if (!stationLabelVisibleForLayer(station, current.layerVisibility, visibleStationIds)) {
+                continue;
+            }
+
             const QString label = current.sceneModel.stationQualifiedName(station);
             if (label.isEmpty()) {
                 continue;
@@ -1524,8 +1662,12 @@ void ThreeDViewerViewportItem::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::LeftButton) {
         const Snapshot current = snapshot();
         if (current.measurementMode) {
+            const QSet<quint32> pickableStationIds = visibleCenterlineStationIds(current.sceneModel,
+                                                                                current.layerVisibility,
+                                                                                current.featureVisibility);
             const ThreeDViewerStation *station = pickStationAtPosition(current.sceneModel,
                                                                        current.camera,
+                                                                       pickableStationIds,
                                                                        event->position(),
                                                                        std::max(1, int(width())),
                                                                        std::max(1, int(height())));
@@ -1605,6 +1747,7 @@ ThreeDViewerViewportItem::Snapshot ThreeDViewerViewportItem::snapshot() const
     Snapshot current;
     current.sceneModel = sceneModel_;
     current.layerVisibility = layerVisibility_;
+    current.featureVisibility = featureVisibility_;
     current.meshColorMode = meshColorMode_;
     current.measurementMode = measurementMode_;
     current.hasHoveredStation = hasHoveredStation_;

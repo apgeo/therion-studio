@@ -46,6 +46,12 @@ void ThreeDViewerViewportWidget::setLayerVisibility(const std::array<bool, 5> &l
     syncRootItem();
 }
 
+void ThreeDViewerViewportWidget::setFeatureVisibility(const ThreeDViewerLayerListModel::FeatureVisibility &featureVisibility)
+{
+    featureVisibility_ = featureVisibility;
+    syncRootItem();
+}
+
 void ThreeDViewerViewportWidget::setMeshColorMode(ThreeDViewerMeshColorMode meshColorMode)
 {
     meshColorMode_ = meshColorMode;
@@ -113,6 +119,7 @@ void ThreeDViewerViewportWidget::syncRootItem()
     if (auto *item = rootViewportItem()) {
         item->setSceneModel(sceneModel_);
         item->setLayerVisibility(layerVisibility_);
+        item->setFeatureVisibility(featureVisibility_);
         item->setMeshColorMode(meshColorMode_);
         item->setMeasurementMode(measurementMode_);
 

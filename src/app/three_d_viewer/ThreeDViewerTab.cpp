@@ -186,6 +186,7 @@ void ThreeDViewerTab::buildUi()
     connect(layerModel_, &ThreeDViewerLayerListModel::layerVisibilityChanged, this, [this](int, bool) {
         if (viewport_ != nullptr && layerModel_ != nullptr) {
             viewport_->setLayerVisibility(layerModel_->layerVisibility());
+            viewport_->setFeatureVisibility(layerModel_->featureVisibility());
         }
     });
     connect(inspectorState_, &ThreeDViewerInspectorState::meshColorModeChanged, this, [this] {
@@ -239,6 +240,7 @@ void ThreeDViewerTab::loadSceneIntoView()
     if (layerModel_ != nullptr) {
         layerModel_->setSceneModel(sceneModel_);
         viewport_->setLayerVisibility(layerModel_->layerVisibility());
+        viewport_->setFeatureVisibility(layerModel_->featureVisibility());
     }
     if (inspectorState_ != nullptr) {
         viewport_->setMeshColorMode(static_cast<ThreeDViewerMeshColorMode>(inspectorState_->meshColorMode()));

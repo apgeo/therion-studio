@@ -81,6 +81,9 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - The transitional QWidget viewport renderer has been removed now that the scene-graph viewport is the sole active render path.
 - The viewport controller is now split out from the widget shell so camera interaction and camera-change signaling can be reused by future render surfaces.
 - The layer inspector is now backed by a shared list model so the QWidget view and future QML UI can use the same visibility/count state.
+- The 3D viewer layer inspector now shows clean layer names without visible item counts, generates centerline sublayers from present shot classes, defaults centerline sublayers to underground-only visibility, exposes disjoint station sublayers only when multiple station classes are present, and keeps station markers and labels constrained to stations attached to currently visible centerline shots.
+- The 3D viewer station hover and measurement picking now ignore stations whose centerline shots are hidden by the current centerline layer filters.
+- The 3D viewer labels layer now remains independent from station marker visibility while still respecting the visible centerline filters.
 - Viewer fit/reset controls now live in the shared workspace command bar instead of a tab-local toolbar.
 - The 3D viewer layer list now blocks internal item-change recursion during tab construction and refresh.
 - Continue the renderer refinement and the broader Qt Quick/QML shell migration once the GPU-backed viewport proves out the document-open workflow.

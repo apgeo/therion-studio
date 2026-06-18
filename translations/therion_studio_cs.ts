@@ -72,10 +72,6 @@
         <translation type="vanished">Přizpůsobit včetně pozadí</translation>
     </message>
     <message>
-        <source>Measure points</source>
-        <translation type="unfinished">Měřit body</translation>
-    </message>
-    <message>
         <source>Select</source>
         <translation type="vanished">Vybrat</translation>
     </message>
@@ -5430,13 +5426,8 @@ subtype blocks</translation>
     </message>
     <message>
         <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="37"/>
-        <source>Mesh coloring</source>
-        <translation type="unfinished">Barvení sítě</translation>
-    </message>
-    <message>
-        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="51"/>
-        <source>Measure points</source>
-        <translation type="unfinished">Měřit body</translation>
+        <source>Model coloring</source>
+        <translation type="unfinished">Barvení modelu</translation>
     </message>
     <message>
         <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="43"/>
@@ -5447,41 +5438,6 @@ subtype blocks</translation>
         <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="43"/>
         <source>Depth</source>
         <translation type="unfinished">Hloubka</translation>
-    </message>
-    <message>
-        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="24"/>
-        <source>File</source>
-        <translation type="unfinished">Soubor</translation>
-    </message>
-    <message>
-        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="33"/>
-        <source>No file loaded.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="42"/>
-        <source>Surveys</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="45"/>
-        <source>Stations</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="48"/>
-        <source>Shots</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="51"/>
-        <source>Meshes</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="54"/>
-        <source>Surfaces</source>
-        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="61"/>

@@ -34,7 +34,7 @@ Rectangle {
 
                         Label {
                             Layout.preferredWidth: 120
-                            text: qsTr("Mesh coloring")
+                            text: qsTr("Model coloring")
                             color: "#202020"
                         }
 
@@ -48,26 +48,6 @@ Rectangle {
                                 }
                             }
                         }
-                    }
-
-                    CheckBox {
-                        Layout.fillWidth: true
-                        text: qsTr("Measure points")
-                        checked: inspectorState ? inspectorState.measurementMode : false
-                        onToggled: {
-                            if (inspectorState) {
-                                inspectorState.measurementMode = checked
-                            }
-                        }
-                    }
-
-                    Label {
-                        Layout.fillWidth: true
-                        text: inspectorState && inspectorState.filePath.length > 0
-                            ? inspectorState.filePath
-                            : qsTr("No file loaded.")
-                        wrapMode: Text.WrapAnywhere
-                        color: "#404040"
                     }
                 }
             }

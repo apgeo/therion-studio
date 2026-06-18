@@ -64,7 +64,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - The 3D viewer inspector now uses a Qt Quick/QML host embedded through `QQuickWidget`, with the inspector content rendered from a shared QML surface, grouped into scene/layer sections while the viewport is moving to a GPU-backed scene-graph host.
 - The viewport rendering now lives in a QQuickItem-backed scene-graph surface so the viewer can render through Qt Quick instead of QWidget painting.
 - Mesh groups now render through Qt Quick's built-in GPU vertex-color material on the scene graph path.
-- The 3D viewer inspector now exposes a mesh-coloring mode that switches the GPU mesh palette between survey-based and depth-based coloring.
+- The 3D viewer inspector now exposes a model-coloring mode that switches the GPU model palette between survey-based and depth-based coloring.
 - The 3D viewer centerline now uses the same survey-based or depth-based palette as the meshes.
 - The 3D viewer viewport now draws a red bounding box around the current scene extent.
 - The 3D viewer viewport now overlays a compass, scale bar, and altitude legend when scene bounds are available.

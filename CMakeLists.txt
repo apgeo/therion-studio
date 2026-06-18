@@ -717,6 +717,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/screen-share.svg
     resources/icons/lucide/monitor-x.svg
     resources/icons/lucide/spline.svg
+    resources/icons/lucide/square.svg
     resources/icons/lucide/square-dashed-mouse-pointer.svg
     resources/icons/lucide/square-plus.svg
     resources/icons/lucide/toy-brick.svg

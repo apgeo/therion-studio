@@ -60,7 +60,7 @@ Required capabilities:
 - display project files and subfolders
 - recognize common Therion-related file types such as `.th`, `.th2`, `thconfig`, `*.thconfig`, and `thconfig.*`, plus compiled 3D `.lox` artifacts
 - open files in editor tabs
-- opening a `.lox` file shall create a read-only 3D viewer tab with Fit/Reset, Top/Side view, and rotate-left/rotate-right controls, plus orbit, pan, zoom, and world-blue-axis rotation navigation
+- opening a `.lox` file shall create a read-only 3D viewer tab with Fit/Reset, Top/Side view, rotate-left/rotate-right, and automatic-rotation controls, plus orbit, pan, zoom, and world-blue-axis rotation navigation
 - the 3D viewer shall let the user switch model coloring between survey-based coloring and depth-based coloring
 - the 3D viewer shall color centerline shots using the same survey-based or depth-based palette as the meshes
 - the 3D viewer shall render a bounding box around the loaded 3D scene extent
@@ -298,6 +298,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - A `.th2` file shall offer an explicit "Open in Map Editor" action.
 - A `.lox` file shall open in a read-only 3D viewer tab and shall not be offered for map editing.
 - The 3D viewer inspector shall expose a model-coloring control that allows switching between survey-based and depth-based coloring.
+- The 3D viewer inspector shall expose an automatic-rotation speed control, and the 3D viewer toolbar shall expose one play/stop toggle that starts and stops rotation around the world Z axis.
 - The 3D viewer inspector layer controls shall display clean layer names without visible item counts, shall expose data-driven centerline sublayer checkboxes for shot classes present in the loaded `.lox` scene, and shall expose disjoint station sublayer checkboxes only when the scene contains multiple present entrance, fixed, or other station classes. Centerline sublayers shall default to underground shots visible and surface, splay, duplicate, and hidden shots hidden. The top-level Stations checkbox shall be the master switch for station marker rendering, while station sublayer checkboxes shall only narrow the rendered station categories when the master switch is enabled. Station markers and station labels shall be shown only for stations attached to currently visible centerline shots. Station labels shall use a single independent layer checkbox and shall not require station markers to be visible.
 - The 3D viewer shall apply the selected model-coloring mode to centerline shots as well as meshes.
 - The 3D viewer toolbar shall expose a measurement toggle with a ruler icon that activates station-to-station measurement.

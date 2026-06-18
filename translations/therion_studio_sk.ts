@@ -8,6 +8,14 @@
         <translation type="vanished">Therion Studio</translation>
     </message>
     <message>
+        <source>Start Auto Rotation</source>
+        <translation>Spustiť automatickú rotáciu</translation>
+    </message>
+    <message>
+        <source>Stop Auto Rotation</source>
+        <translation>Zastaviť automatickú rotáciu</translation>
+    </message>
+    <message>
         <source>Open project cancelled</source>
         <translation type="vanished">Otvorenie projektu zrušené</translation>
     </message>
@@ -5428,6 +5436,14 @@ subtype blocks</translation>
         <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="37"/>
         <source>Model coloring</source>
         <translation type="unfinished">Farbenie modelu</translation>
+    </message>
+    <message>
+        <source>Rotation speed</source>
+        <translation>Rýchlosť rotácie</translation>
+    </message>
+    <message>
+        <source>%1°/s</source>
+        <translation>%1°/s</translation>
     </message>
     <message>
         <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="43"/>

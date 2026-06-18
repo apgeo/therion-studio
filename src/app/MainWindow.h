@@ -274,6 +274,7 @@ private:
     void initializeWorkspaceModeSwitcher();
     void refreshWorkspaceModeSwitcher();
     void refreshWorkspaceIconTheme();
+    void updateThreeDViewerAutoRotationButton(bool autoRotationEnabled);
     void refreshWorkspaceModeSwitcherGeometry();
     void refreshViewMenuActions();
     void clearValidationRailIndicator();
@@ -442,6 +443,7 @@ private:
     QToolButton *workspaceThreeDViewerFitButton_ = nullptr;
     QToolButton *workspaceThreeDViewerResetButton_ = nullptr;
     QToolButton *workspaceThreeDViewerMeasureButton_ = nullptr;
+    QToolButton *workspaceThreeDViewerAutoRotateButton_ = nullptr;
     QToolButton *workspaceThreeDViewerTopViewButton_ = nullptr;
     QToolButton *workspaceThreeDViewerSideViewButton_ = nullptr;
     QToolButton *workspaceThreeDViewerRollLeftButton_ = nullptr;

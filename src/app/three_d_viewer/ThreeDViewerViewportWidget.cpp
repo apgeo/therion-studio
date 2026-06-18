@@ -64,6 +64,18 @@ void ThreeDViewerViewportWidget::setMeasurementMode(bool measurementMode)
     syncRootItem();
 }
 
+void ThreeDViewerViewportWidget::setAutoRotationEnabled(bool autoRotationEnabled)
+{
+    autoRotationEnabled_ = autoRotationEnabled;
+    syncRootItem();
+}
+
+void ThreeDViewerViewportWidget::setAutoRotationSpeed(double autoRotationSpeed)
+{
+    autoRotationSpeed_ = autoRotationSpeed;
+    syncRootItem();
+}
+
 void ThreeDViewerViewportWidget::fitToScene()
 {
     if (auto *item = rootViewportItem()) {
@@ -122,6 +134,8 @@ void ThreeDViewerViewportWidget::syncRootItem()
         item->setFeatureVisibility(featureVisibility_);
         item->setMeshColorMode(meshColorMode_);
         item->setMeasurementMode(measurementMode_);
+        item->setAutoRotationSpeed(autoRotationSpeed_);
+        item->setAutoRotationEnabled(autoRotationEnabled_);
 
         if (pendingFitToScene_) {
             pendingFitToScene_ = false;

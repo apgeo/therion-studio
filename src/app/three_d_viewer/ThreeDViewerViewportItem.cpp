@@ -37,6 +37,8 @@ constexpr int kLabelsLayer = 2;
 constexpr int kMeshesLayer = 3;
 constexpr int kSurfacesLayer = 4;
 constexpr double kPi = 3.14159265358979323846;
+constexpr int kAutoRotationIntervalMs = 16;
+constexpr qint64 kMaxAutoRotationStepMs = 100;
 constexpr qreal kStationLabelOffsetX = 8.0;
 constexpr qreal kStationLabelOffsetY = -8.0;
 constexpr qreal kStationLabelPadding = 4.0;
@@ -899,6 +901,86 @@ bool stationLabelVisibleForLayer(const ThreeDViewerStation &station,
         && visibleCenterlineStationIds.contains(station.id);
 }
 
+struct DeclutterLockSelection
+{
+    QSet<quint32> stationIds;
+    QSet<quint32> labelIds;
+};
+
+QFont stationLabelFont()
+{
+    QFont font = QGuiApplication::font();
+    font.setPointSizeF(std::max(8.0, font.pointSizeF() > 0.0 ? font.pointSizeF() - 1.0 : 10.0));
+    return font;
+}
+
+DeclutterLockSelection selectDeclutterLocks(const ThreeDViewerSceneModel &sceneModel,
+                                            const ThreeDViewerCamera &camera,
+                                            const std::array<bool, 5> &layerVisibility,
+                                            const ThreeDViewerLayerListModel::FeatureVisibility &featureVisibility,
+                                            int viewportWidth,
+                                            int viewportHeight)
+{
+    DeclutterLockSelection selection;
+    if (viewportWidth <= 0 || viewportHeight <= 0) {
+        return selection;
+    }
+
+    const QSet<quint32> visibleStationIds = visibleCenterlineStationIds(sceneModel, layerVisibility, featureVisibility);
+    if (layerVisibility.at(kStationsLayer)) {
+        QVector<QRectF> occupiedStationBounds;
+        occupiedStationBounds.reserve(std::min(sceneModel.stations.size(), qsizetype(512)));
+        for (const ThreeDViewerStation &station : sceneModel.stations) {
+            if (!stationVisibleForLayer(station, sceneModel, layerVisibility, featureVisibility, visibleStationIds)) {
+                continue;
+            }
+
+            const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight);
+            if (!projected.visible) {
+                continue;
+            }
+
+            const QRectF stationBounds = markerBoundsAt(projected.screenPosition);
+            if (intersectsAny(stationBounds, occupiedStationBounds)) {
+                continue;
+            }
+            occupiedStationBounds.append(stationBounds);
+            selection.stationIds.insert(station.id);
+        }
+    }
+
+    if (layerVisibility.at(kLabelsLayer)) {
+        const QFont labelFont = stationLabelFont();
+        QVector<QRectF> occupiedLabelBounds;
+        occupiedLabelBounds.reserve(std::min(sceneModel.stations.size(), qsizetype(512)));
+        for (const ThreeDViewerStation &station : sceneModel.stations) {
+            if (!stationLabelVisibleForLayer(station, layerVisibility, visibleStationIds)) {
+                continue;
+            }
+
+            const QString label = sceneModel.stationQualifiedName(station);
+            if (label.isEmpty()) {
+                continue;
+            }
+
+            const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight);
+            if (!projected.visible) {
+                continue;
+            }
+
+            const QPointF labelPosition = projected.screenPosition + QPointF(kStationLabelOffsetX, kStationLabelOffsetY);
+            const QRectF labelBounds = textBoundsAt(label, labelFont, labelPosition);
+            if (intersectsAny(labelBounds, occupiedLabelBounds)) {
+                continue;
+            }
+            occupiedLabelBounds.append(labelBounds);
+            selection.labelIds.insert(station.id);
+        }
+    }
+
+    return selection;
+}
+
 QVector<QPointF> projectedCircle(const QPointF &center, double radius, int segments = 20)
 {
     QVector<QPointF> points;
@@ -1027,6 +1109,8 @@ ThreeDViewerViewportItem::ThreeDViewerViewportItem(QQuickItem *parent)
     setFlag(ItemHasContents, true);
     setAcceptedMouseButtons(Qt::AllButtons);
     setAcceptHoverEvents(true);
+    autoRotationTimer_.setInterval(kAutoRotationIntervalMs);
+    autoRotationTimer_.setTimerType(Qt::PreciseTimer);
 
     connect(&controller_, &ThreeDViewerViewportController::cameraChanged, this, [this]() {
         {
@@ -1035,6 +1119,7 @@ ThreeDViewerViewportItem::ThreeDViewerViewportItem(QQuickItem *parent)
         }
         scheduleUpdate();
     });
+    connect(&autoRotationTimer_, &QTimer::timeout, this, &ThreeDViewerViewportItem::handleAutoRotationTick);
 }
 
 void ThreeDViewerViewportItem::setSceneModel(const ThreeDViewerSceneModel &sceneModel)
@@ -1049,24 +1134,38 @@ void ThreeDViewerViewportItem::setSceneModel(const ThreeDViewerSceneModel &scene
         hasMeasurementStartStation_ = false;
         measurementEndStationId_ = 0;
         hasMeasurementEndStation_ = false;
+        autoRotationDeclutterLocked_ = false;
+        autoRotationStationIds_.clear();
+        autoRotationLabelIds_.clear();
     }
     controller_.fitToScene(sceneModel);
+    rebuildAutoRotationDeclutterLocks();
 }
 
 void ThreeDViewerViewportItem::setLayerVisibility(const std::array<bool, 5> &layerVisibility)
 {
+    bool shouldRebuildDeclutterLock = false;
     {
         QMutexLocker locker(&mutex_);
         layerVisibility_ = layerVisibility;
+        shouldRebuildDeclutterLock = autoRotationEnabled_;
+    }
+    if (shouldRebuildDeclutterLock) {
+        rebuildAutoRotationDeclutterLocks();
     }
     scheduleUpdate();
 }
 
 void ThreeDViewerViewportItem::setFeatureVisibility(const ThreeDViewerLayerListModel::FeatureVisibility &featureVisibility)
 {
+    bool shouldRebuildDeclutterLock = false;
     {
         QMutexLocker locker(&mutex_);
         featureVisibility_ = featureVisibility;
+        shouldRebuildDeclutterLock = autoRotationEnabled_;
+    }
+    if (shouldRebuildDeclutterLock) {
+        rebuildAutoRotationDeclutterLocks();
     }
     scheduleUpdate();
 }
@@ -1112,6 +1211,39 @@ void ThreeDViewerViewportItem::setMeasurementMode(bool measurementMode)
     if (changed) {
         scheduleUpdate();
     }
+}
+
+void ThreeDViewerViewportItem::setAutoRotationEnabled(bool autoRotationEnabled)
+{
+    {
+        QMutexLocker locker(&mutex_);
+        if (autoRotationEnabled_ == autoRotationEnabled) {
+            return;
+        }
+        autoRotationEnabled_ = autoRotationEnabled;
+    }
+
+    if (autoRotationEnabled) {
+        rebuildAutoRotationDeclutterLocks();
+        autoRotationElapsedTimer_.restart();
+        autoRotationTimer_.start();
+    } else {
+        autoRotationTimer_.stop();
+        autoRotationElapsedTimer_.invalidate();
+        {
+            QMutexLocker locker(&mutex_);
+            autoRotationDeclutterLocked_ = false;
+            autoRotationStationIds_.clear();
+            autoRotationLabelIds_.clear();
+        }
+        scheduleUpdate();
+    }
+}
+
+void ThreeDViewerViewportItem::setAutoRotationSpeed(double autoRotationSpeedDegreesPerSecond)
+{
+    QMutexLocker locker(&mutex_);
+    autoRotationSpeedDegreesPerSecond_ = std::clamp(autoRotationSpeedDegreesPerSecond, 5.0, 90.0);
 }
 
 void ThreeDViewerViewportItem::hoverMoveEvent(QHoverEvent *event)
@@ -1424,17 +1556,22 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
             if (!stationVisibleForLayer(station, current.sceneModel, current.layerVisibility, current.featureVisibility, visibleStationIds)) {
                 continue;
             }
+            if (current.autoRotationDeclutterLocked && !priorityStation && !current.autoRotationStationIds.contains(station.id)) {
+                continue;
+            }
 
             const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight);
             if (!projected.visible) {
                 continue;
             }
 
-            const QRectF stationBounds = markerBoundsAt(projected.screenPosition);
-            if (!priorityStation && intersectsAny(stationBounds, occupiedStationBounds)) {
-                continue;
+            if (!current.autoRotationDeclutterLocked) {
+                const QRectF stationBounds = markerBoundsAt(projected.screenPosition);
+                if (!priorityStation && intersectsAny(stationBounds, occupiedStationBounds)) {
+                    continue;
+                }
+                occupiedStationBounds.append(stationBounds);
             }
-            occupiedStationBounds.append(stationBounds);
 
             if (accentColor.isValid()) {
                 const QVector<QPointF> outerCircle = projectedCircle(projected.screenPosition, 5.2);
@@ -1483,16 +1620,15 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
     appendStationHoverOverlay(measurementEndStation, QColor(QStringLiteral("#fb7185")));
 
     if (current.layerVisibility.at(kLabelsLayer)) {
-        const QFont labelFont = [] {
-            QFont font = QGuiApplication::font();
-            font.setPointSizeF(std::max(8.0, font.pointSizeF() > 0.0 ? font.pointSizeF() - 1.0 : 10.0));
-            return font;
-        }();
+        const QFont labelFont = stationLabelFont();
 
         QVector<QRectF> occupiedLabelBounds;
         occupiedLabelBounds.reserve(std::min(current.sceneModel.stations.size(), qsizetype(512)));
         for (const ThreeDViewerStation &station : current.sceneModel.stations) {
             if (!stationLabelVisibleForLayer(station, current.layerVisibility, visibleStationIds)) {
+                continue;
+            }
+            if (current.autoRotationDeclutterLocked && !current.autoRotationLabelIds.contains(station.id)) {
                 continue;
             }
 
@@ -1507,11 +1643,13 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
             }
 
             const QPointF labelPosition = projected.screenPosition + QPointF(kStationLabelOffsetX, kStationLabelOffsetY);
-            const QRectF labelBounds = textBoundsAt(label, labelFont, labelPosition);
-            if (intersectsAny(labelBounds, occupiedLabelBounds)) {
-                continue;
+            if (!current.autoRotationDeclutterLocked) {
+                const QRectF labelBounds = textBoundsAt(label, labelFont, labelPosition);
+                if (intersectsAny(labelBounds, occupiedLabelBounds)) {
+                    continue;
+                }
+                occupiedLabelBounds.append(labelBounds);
             }
-            occupiedLabelBounds.append(labelBounds);
 
             appendTextNodeWithShadow(root,
                                      window(),
@@ -1757,6 +1895,9 @@ ThreeDViewerViewportItem::Snapshot ThreeDViewerViewportItem::snapshot() const
     current.measurementStartStationId = measurementStartStationId_;
     current.hasMeasurementEndStation = hasMeasurementEndStation_;
     current.measurementEndStationId = measurementEndStationId_;
+    current.autoRotationDeclutterLocked = autoRotationDeclutterLocked_;
+    current.autoRotationStationIds = autoRotationStationIds_;
+    current.autoRotationLabelIds = autoRotationLabelIds_;
     current.camera = cameraSnapshot_;
     return current;
 }
@@ -1764,6 +1905,64 @@ ThreeDViewerViewportItem::Snapshot ThreeDViewerViewportItem::snapshot() const
 void ThreeDViewerViewportItem::scheduleUpdate()
 {
     update();
+}
+
+void ThreeDViewerViewportItem::handleAutoRotationTick()
+{
+    double speedDegreesPerSecond = 0.0;
+    {
+        QMutexLocker locker(&mutex_);
+        if (!autoRotationEnabled_) {
+            return;
+        }
+        speedDegreesPerSecond = autoRotationSpeedDegreesPerSecond_;
+    }
+
+    qint64 elapsedMs = kAutoRotationIntervalMs;
+    if (autoRotationElapsedTimer_.isValid()) {
+        elapsedMs = autoRotationElapsedTimer_.restart();
+    } else {
+        autoRotationElapsedTimer_.restart();
+    }
+    elapsedMs = std::clamp(elapsedMs, qint64(1), kMaxAutoRotationStepMs);
+
+    const double deltaRadians = speedDegreesPerSecond * double(elapsedMs) / 1000.0 * kPi / 180.0;
+    controller_.rotateByRadians(deltaRadians);
+}
+
+void ThreeDViewerViewportItem::rebuildAutoRotationDeclutterLocks()
+{
+    ThreeDViewerSceneModel sceneModel;
+    ThreeDViewerCamera camera;
+    std::array<bool, 5> layerVisibility;
+    ThreeDViewerLayerListModel::FeatureVisibility featureVisibility;
+    {
+        QMutexLocker locker(&mutex_);
+        if (!autoRotationEnabled_) {
+            return;
+        }
+        sceneModel = sceneModel_;
+        camera = cameraSnapshot_;
+        layerVisibility = layerVisibility_;
+        featureVisibility = featureVisibility_;
+    }
+
+    const DeclutterLockSelection selection = selectDeclutterLocks(sceneModel,
+                                                                  camera,
+                                                                  layerVisibility,
+                                                                  featureVisibility,
+                                                                  int(std::round(width())),
+                                                                  int(std::round(height())));
+    {
+        QMutexLocker locker(&mutex_);
+        if (!autoRotationEnabled_) {
+            return;
+        }
+        autoRotationStationIds_ = selection.stationIds;
+        autoRotationLabelIds_ = selection.labelIds;
+        autoRotationDeclutterLocked_ = true;
+    }
+    scheduleUpdate();
 }
 
 } // namespace TherionStudio

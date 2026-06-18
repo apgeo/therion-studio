@@ -13,6 +13,7 @@ private slots:
     void tracksFilePathAndSceneMetrics();
     void tracksMeshColorMode();
     void tracksMeasurementMode();
+    void tracksAutoRotationSettings();
 };
 
 void ThreeDViewerInspectorStateTest::tracksFilePathAndSceneMetrics()
@@ -71,6 +72,30 @@ void ThreeDViewerInspectorStateTest::tracksMeasurementMode()
 
     QCOMPARE(state.measurementMode(), true);
     QCOMPARE(spy.count(), 1);
+}
+
+void ThreeDViewerInspectorStateTest::tracksAutoRotationSettings()
+{
+    ThreeDViewerInspectorState state;
+    QSignalSpy enabledSpy(&state, &ThreeDViewerInspectorState::autoRotationEnabledChanged);
+    QSignalSpy speedSpy(&state, &ThreeDViewerInspectorState::autoRotationSpeedChanged);
+
+    QCOMPARE(state.autoRotationEnabled(), false);
+    QCOMPARE(state.autoRotationSpeed(), 30.0);
+
+    state.setAutoRotationEnabled(true);
+    state.setAutoRotationSpeed(45.0);
+
+    QCOMPARE(state.autoRotationEnabled(), true);
+    QCOMPARE(state.autoRotationSpeed(), 45.0);
+    QCOMPARE(enabledSpy.count(), 1);
+    QCOMPARE(speedSpy.count(), 1);
+
+    state.setAutoRotationSpeed(0.0);
+    QCOMPARE(state.autoRotationSpeed(), 5.0);
+
+    state.setAutoRotationSpeed(360.0);
+    QCOMPARE(state.autoRotationSpeed(), 90.0);
 }
 
 int runThreeDViewerInspectorStateTest(int argc, char **argv)

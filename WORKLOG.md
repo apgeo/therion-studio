@@ -86,6 +86,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - The 3D viewer labels layer now remains independent from station marker visibility while still respecting the visible centerline filters.
 - Viewer fit/reset controls now live in the shared workspace command bar instead of a tab-local toolbar.
 - The 3D viewer layer list now blocks internal item-change recursion during tab construction and refresh.
+- The 3D viewer toolbar now has a play/stop automatic-rotation toggle, and the inspector exposes rotation speed in degrees per second.
 - Continue the renderer refinement and the broader Qt Quick/QML shell migration once the GPU-backed viewport proves out the document-open workflow.
 
 ## Blocked / Needs Input

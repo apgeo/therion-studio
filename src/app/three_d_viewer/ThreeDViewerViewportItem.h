@@ -5,9 +5,12 @@
 #include "ThreeDViewerMeshColorMode.h"
 #include "ThreeDViewerViewportController.h"
 
+#include <QElapsedTimer>
 #include <QMutex>
 #include <QPointF>
 #include <QQuickItem>
+#include <QSet>
+#include <QTimer>
 
 #include <array>
 
@@ -31,6 +34,8 @@ public:
     void setFeatureVisibility(const ThreeDViewerLayerListModel::FeatureVisibility &featureVisibility);
     void setMeshColorMode(ThreeDViewerMeshColorMode meshColorMode);
     void setMeasurementMode(bool measurementMode);
+    void setAutoRotationEnabled(bool autoRotationEnabled);
+    void setAutoRotationSpeed(double autoRotationSpeedDegreesPerSecond);
     void fitToScene();
     void resetView();
     void setViewPreset(ThreeDViewerViewPreset preset);
@@ -61,11 +66,16 @@ private:
         quint32 measurementStartStationId = 0;
         bool hasMeasurementEndStation = false;
         quint32 measurementEndStationId = 0;
+        bool autoRotationDeclutterLocked = false;
+        QSet<quint32> autoRotationStationIds;
+        QSet<quint32> autoRotationLabelIds;
         ThreeDViewerCamera camera;
     };
 
     Snapshot snapshot() const;
     void scheduleUpdate();
+    void handleAutoRotationTick();
+    void rebuildAutoRotationDeclutterLocks();
 
     mutable QMutex mutex_;
     ThreeDViewerSceneModel sceneModel_;
@@ -73,6 +83,13 @@ private:
     ThreeDViewerLayerListModel::FeatureVisibility featureVisibility_;
     ThreeDViewerMeshColorMode meshColorMode_ = ThreeDViewerMeshColorMode::Survey;
     bool measurementMode_ = false;
+    bool autoRotationEnabled_ = false;
+    double autoRotationSpeedDegreesPerSecond_ = 30.0;
+    QTimer autoRotationTimer_;
+    QElapsedTimer autoRotationElapsedTimer_;
+    bool autoRotationDeclutterLocked_ = false;
+    QSet<quint32> autoRotationStationIds_;
+    QSet<quint32> autoRotationLabelIds_;
     ThreeDViewerCamera cameraSnapshot_;
     ThreeDViewerViewportController controller_;
     quint32 hoveredStationId_ = 0;

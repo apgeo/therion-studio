@@ -16,6 +16,8 @@ class ThreeDViewerInspectorState final : public QObject
     Q_PROPERTY(QString filePath READ filePath WRITE setFilePath NOTIFY filePathChanged)
     Q_PROPERTY(int meshColorMode READ meshColorMode WRITE setMeshColorMode NOTIFY meshColorModeChanged)
     Q_PROPERTY(bool measurementMode READ measurementMode WRITE setMeasurementMode NOTIFY measurementModeChanged)
+    Q_PROPERTY(bool autoRotationEnabled READ autoRotationEnabled WRITE setAutoRotationEnabled NOTIFY autoRotationEnabledChanged)
+    Q_PROPERTY(double autoRotationSpeed READ autoRotationSpeed WRITE setAutoRotationSpeed NOTIFY autoRotationSpeedChanged)
     Q_PROPERTY(QString caveLengthText READ caveLengthText NOTIFY sceneMetricsChanged)
     Q_PROPERTY(QString caveDepthText READ caveDepthText NOTIFY sceneMetricsChanged)
     Q_PROPERTY(int surveyCount READ surveyCount NOTIFY sceneMetricsChanged)
@@ -36,6 +38,12 @@ public:
     bool measurementMode() const;
     void setMeasurementMode(bool measurementMode);
 
+    bool autoRotationEnabled() const;
+    void setAutoRotationEnabled(bool autoRotationEnabled);
+
+    double autoRotationSpeed() const;
+    void setAutoRotationSpeed(double autoRotationSpeed);
+
     QString caveLengthText() const;
     QString caveDepthText() const;
     int surveyCount() const;
@@ -50,12 +58,16 @@ signals:
     void filePathChanged();
     void meshColorModeChanged();
     void measurementModeChanged();
+    void autoRotationEnabledChanged();
+    void autoRotationSpeedChanged();
     void sceneMetricsChanged();
 
 private:
     QString filePath_;
     ThreeDViewerMeshColorMode meshColorMode_ = ThreeDViewerMeshColorMode::Survey;
     bool measurementMode_ = false;
+    bool autoRotationEnabled_ = false;
+    double autoRotationSpeed_ = 30.0;
     QString caveLengthText_;
     QString caveDepthText_;
     int surveyCount_ = 0;

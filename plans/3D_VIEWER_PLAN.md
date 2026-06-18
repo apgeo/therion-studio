@@ -9,7 +9,7 @@ The old Therion Loch sources in `therion/loch` remain useful as a behavioral ref
 - `.lox` files open in a read-only 3D viewer tab.
 - `.lox` loading lives in `ThreeDViewerLoxLoader` under `src/core/`.
 - The neutral scene model lives in `ThreeDViewerSceneModel` and currently covers surveys, stations, shots, mesh groups, terrain surfaces, station flags, LRUD data, shot flags, and scene bounds.
-- Camera orbit, pan, zoom, fit, reset, top view, side view, and blue-axis rotation are owned by `ThreeDViewerCamera` / `ThreeDViewerViewportController`.
+- Camera orbit, pan, zoom, fit, reset, top view, side view, manual blue-axis rotation, and automatic Z-axis rotation are owned by `ThreeDViewerCamera` / `ThreeDViewerViewportController` / viewport state.
 - The viewport is a Qt Quick `QQuickItem` scene-graph surface hosted in the existing Qt Widgets shell.
 - The viewer renders centerline, stations, labels, mesh groups, surfaces, a red scene bounding box, and Loch-style screen overlays.
 - The model coloring mode supports survey and depth palettes and applies consistently to meshes and centerline.

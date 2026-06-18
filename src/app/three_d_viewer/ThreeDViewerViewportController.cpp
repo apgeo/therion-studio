@@ -46,6 +46,16 @@ void ThreeDViewerViewportController::rotateRight()
     emitCameraChanged();
 }
 
+void ThreeDViewerViewportController::rotateByRadians(double radians)
+{
+    if (radians == 0.0) {
+        return;
+    }
+
+    camera_.yawByRadians(radians);
+    emitCameraChanged();
+}
+
 bool ThreeDViewerViewportController::mousePress(Qt::MouseButton button, const QPoint &position)
 {
     lastMousePosition_ = position;

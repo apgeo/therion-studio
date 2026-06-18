@@ -13,6 +13,7 @@ class ThreeDViewerViewportControllerTest : public QObject
 
 private slots:
     void rotatesAroundBlueAxisAndZooms();
+    void rotatesByArbitraryRadians();
     void orbitsAroundScene();
     void emitsCameraChanged();
 };
@@ -35,6 +36,24 @@ void ThreeDViewerViewportControllerTest::rotatesAroundBlueAxisAndZooms()
     QVERIFY(controller.wheel(QPoint(0, 120)));
     const ThreeDViewerCameraState afterZoom = controller.camera().state();
     QVERIFY(afterZoom.distance < beforeZoom.distance);
+}
+
+void ThreeDViewerViewportControllerTest::rotatesByArbitraryRadians()
+{
+    ThreeDViewerViewportController controller;
+    QSignalSpy spy(&controller, &ThreeDViewerViewportController::cameraChanged);
+
+    const ThreeDViewerCameraState beforeRotate = controller.camera().state();
+    controller.rotateByRadians(0.125);
+    const ThreeDViewerCameraState afterRotate = controller.camera().state();
+
+    QVERIFY(std::abs(afterRotate.yaw - (beforeRotate.yaw + 0.125)) < 1e-12);
+    QCOMPARE(afterRotate.pitch, beforeRotate.pitch);
+    QCOMPARE(afterRotate.distance, beforeRotate.distance);
+    QCOMPARE(spy.count(), 1);
+
+    controller.rotateByRadians(0.0);
+    QCOMPARE(spy.count(), 1);
 }
 
 void ThreeDViewerViewportControllerTest::orbitsAroundScene()

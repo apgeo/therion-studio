@@ -26,6 +26,8 @@ public:
     void setFeatureVisibility(const ThreeDViewerLayerListModel::FeatureVisibility &featureVisibility);
     void setMeshColorMode(ThreeDViewerMeshColorMode meshColorMode);
     void setMeasurementMode(bool measurementMode);
+    void setAutoRotationEnabled(bool autoRotationEnabled);
+    void setAutoRotationSpeed(double autoRotationSpeed);
     void fitToScene();
     void resetView();
     void setViewPreset(ThreeDViewerViewPreset preset);
@@ -41,6 +43,8 @@ private:
     ThreeDViewerLayerListModel::FeatureVisibility featureVisibility_;
     ThreeDViewerMeshColorMode meshColorMode_ = ThreeDViewerMeshColorMode::Survey;
     bool measurementMode_ = false;
+    bool autoRotationEnabled_ = false;
+    double autoRotationSpeed_ = 30.0;
     bool pendingFitToScene_ = false;
     bool pendingResetView_ = false;
     bool pendingRollLeft_ = false;

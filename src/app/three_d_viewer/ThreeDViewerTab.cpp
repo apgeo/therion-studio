@@ -140,6 +140,21 @@ bool ThreeDViewerTab::measurementMode() const
     return inspectorState_ != nullptr ? inspectorState_->measurementMode() : false;
 }
 
+void ThreeDViewerTab::setAutoRotationEnabled(bool autoRotationEnabled)
+{
+    if (inspectorState_ != nullptr) {
+        inspectorState_->setAutoRotationEnabled(autoRotationEnabled);
+    }
+    if (viewport_ != nullptr) {
+        viewport_->setAutoRotationEnabled(autoRotationEnabled);
+    }
+}
+
+bool ThreeDViewerTab::autoRotationEnabled() const
+{
+    return inspectorState_ != nullptr ? inspectorState_->autoRotationEnabled() : false;
+}
+
 void ThreeDViewerTab::showFindBar(bool)
 {
 }
@@ -200,6 +215,17 @@ void ThreeDViewerTab::buildUi()
         }
         emit measurementModeChanged(inspectorState_ != nullptr ? inspectorState_->measurementMode() : false);
     });
+    connect(inspectorState_, &ThreeDViewerInspectorState::autoRotationEnabledChanged, this, [this] {
+        if (viewport_ != nullptr && inspectorState_ != nullptr) {
+            viewport_->setAutoRotationEnabled(inspectorState_->autoRotationEnabled());
+        }
+        emit autoRotationEnabledChanged(inspectorState_ != nullptr ? inspectorState_->autoRotationEnabled() : false);
+    });
+    connect(inspectorState_, &ThreeDViewerInspectorState::autoRotationSpeedChanged, this, [this] {
+        if (viewport_ != nullptr && inspectorState_ != nullptr) {
+            viewport_->setAutoRotationSpeed(inspectorState_->autoRotationSpeed());
+        }
+    });
 
     inspectorWidget_ = new ThreeDViewerInspectorWidget(inspector);
     inspectorWidget_->setInspectorState(inspectorState_);
@@ -209,6 +235,8 @@ void ThreeDViewerTab::buildUi()
     if (viewport_ != nullptr && inspectorState_ != nullptr) {
         viewport_->setMeshColorMode(static_cast<ThreeDViewerMeshColorMode>(inspectorState_->meshColorMode()));
         viewport_->setMeasurementMode(inspectorState_->measurementMode());
+        viewport_->setAutoRotationSpeed(inspectorState_->autoRotationSpeed());
+        viewport_->setAutoRotationEnabled(inspectorState_->autoRotationEnabled());
     }
 
     splitter_->addWidget(inspector);
@@ -245,6 +273,8 @@ void ThreeDViewerTab::loadSceneIntoView()
     if (inspectorState_ != nullptr) {
         viewport_->setMeshColorMode(static_cast<ThreeDViewerMeshColorMode>(inspectorState_->meshColorMode()));
         viewport_->setMeasurementMode(inspectorState_->measurementMode());
+        viewport_->setAutoRotationSpeed(inspectorState_->autoRotationSpeed());
+        viewport_->setAutoRotationEnabled(inspectorState_->autoRotationEnabled());
     }
     viewport_->fitToScene();
 }

@@ -49,6 +49,39 @@ Rectangle {
                             }
                         }
                     }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Label {
+                            Layout.preferredWidth: 120
+                            text: qsTr("Rotation speed")
+                            color: "#202020"
+                        }
+
+                        Slider {
+                            id: rotationSpeedSlider
+                            Layout.fillWidth: true
+                            from: 5
+                            to: 90
+                            stepSize: 1
+                            live: true
+                            value: inspectorState ? inspectorState.autoRotationSpeed : 30
+                            onMoved: {
+                                if (inspectorState) {
+                                    inspectorState.autoRotationSpeed = value
+                                }
+                            }
+                        }
+
+                        Label {
+                            Layout.preferredWidth: 64
+                            horizontalAlignment: Text.AlignRight
+                            text: qsTr("%1°/s").arg(Math.round(rotationSpeedSlider.value))
+                            color: "#202020"
+                        }
+                    }
                 }
             }
 

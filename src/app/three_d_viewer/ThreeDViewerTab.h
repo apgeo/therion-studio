@@ -35,6 +35,8 @@ public:
     void rollViewRight();
     void setMeasurementMode(bool measurementMode);
     bool measurementMode() const;
+    void setAutoRotationEnabled(bool autoRotationEnabled);
+    bool autoRotationEnabled() const;
     void showFindBar(bool replaceMode = false);
     void hideFindBar();
     void goToLine(int lineNumber);
@@ -43,6 +45,7 @@ public:
 signals:
     void titleChanged();
     void measurementModeChanged(bool measurementMode);
+    void autoRotationEnabledChanged(bool autoRotationEnabled);
 
 private:
     void buildUi();

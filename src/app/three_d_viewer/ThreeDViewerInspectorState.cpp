@@ -3,6 +3,7 @@
 #include <QLocale>
 #include "../../core/ThreeDViewerSceneStatistics.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace TherionStudio
@@ -66,6 +67,37 @@ void ThreeDViewerInspectorState::setMeasurementMode(bool measurementMode)
 
     measurementMode_ = measurementMode;
     emit measurementModeChanged();
+}
+
+bool ThreeDViewerInspectorState::autoRotationEnabled() const
+{
+    return autoRotationEnabled_;
+}
+
+void ThreeDViewerInspectorState::setAutoRotationEnabled(bool autoRotationEnabled)
+{
+    if (autoRotationEnabled_ == autoRotationEnabled) {
+        return;
+    }
+
+    autoRotationEnabled_ = autoRotationEnabled;
+    emit autoRotationEnabledChanged();
+}
+
+double ThreeDViewerInspectorState::autoRotationSpeed() const
+{
+    return autoRotationSpeed_;
+}
+
+void ThreeDViewerInspectorState::setAutoRotationSpeed(double autoRotationSpeed)
+{
+    const double clampedSpeed = std::clamp(autoRotationSpeed, 5.0, 90.0);
+    if (qFuzzyCompare(autoRotationSpeed_ + 1.0, clampedSpeed + 1.0)) {
+        return;
+    }
+
+    autoRotationSpeed_ = clampedSpeed;
+    emit autoRotationSpeedChanged();
 }
 
 QString ThreeDViewerInspectorState::caveLengthText() const

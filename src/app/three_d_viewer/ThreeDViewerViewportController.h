@@ -24,6 +24,7 @@ public:
     void setViewPreset(ThreeDViewerViewPreset preset, const ThreeDViewerSceneModel &sceneModel);
     void rotateLeft();
     void rotateRight();
+    void rotateByRadians(double radians);
 
     bool mousePress(Qt::MouseButton button, const QPoint &position);
     bool mouseMove(const QPoint &position, int viewportHeight);

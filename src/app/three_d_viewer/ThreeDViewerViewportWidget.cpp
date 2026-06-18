@@ -28,6 +28,7 @@ ThreeDViewerViewportWidget::ThreeDViewerViewportWidget(QWidget *parent)
     setResizeMode(QQuickWidget::SizeRootObjectToView);
     setClearColor(QColor(QStringLiteral("#000000")));
     connect(this, &QQuickWidget::statusChanged, this, [this](QQuickWidget::Status) {
+        rootSceneModelSynced_ = false;
         syncRootItem();
     });
     setSource(QUrl(QStringLiteral("qrc:/resources/qml/three_d_viewer/ThreeDViewerViewport.qml")));
@@ -37,6 +38,7 @@ ThreeDViewerViewportWidget::ThreeDViewerViewportWidget(QWidget *parent)
 void ThreeDViewerViewportWidget::setSceneModel(const ThreeDViewerSceneModel &sceneModel)
 {
     sceneModel_ = sceneModel;
+    rootSceneModelSynced_ = false;
     syncRootItem();
 }
 
@@ -74,6 +76,60 @@ void ThreeDViewerViewportWidget::setAutoRotationSpeed(double autoRotationSpeed)
 {
     autoRotationSpeed_ = autoRotationSpeed;
     syncRootItem();
+}
+
+void ThreeDViewerViewportWidget::setOrthographicProjection(bool orthographicProjection)
+{
+    orthographicProjection_ = orthographicProjection;
+    syncRootItem();
+}
+
+void ThreeDViewerViewportWidget::setSceneOverlayVisibility(bool showBoundingBox, bool showHud, bool showInfo)
+{
+    showBoundingBox_ = showBoundingBox;
+    showHud_ = showHud;
+    showInfo_ = showInfo;
+    syncRootItem();
+}
+
+void ThreeDViewerViewportWidget::setCameraFacingDegrees(double degrees)
+{
+    cameraFacingDegrees_ = degrees;
+    if (auto *item = rootViewportItem()) {
+        item->setCameraFacingDegrees(cameraFacingDegrees_);
+    } else {
+        syncRootItem();
+    }
+}
+
+void ThreeDViewerViewportWidget::setCameraTiltDegrees(double degrees)
+{
+    cameraTiltDegrees_ = degrees;
+    if (auto *item = rootViewportItem()) {
+        item->setCameraTiltDegrees(cameraTiltDegrees_);
+    } else {
+        syncRootItem();
+    }
+}
+
+void ThreeDViewerViewportWidget::setCameraDistanceMeters(double distanceMeters)
+{
+    cameraDistanceMeters_ = distanceMeters;
+    if (auto *item = rootViewportItem()) {
+        item->setCameraDistanceMeters(cameraDistanceMeters_);
+    } else {
+        syncRootItem();
+    }
+}
+
+void ThreeDViewerViewportWidget::setCameraFocalLengthMm(double focalLengthMm)
+{
+    cameraFocalLengthMm_ = focalLengthMm;
+    if (auto *item = rootViewportItem()) {
+        item->setCameraFocalLengthMm(cameraFocalLengthMm_);
+    } else {
+        syncRootItem();
+    }
 }
 
 void ThreeDViewerViewportWidget::fitToScene()
@@ -129,11 +185,25 @@ void ThreeDViewerViewportWidget::syncRootItem()
     }
 
     if (auto *item = rootViewportItem()) {
-        item->setSceneModel(sceneModel_);
+        connect(item,
+                &ThreeDViewerViewportItem::cameraSettingsChanged,
+                this,
+                &ThreeDViewerViewportWidget::handleCameraSettingsChanged,
+                Qt::UniqueConnection);
+        if (!rootSceneModelSynced_) {
+            item->setSceneModel(sceneModel_);
+            rootSceneModelSynced_ = true;
+        }
         item->setLayerVisibility(layerVisibility_);
         item->setFeatureVisibility(featureVisibility_);
         item->setMeshColorMode(meshColorMode_);
         item->setMeasurementMode(measurementMode_);
+        item->setOrthographicProjection(orthographicProjection_);
+        item->setSceneOverlayVisibility(showBoundingBox_, showHud_, showInfo_);
+        item->setCameraFacingDegrees(cameraFacingDegrees_);
+        item->setCameraTiltDegrees(cameraTiltDegrees_);
+        item->setCameraDistanceMeters(cameraDistanceMeters_);
+        item->setCameraFocalLengthMm(cameraFocalLengthMm_);
         item->setAutoRotationSpeed(autoRotationSpeed_);
         item->setAutoRotationEnabled(autoRotationEnabled_);
 
@@ -163,6 +233,18 @@ void ThreeDViewerViewportWidget::syncRootItem()
 ThreeDViewerViewportItem *ThreeDViewerViewportWidget::rootViewportItem() const
 {
     return qobject_cast<ThreeDViewerViewportItem *>(rootObject());
+}
+
+void ThreeDViewerViewportWidget::handleCameraSettingsChanged(double facingDegrees,
+                                                             double tiltDegrees,
+                                                             double distanceMeters,
+                                                             double focalLengthMm)
+{
+    cameraFacingDegrees_ = facingDegrees;
+    cameraTiltDegrees_ = tiltDegrees;
+    cameraDistanceMeters_ = distanceMeters;
+    cameraFocalLengthMm_ = focalLengthMm;
+    emit cameraSettingsChanged(facingDegrees, tiltDegrees, distanceMeters, focalLengthMm);
 }
 
 } // namespace TherionStudio

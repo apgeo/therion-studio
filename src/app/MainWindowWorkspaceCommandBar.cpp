@@ -307,24 +307,30 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     auto *viewerLayout = new QHBoxLayout(workspaceThreeDViewerGroup_);
     viewerLayout->setContentsMargins(0, 0, 0, 0);
     viewerLayout->setSpacing(4);
+    workspaceThreeDViewerResetButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Reset 3D View"), QStringLiteral("house"));
     workspaceThreeDViewerFitButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Fit 3D View"), QStringLiteral("scan"));
-    workspaceThreeDViewerResetButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Reset 3D View"), QStringLiteral("locate-fixed"));
+    workspaceThreeDViewerOrthographicButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Orthogonal Projection"), QStringLiteral("square-plus"));
+    workspaceThreeDViewerOrthographicButton_->setCheckable(true);
     workspaceThreeDViewerMeasureButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Measure points"), QStringLiteral("ruler"));
     workspaceThreeDViewerMeasureButton_->setCheckable(true);
     workspaceThreeDViewerAutoRotateButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Start Auto Rotation"), QStringLiteral("play"));
     workspaceThreeDViewerAutoRotateButton_->setCheckable(true);
     workspaceThreeDViewerTopViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Top View"), QStringLiteral("arrow-big-down"));
     workspaceThreeDViewerSideViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Side View"), QStringLiteral("arrow-big-right"));
-    workspaceThreeDViewerRollLeftButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Left"), QStringLiteral("view-roll-left"));
-    workspaceThreeDViewerRollRightButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Right"), QStringLiteral("view-roll-right"));
-    viewerLayout->addWidget(workspaceThreeDViewerFitButton_);
+    workspaceThreeDViewerRollLeftButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Left"), QStringLiteral("rotate-ccw"));
+    workspaceThreeDViewerRollRightButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Right"), QStringLiteral("rotate-cw"));
     viewerLayout->addWidget(workspaceThreeDViewerResetButton_);
-    viewerLayout->addWidget(workspaceThreeDViewerMeasureButton_);
-    viewerLayout->addWidget(workspaceThreeDViewerAutoRotateButton_);
+    viewerLayout->addWidget(workspaceThreeDViewerFitButton_);
+    viewerLayout->addWidget(createWorkspaceToolbarSeparator(workspaceThreeDViewerGroup_));
+    viewerLayout->addWidget(workspaceThreeDViewerOrthographicButton_);
     viewerLayout->addWidget(workspaceThreeDViewerTopViewButton_);
     viewerLayout->addWidget(workspaceThreeDViewerSideViewButton_);
+    viewerLayout->addWidget(createWorkspaceToolbarSeparator(workspaceThreeDViewerGroup_));
     viewerLayout->addWidget(workspaceThreeDViewerRollLeftButton_);
     viewerLayout->addWidget(workspaceThreeDViewerRollRightButton_);
+    viewerLayout->addWidget(workspaceThreeDViewerAutoRotateButton_);
+    viewerLayout->addWidget(createWorkspaceToolbarSeparator(workspaceThreeDViewerGroup_));
+    viewerLayout->addWidget(workspaceThreeDViewerMeasureButton_);
     hostLayout->addWidget(workspaceThreeDViewerGroup_);
     workspaceThreeDViewerGroup_->setVisible(false);
     workspaceMapToolsGroup_ = new QWidget(workspaceModeSwitcher_);
@@ -407,6 +413,11 @@ void MainWindow::initializeWorkspaceModeSwitcher()
             viewerTab->setAutoRotationEnabled(checked);
         }
         updateThreeDViewerAutoRotationButton(checked);
+    });
+    connect(workspaceThreeDViewerOrthographicButton_, &QToolButton::toggled, this, [this](bool checked) {
+        if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+            viewerTab->setOrthographicProjection(checked);
+        }
     });
     connect(workspaceThreeDViewerTopViewButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerTopViewForActiveDocument);
     connect(workspaceThreeDViewerSideViewButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerSideViewForActiveDocument);
@@ -502,6 +513,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspaceThreeDViewerResetButton_ == nullptr
         || workspaceThreeDViewerMeasureButton_ == nullptr
         || workspaceThreeDViewerAutoRotateButton_ == nullptr
+        || workspaceThreeDViewerOrthographicButton_ == nullptr
         || workspaceThreeDViewerTopViewButton_ == nullptr
         || workspaceThreeDViewerSideViewButton_ == nullptr
         || workspaceThreeDViewerRollLeftButton_ == nullptr
@@ -563,6 +575,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceThreeDViewerResetButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerMeasureButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerAutoRotateButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerOrthographicButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerTopViewButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerSideViewButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerRollLeftButton_->setEnabled(showThreeDViewerModes);
@@ -580,6 +593,13 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         const QSignalBlocker autoRotationBlocker(workspaceThreeDViewerAutoRotateButton_);
         workspaceThreeDViewerAutoRotateButton_->setChecked(autoRotationEnabled);
         updateThreeDViewerAutoRotationButton(autoRotationEnabled);
+    }
+    {
+        const bool orthographicProjection = showThreeDViewerModes
+            && currentThreeDViewerTab() != nullptr
+            && currentThreeDViewerTab()->orthographicProjection();
+        const QSignalBlocker orthographicBlocker(workspaceThreeDViewerOrthographicButton_);
+        workspaceThreeDViewerOrthographicButton_->setChecked(orthographicProjection);
     }
     workspaceMapToolsGroup_->setVisible(showEditorActions && showMapTools);
     workspaceSaveButton_->setVisible(showEditorActions);
@@ -633,6 +653,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceThreeDViewerResetButton_->setVisible(showThreeDViewerModes);
     workspaceThreeDViewerMeasureButton_->setVisible(showThreeDViewerModes);
     workspaceThreeDViewerAutoRotateButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerOrthographicButton_->setVisible(showThreeDViewerModes);
     workspaceThreeDViewerTopViewButton_->setVisible(showThreeDViewerModes);
     workspaceThreeDViewerSideViewButton_->setVisible(showThreeDViewerModes);
     workspaceThreeDViewerRollLeftButton_->setVisible(showThreeDViewerModes);
@@ -641,6 +662,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceThreeDViewerResetButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerMeasureButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerAutoRotateButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerOrthographicButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerTopViewButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerSideViewButton_->setEnabled(showThreeDViewerModes);
     workspaceThreeDViewerRollLeftButton_->setEnabled(showThreeDViewerModes);

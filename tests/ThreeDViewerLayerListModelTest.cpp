@@ -47,9 +47,13 @@ void ThreeDViewerLayerListModelTest::exposesLayerCountsAndVisibility()
     QCOMPARE(model.data(model.index(1, 0), ThreeDViewerLayerListModel::IndentRole).toInt(), 1);
     QCOMPARE(model.data(model.index(3, 0), Qt::DisplayRole).toString(), QStringLiteral("Stations"));
     QCOMPARE(model.data(model.index(4, 0), Qt::DisplayRole).toString(), QStringLiteral("Entrances"));
-    QCOMPARE(model.data(model.index(5, 0), Qt::DisplayRole).toString(), QStringLiteral("Fixed stations"));
-    QCOMPARE(model.data(model.index(6, 0), Qt::DisplayRole).toString(), QStringLiteral("Other stations"));
+    QCOMPARE(model.data(model.index(5, 0), Qt::DisplayRole).toString(), QStringLiteral("Fixed Stations"));
+    QCOMPARE(model.data(model.index(6, 0), Qt::DisplayRole).toString(), QStringLiteral("Other Stations"));
     QCOMPARE(model.data(model.index(7, 0), Qt::DisplayRole).toString(), QStringLiteral("Labels"));
+    QCOMPARE(model.data(model.index(3, 0), Qt::CheckStateRole).toInt(), int(Qt::Unchecked));
+    QCOMPARE(model.data(model.index(7, 0), Qt::CheckStateRole).toInt(), int(Qt::Unchecked));
+    QCOMPARE(model.data(model.index(8, 0), Qt::CheckStateRole).toInt(), int(Qt::Checked));
+    QCOMPARE(model.data(model.index(9, 0), Qt::CheckStateRole).toInt(), int(Qt::Checked));
 
     QSignalSpy spy(&model, &ThreeDViewerLayerListModel::layerVisibilityChanged);
     QVERIFY(model.setData(centerlineIndex, Qt::Unchecked, Qt::CheckStateRole));

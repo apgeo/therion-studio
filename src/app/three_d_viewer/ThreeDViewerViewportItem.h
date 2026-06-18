@@ -36,6 +36,12 @@ public:
     void setMeasurementMode(bool measurementMode);
     void setAutoRotationEnabled(bool autoRotationEnabled);
     void setAutoRotationSpeed(double autoRotationSpeedDegreesPerSecond);
+    void setOrthographicProjection(bool orthographicProjection);
+    void setSceneOverlayVisibility(bool showBoundingBox, bool showHud, bool showInfo);
+    void setCameraFacingDegrees(double degrees);
+    void setCameraTiltDegrees(double degrees);
+    void setCameraDistanceMeters(double distanceMeters);
+    void setCameraFocalLengthMm(double focalLengthMm);
     void fitToScene();
     void resetView();
     void setViewPreset(ThreeDViewerViewPreset preset);
@@ -51,14 +57,21 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
 
+signals:
+    void cameraSettingsChanged(double facingDegrees, double tiltDegrees, double distanceMeters, double focalLengthMm);
+
 private:
     struct Snapshot
     {
         ThreeDViewerSceneModel sceneModel;
         std::array<bool, 5> layerVisibility = {true, true, true, true, true};
         ThreeDViewerLayerListModel::FeatureVisibility featureVisibility;
-        ThreeDViewerMeshColorMode meshColorMode = ThreeDViewerMeshColorMode::Survey;
+        ThreeDViewerMeshColorMode meshColorMode = ThreeDViewerMeshColorMode::Altitude;
         bool measurementMode = false;
+        bool orthographicProjection = false;
+        bool showBoundingBox = true;
+        bool showHud = true;
+        bool showInfo = true;
         bool hasHoveredStation = false;
         quint32 hoveredStationId = 0;
         QPointF hoveredStationScreenPosition;
@@ -81,8 +94,12 @@ private:
     ThreeDViewerSceneModel sceneModel_;
     std::array<bool, 5> layerVisibility_ = {true, true, true, true, true};
     ThreeDViewerLayerListModel::FeatureVisibility featureVisibility_;
-    ThreeDViewerMeshColorMode meshColorMode_ = ThreeDViewerMeshColorMode::Survey;
+    ThreeDViewerMeshColorMode meshColorMode_ = ThreeDViewerMeshColorMode::Altitude;
     bool measurementMode_ = false;
+    bool orthographicProjection_ = false;
+    bool showBoundingBox_ = true;
+    bool showHud_ = true;
+    bool showInfo_ = true;
     bool autoRotationEnabled_ = false;
     double autoRotationSpeedDegreesPerSecond_ = 30.0;
     QTimer autoRotationTimer_;

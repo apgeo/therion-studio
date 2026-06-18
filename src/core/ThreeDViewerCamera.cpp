@@ -1,6 +1,7 @@
 #include "ThreeDViewerCamera.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 namespace TherionStudio
@@ -34,6 +35,11 @@ ThreeDViewerVec3 multiply(const ThreeDViewerVec3 &value, double factor)
     return {value.x * factor, value.y * factor, value.z * factor};
 }
 
+double dot(const ThreeDViewerVec3 &left, const ThreeDViewerVec3 &right)
+{
+    return left.x * right.x + left.y * right.y + left.z * right.z;
+}
+
 ThreeDViewerVec3 cross(const ThreeDViewerVec3 &left, const ThreeDViewerVec3 &right)
 {
     return {left.y * right.z - left.z * right.y,
@@ -49,6 +55,18 @@ ThreeDViewerVec3 normalizedOrFallback(const ThreeDViewerVec3 &value, const Three
     }
     return {value.x / length, value.y / length, value.z / length};
 }
+
+std::array<ThreeDViewerVec3, 8> boundsCorners(const ThreeDViewerBounds &bounds)
+{
+    return {{{bounds.minimum.x, bounds.minimum.y, bounds.minimum.z},
+             {bounds.minimum.x, bounds.minimum.y, bounds.maximum.z},
+             {bounds.minimum.x, bounds.maximum.y, bounds.minimum.z},
+             {bounds.minimum.x, bounds.maximum.y, bounds.maximum.z},
+             {bounds.maximum.x, bounds.minimum.y, bounds.minimum.z},
+             {bounds.maximum.x, bounds.minimum.y, bounds.maximum.z},
+             {bounds.maximum.x, bounds.maximum.y, bounds.minimum.z},
+             {bounds.maximum.x, bounds.maximum.y, bounds.maximum.z}}};
+}
 } // namespace
 
 const ThreeDViewerCameraState &ThreeDViewerCamera::state() const
@@ -60,14 +78,20 @@ void ThreeDViewerCamera::setState(const ThreeDViewerCameraState &state)
 {
     state_ = state;
     state_.pitch = clampPitch(state_.pitch);
-    state_.distance = std::clamp(state_.distance, minDistance(), maxDistance());
+    state_.distance = clampDistance(state_.distance);
+    state_.focalLengthMm = clampFocalLengthMm(state_.focalLengthMm);
 }
 
 void ThreeDViewerCamera::fitToBounds(const ThreeDViewerBounds &bounds)
 {
+    fitToBounds(bounds, 0, 0);
+}
+
+void ThreeDViewerCamera::fitToBounds(const ThreeDViewerBounds &bounds, int viewportWidth, int viewportHeight)
+{
     if (!bounds.valid) {
         state_.target = {0.0, 0.0, 0.0};
-        state_.distance = 120.0;
+        state_.distance = defaultDistance();
         return;
     }
 
@@ -76,9 +100,34 @@ void ThreeDViewerCamera::fitToBounds(const ThreeDViewerBounds &bounds)
                      (bounds.minimum.z + bounds.maximum.z) * 0.5};
 
     const ThreeDViewerVec3 diagonal = subtract(bounds.maximum, bounds.minimum);
-    const double radius = std::max(1.0, vectorLength(diagonal) * 0.5);
-    const double distance = radius / std::tan(defaultFieldOfViewRadians() * 0.5) * 1.35;
-    state_.distance = std::clamp(distance, minDistance(), maxDistance());
+    if (viewportWidth <= 0 || viewportHeight <= 0) {
+        const double radius = std::max(1.0, vectorLength(diagonal) * 0.5);
+        const double distance = radius / std::tan(fieldOfViewRadians() * 0.5) * 1.05;
+        state_.distance = clampDistance(distance);
+        return;
+    }
+
+    const double aspectRatio = std::max(0.1, double(viewportWidth) / double(viewportHeight));
+    const double tanHalfVerticalFov = std::tan(fieldOfViewRadians() * 0.5);
+    const double tanHalfHorizontalFov = tanHalfVerticalFov * aspectRatio;
+    constexpr double usableFrame = 0.9;
+
+    const ThreeDViewerVec3 forward = forwardVector();
+    const ThreeDViewerVec3 right = rightVector();
+    const ThreeDViewerVec3 up = upVector();
+
+    double distance = minDistance();
+    for (const ThreeDViewerVec3 &corner : boundsCorners(bounds)) {
+        const ThreeDViewerVec3 offset = subtract(corner, state_.target);
+        const double cameraX = std::abs(dot(offset, right));
+        const double cameraY = std::abs(dot(offset, up));
+        const double cameraZ = dot(offset, forward);
+        distance = std::max(distance, cameraX / (tanHalfHorizontalFov * usableFrame) - cameraZ);
+        distance = std::max(distance, cameraY / (tanHalfVerticalFov * usableFrame) - cameraZ);
+        distance = std::max(distance, 1.0 - cameraZ);
+    }
+
+    state_.distance = clampDistance(distance);
 }
 
 void ThreeDViewerCamera::resetToBounds(const ThreeDViewerBounds &bounds)
@@ -97,7 +146,7 @@ void ThreeDViewerCamera::setViewPreset(ThreeDViewerViewPreset preset)
         break;
     case ThreeDViewerViewPreset::Top:
         state_.yaw = -0.85;
-        state_.pitch = 1.34;
+        state_.pitch = 3.14159265358979323846 * 0.5;
         break;
     case ThreeDViewerViewPreset::Side:
         state_.yaw = 0.0;
@@ -118,10 +167,7 @@ void ThreeDViewerCamera::orbitByPixels(double deltaX, double deltaY, double yawS
     state_.pitch = clampPitch(state_.pitch + deltaY * pitchScale);
 }
 
-void ThreeDViewerCamera::panByPixels(double deltaX,
-                                     double deltaY,
-                                     int viewportHeight,
-                                     double fieldOfViewRadians)
+void ThreeDViewerCamera::panByPixels(double deltaX, double deltaY, int viewportHeight)
 {
     if (viewportHeight <= 0) {
         return;
@@ -129,7 +175,7 @@ void ThreeDViewerCamera::panByPixels(double deltaX,
 
     const ThreeDViewerVec3 right = rightVector();
     const ThreeDViewerVec3 up = upVector();
-    const double scale = screenPanScale(viewportHeight, fieldOfViewRadians);
+    const double scale = screenPanScale(viewportHeight);
     state_.target = subtract(state_.target,
                              add(multiply(right, deltaX * scale), multiply(up, -deltaY * scale)));
 }
@@ -139,7 +185,7 @@ void ThreeDViewerCamera::zoomByFactor(double factor)
     if (!(factor > 0.0)) {
         return;
     }
-    state_.distance = std::clamp(state_.distance * factor, minDistance(), maxDistance());
+    state_.distance = clampDistance(state_.distance * factor);
 }
 
 ThreeDViewerVec3 ThreeDViewerCamera::position() const
@@ -159,13 +205,7 @@ ThreeDViewerVec3 ThreeDViewerCamera::forwardVector() const
 
 ThreeDViewerVec3 ThreeDViewerCamera::rightVector() const
 {
-    const ThreeDViewerVec3 forward = forwardVector();
-    ThreeDViewerVec3 right = cross(forward, worldUp);
-    if (vectorLengthSquared(right) <= 0.00000001) {
-        right = cross(forward, {0.0, 1.0, 0.0});
-    }
-    right = normalizedOrFallback(right, {1.0, 0.0, 0.0});
-    return right;
+    return {-std::sin(state_.yaw), std::cos(state_.yaw), 0.0};
 }
 
 ThreeDViewerVec3 ThreeDViewerCamera::upVector() const
@@ -175,18 +215,41 @@ ThreeDViewerVec3 ThreeDViewerCamera::upVector() const
     return normalizedOrFallback(cross(right, forward), worldUp);
 }
 
-double ThreeDViewerCamera::screenPanScale(int viewportHeight, double fieldOfViewRadians) const
+double ThreeDViewerCamera::fieldOfViewRadians() const
+{
+    return fieldOfViewRadiansForFocalLengthMm(state_.focalLengthMm);
+}
+
+double ThreeDViewerCamera::screenPanScale(int viewportHeight) const
 {
     if (viewportHeight <= 0) {
         return 0.0;
     }
 
-    return 2.0 * state_.distance * std::tan(fieldOfViewRadians * 0.5) / double(viewportHeight);
+    return 2.0 * state_.distance * std::tan(fieldOfViewRadians() * 0.5) / double(viewportHeight);
+}
+
+double ThreeDViewerCamera::clampDistance(double distance)
+{
+    return std::clamp(distance, minDistance(), maxDistance());
 }
 
 double ThreeDViewerCamera::clampPitch(double pitch)
 {
-    return std::clamp(pitch, -1.45, 1.45);
+    constexpr double verticalLimit = 3.14159265358979323846 * 0.5;
+    return std::clamp(pitch, -verticalLimit, verticalLimit);
+}
+
+double ThreeDViewerCamera::clampFocalLengthMm(double focalLengthMm)
+{
+    return std::clamp(focalLengthMm, 10.0, 80.0);
+}
+
+double ThreeDViewerCamera::fieldOfViewRadiansForFocalLengthMm(double focalLengthMm)
+{
+    constexpr double sensorHeightMm = 24.0;
+    const double clampedFocalLength = clampFocalLengthMm(focalLengthMm);
+    return 2.0 * std::atan(sensorHeightMm / (2.0 * clampedFocalLength));
 }
 
 } // namespace TherionStudio

@@ -444,6 +444,7 @@ private:
     QToolButton *workspaceThreeDViewerResetButton_ = nullptr;
     QToolButton *workspaceThreeDViewerMeasureButton_ = nullptr;
     QToolButton *workspaceThreeDViewerAutoRotateButton_ = nullptr;
+    QToolButton *workspaceThreeDViewerOrthographicButton_ = nullptr;
     QToolButton *workspaceThreeDViewerTopViewButton_ = nullptr;
     QToolButton *workspaceThreeDViewerSideViewButton_ = nullptr;
     QToolButton *workspaceThreeDViewerRollLeftButton_ = nullptr;

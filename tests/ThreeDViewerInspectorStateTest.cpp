@@ -13,7 +13,9 @@ private slots:
     void tracksFilePathAndSceneMetrics();
     void tracksMeshColorMode();
     void tracksMeasurementMode();
+    void tracksSceneOverlayVisibility();
     void tracksAutoRotationSettings();
+    void tracksCameraSettings();
 };
 
 void ThreeDViewerInspectorStateTest::tracksFilePathAndSceneMetrics()
@@ -21,7 +23,7 @@ void ThreeDViewerInspectorStateTest::tracksFilePathAndSceneMetrics()
     ThreeDViewerInspectorState state;
 
     QCOMPARE(state.filePath(), QString());
-    QCOMPARE(state.meshColorMode(), int(ThreeDViewerMeshColorMode::Survey));
+    QCOMPARE(state.meshColorMode(), int(ThreeDViewerMeshColorMode::Altitude));
     QCOMPARE(state.measurementMode(), false);
     QCOMPARE(state.caveLengthText(), QLocale::system().toString(0.0, 'f', 1) + QStringLiteral(" m"));
     QCOMPARE(state.caveDepthText(), QLocale::system().toString(0.0, 'f', 1) + QStringLiteral(" m"));
@@ -57,9 +59,9 @@ void ThreeDViewerInspectorStateTest::tracksMeshColorMode()
     ThreeDViewerInspectorState state;
     QSignalSpy spy(&state, &ThreeDViewerInspectorState::meshColorModeChanged);
 
-    state.setMeshColorMode(int(ThreeDViewerMeshColorMode::Depth));
+    state.setMeshColorMode(int(ThreeDViewerMeshColorMode::None));
 
-    QCOMPARE(state.meshColorMode(), int(ThreeDViewerMeshColorMode::Depth));
+    QCOMPARE(state.meshColorMode(), int(ThreeDViewerMeshColorMode::None));
     QCOMPARE(spy.count(), 1);
 }
 
@@ -74,21 +76,49 @@ void ThreeDViewerInspectorStateTest::tracksMeasurementMode()
     QCOMPARE(spy.count(), 1);
 }
 
+void ThreeDViewerInspectorStateTest::tracksSceneOverlayVisibility()
+{
+    ThreeDViewerInspectorState state;
+    QSignalSpy boundingBoxSpy(&state, &ThreeDViewerInspectorState::showBoundingBoxChanged);
+    QSignalSpy hudSpy(&state, &ThreeDViewerInspectorState::showHudChanged);
+    QSignalSpy infoSpy(&state, &ThreeDViewerInspectorState::showInfoChanged);
+
+    QCOMPARE(state.showBoundingBox(), true);
+    QCOMPARE(state.showHud(), true);
+    QCOMPARE(state.showInfo(), true);
+
+    state.setShowBoundingBox(false);
+    state.setShowHud(false);
+    state.setShowInfo(false);
+
+    QCOMPARE(state.showBoundingBox(), false);
+    QCOMPARE(state.showHud(), false);
+    QCOMPARE(state.showInfo(), false);
+    QCOMPARE(boundingBoxSpy.count(), 1);
+    QCOMPARE(hudSpy.count(), 1);
+    QCOMPARE(infoSpy.count(), 1);
+}
+
 void ThreeDViewerInspectorStateTest::tracksAutoRotationSettings()
 {
     ThreeDViewerInspectorState state;
     QSignalSpy enabledSpy(&state, &ThreeDViewerInspectorState::autoRotationEnabledChanged);
+    QSignalSpy orthographicSpy(&state, &ThreeDViewerInspectorState::orthographicProjectionChanged);
     QSignalSpy speedSpy(&state, &ThreeDViewerInspectorState::autoRotationSpeedChanged);
 
     QCOMPARE(state.autoRotationEnabled(), false);
+    QCOMPARE(state.orthographicProjection(), false);
     QCOMPARE(state.autoRotationSpeed(), 30.0);
 
     state.setAutoRotationEnabled(true);
+    state.setOrthographicProjection(true);
     state.setAutoRotationSpeed(45.0);
 
     QCOMPARE(state.autoRotationEnabled(), true);
+    QCOMPARE(state.orthographicProjection(), true);
     QCOMPARE(state.autoRotationSpeed(), 45.0);
     QCOMPARE(enabledSpy.count(), 1);
+    QCOMPARE(orthographicSpy.count(), 1);
     QCOMPARE(speedSpy.count(), 1);
 
     state.setAutoRotationSpeed(0.0);
@@ -96,6 +126,35 @@ void ThreeDViewerInspectorStateTest::tracksAutoRotationSettings()
 
     state.setAutoRotationSpeed(360.0);
     QCOMPARE(state.autoRotationSpeed(), 90.0);
+}
+
+void ThreeDViewerInspectorStateTest::tracksCameraSettings()
+{
+    ThreeDViewerInspectorState state;
+    QSignalSpy facingSpy(&state, &ThreeDViewerInspectorState::cameraFacingDegreesChanged);
+    QSignalSpy tiltSpy(&state, &ThreeDViewerInspectorState::cameraTiltDegreesChanged);
+    QSignalSpy distanceSpy(&state, &ThreeDViewerInspectorState::cameraDistanceMetersChanged);
+    QSignalSpy focusSpy(&state, &ThreeDViewerInspectorState::cameraFocalLengthMmChanged);
+
+    state.setCameraFacingDegrees(725.0);
+    state.setCameraTiltDegrees(90.0);
+    state.setCameraDistanceMeters(0.0);
+    state.setCameraFocalLengthMm(200.0);
+
+    QCOMPARE(state.cameraFacingDegrees(), 5.0);
+    QCOMPARE(state.cameraTiltDegrees(), 90.0);
+    QCOMPARE(state.cameraDistanceMeters(), 4.0);
+    QCOMPARE(state.cameraFocalLengthMm(), 80.0);
+    QCOMPARE(facingSpy.count(), 1);
+    QCOMPARE(tiltSpy.count(), 1);
+    QCOMPARE(distanceSpy.count(), 1);
+    QCOMPARE(focusSpy.count(), 1);
+
+    state.setCameraDistanceMeters(250.0);
+    QCOMPARE(state.cameraDistanceMeters(), 250.0);
+
+    state.setCameraFocalLengthMm(0.0);
+    QCOMPARE(state.cameraFocalLengthMm(), 10.0);
 }
 
 int runThreeDViewerInspectorStateTest(int argc, char **argv)

@@ -218,12 +218,13 @@ QPointF centeredTextOrigin(const QFont &font, const QString &text, const QPointF
 QVector<QPointF> projectPolyline(const ThreeDViewerCamera &camera,
                                  const QVector<ThreeDViewerVec3> &points,
                                  int viewportWidth,
-                                 int viewportHeight)
+                                 int viewportHeight,
+                                 bool orthographic)
 {
     QVector<QPointF> projectedPoints;
     projectedPoints.reserve(points.size());
     for (const ThreeDViewerVec3 &point : points) {
-        const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, point, viewportWidth, viewportHeight);
+        const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, point, viewportWidth, viewportHeight, orthographic);
         if (!projected.visible) {
             return {};
         }
@@ -237,7 +238,8 @@ void appendBoundingBox(QSGNode *root,
                        const ThreeDViewerBounds &bounds,
                        int viewportWidth,
                        int viewportHeight,
-                       const QColor &color)
+                       const QColor &color,
+                       bool orthographic)
 {
     if (!bounds.valid) {
         return;
@@ -265,7 +267,7 @@ void appendBoundingBox(QSGNode *root,
     for (const auto &edge : edges) {
         QPointF fromScreen;
         QPointF toScreen;
-        if (!ThreeDViewerProjection::projectLine(camera, edge.first, edge.second, viewportWidth, viewportHeight, &fromScreen, &toScreen)) {
+        if (!ThreeDViewerProjection::projectLine(camera, edge.first, edge.second, viewportWidth, viewportHeight, &fromScreen, &toScreen, orthographic)) {
             continue;
         }
 
@@ -309,7 +311,7 @@ void appendScaleBar(QSGNode *root,
         sceneCenter.z - cameraPosition.z,
     };
     const double sceneDepth = std::max(1.0, toCenter.x * forward.x + toCenter.y * forward.y + toCenter.z * forward.z);
-    const double worldPerPixel = 2.0 * sceneDepth * std::tan(ThreeDViewerCamera::defaultFieldOfViewRadians() * 0.5) / std::max(1, viewportHeight);
+    const double worldPerPixel = 2.0 * sceneDepth * std::tan(camera.fieldOfViewRadians() * 0.5) / std::max(1, viewportHeight);
     const double targetPixels = std::clamp(double(viewportWidth) * 0.18, 80.0, 180.0);
     const double scaleLength = niceScaleLength(worldPerPixel * targetPixels);
     const double barPixels = scaleLength / std::max(0.000001, worldPerPixel);
@@ -348,6 +350,11 @@ double normalizeDegrees(double value)
         value += 360.0;
     }
     return value;
+}
+
+double radiansToDegrees(double radians)
+{
+    return radians * 180.0 / kPi;
 }
 
 double cameraHeadingDegrees(const ThreeDViewerCamera &camera)
@@ -612,7 +619,7 @@ void appendSceneStatisticsOverlay(QSGNode *root,
 
     appendTextNode(root,
                    window,
-                   QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Cave length")
+                   QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Underground Passages Length")
                        + QStringLiteral(": ")
                        + formatMeters(statistics.caveLengthMeters),
                    QPointF(left, currentY),
@@ -622,7 +629,7 @@ void appendSceneStatisticsOverlay(QSGNode *root,
 
     appendTextNode(root,
                    window,
-                   QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Cave depth")
+                   QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Underground Depth")
                        + QStringLiteral(": ")
                        + formatMeters(statistics.caveDepthMeters),
                    QPointF(left, currentY),
@@ -696,6 +703,7 @@ const ThreeDViewerStation *pickStationAtPosition(const ThreeDViewerSceneModel &s
                                                  const QPointF &screenPosition,
                                                  int viewportWidth,
                                                  int viewportHeight,
+                                                 bool orthographic,
                                                  double maxDistancePixels = 14.0)
 {
     const double maxDistanceSquared = maxDistancePixels * maxDistancePixels;
@@ -707,7 +715,7 @@ const ThreeDViewerStation *pickStationAtPosition(const ThreeDViewerSceneModel &s
             continue;
         }
 
-        const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight);
+        const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight, orthographic);
         if (!projected.visible) {
             continue;
         }
@@ -919,7 +927,8 @@ DeclutterLockSelection selectDeclutterLocks(const ThreeDViewerSceneModel &sceneM
                                             const std::array<bool, 5> &layerVisibility,
                                             const ThreeDViewerLayerListModel::FeatureVisibility &featureVisibility,
                                             int viewportWidth,
-                                            int viewportHeight)
+                                            int viewportHeight,
+                                            bool orthographic)
 {
     DeclutterLockSelection selection;
     if (viewportWidth <= 0 || viewportHeight <= 0) {
@@ -935,7 +944,7 @@ DeclutterLockSelection selectDeclutterLocks(const ThreeDViewerSceneModel &sceneM
                 continue;
             }
 
-            const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight);
+            const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight, orthographic);
             if (!projected.visible) {
                 continue;
             }
@@ -963,7 +972,7 @@ DeclutterLockSelection selectDeclutterLocks(const ThreeDViewerSceneModel &sceneM
                 continue;
             }
 
-            const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight);
+            const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight, orthographic);
             if (!projected.visible) {
                 continue;
             }
@@ -1044,12 +1053,6 @@ struct MeshTriangleRender
     double depth = 0.0;
 };
 
-QColor surveyColor(quint32 surveyId)
-{
-    const double hue = std::fmod(double(surveyId) * 0.6180339887498949, 1.0);
-    return QColor::fromHsvF(hue, 0.60, 0.95, 0.75);
-}
-
 QColor depthColor(double depth, const ThreeDViewerBounds &bounds)
 {
     if (!bounds.valid || bounds.maximum.z <= bounds.minimum.z + 0.000001) {
@@ -1064,11 +1067,13 @@ QColor depthColor(double depth, const ThreeDViewerBounds &bounds)
 }
 
 QColor sceneColorForMode(ThreeDViewerMeshColorMode mode,
-                         quint32 surveyId,
                          double depth,
                          const ThreeDViewerBounds &bounds)
 {
-    return mode == ThreeDViewerMeshColorMode::Depth ? depthColor(depth, bounds) : surveyColor(surveyId);
+    if (mode == ThreeDViewerMeshColorMode::None) {
+        return QColor(210, 214, 220, 210);
+    }
+    return depthColor(depth, bounds);
 }
 
 QSGGeometryNode *createMeshNode(const QVector<MeshTriangleRender> &triangles)
@@ -1113,10 +1118,17 @@ ThreeDViewerViewportItem::ThreeDViewerViewportItem(QQuickItem *parent)
     autoRotationTimer_.setTimerType(Qt::PreciseTimer);
 
     connect(&controller_, &ThreeDViewerViewportController::cameraChanged, this, [this]() {
+        ThreeDViewerCamera camera;
         {
             QMutexLocker locker(&mutex_);
             cameraSnapshot_ = controller_.camera();
+            camera = cameraSnapshot_;
         }
+        const ThreeDViewerCameraState state = camera.state();
+        emit cameraSettingsChanged(cameraHeadingDegrees(camera),
+                                   radiansToDegrees(state.pitch),
+                                   state.distance,
+                                   state.focalLengthMm);
         scheduleUpdate();
     });
     connect(&autoRotationTimer_, &QTimer::timeout, this, &ThreeDViewerViewportItem::handleAutoRotationTick);
@@ -1138,7 +1150,9 @@ void ThreeDViewerViewportItem::setSceneModel(const ThreeDViewerSceneModel &scene
         autoRotationStationIds_.clear();
         autoRotationLabelIds_.clear();
     }
-    controller_.fitToScene(sceneModel);
+    controller_.fitToScene(sceneModel,
+                           std::max(1, int(std::lround(width()))),
+                           std::max(1, int(std::lround(height()))));
     rebuildAutoRotationDeclutterLocks();
 }
 
@@ -1246,6 +1260,55 @@ void ThreeDViewerViewportItem::setAutoRotationSpeed(double autoRotationSpeedDegr
     autoRotationSpeedDegreesPerSecond_ = std::clamp(autoRotationSpeedDegreesPerSecond, 5.0, 90.0);
 }
 
+void ThreeDViewerViewportItem::setOrthographicProjection(bool orthographicProjection)
+{
+    {
+        QMutexLocker locker(&mutex_);
+        if (orthographicProjection_ == orthographicProjection) {
+            return;
+        }
+        orthographicProjection_ = orthographicProjection;
+    }
+    if (autoRotationEnabled_) {
+        rebuildAutoRotationDeclutterLocks();
+    }
+    scheduleUpdate();
+}
+
+void ThreeDViewerViewportItem::setSceneOverlayVisibility(bool showBoundingBox, bool showHud, bool showInfo)
+{
+    {
+        QMutexLocker locker(&mutex_);
+        if (showBoundingBox_ == showBoundingBox && showHud_ == showHud && showInfo_ == showInfo) {
+            return;
+        }
+        showBoundingBox_ = showBoundingBox;
+        showHud_ = showHud;
+        showInfo_ = showInfo;
+    }
+    scheduleUpdate();
+}
+
+void ThreeDViewerViewportItem::setCameraFacingDegrees(double degrees)
+{
+    controller_.setFacingDegrees(degrees);
+}
+
+void ThreeDViewerViewportItem::setCameraTiltDegrees(double degrees)
+{
+    controller_.setTiltDegrees(degrees);
+}
+
+void ThreeDViewerViewportItem::setCameraDistanceMeters(double distanceMeters)
+{
+    controller_.setDistanceMeters(distanceMeters);
+}
+
+void ThreeDViewerViewportItem::setCameraFocalLengthMm(double focalLengthMm)
+{
+    controller_.setFocalLengthMm(focalLengthMm);
+}
+
 void ThreeDViewerViewportItem::hoverMoveEvent(QHoverEvent *event)
 {
     if (event == nullptr) {
@@ -1261,7 +1324,8 @@ void ThreeDViewerViewportItem::hoverMoveEvent(QHoverEvent *event)
                                                                pickableStationIds,
                                                                event->position(),
                                                                std::max(1, int(width())),
-                                                               std::max(1, int(height())));
+                                                               std::max(1, int(height())),
+                                                               current.orthographicProjection);
     const quint32 hoveredStationId = station != nullptr ? station->id : 0;
     const bool hasHoveredStation = station != nullptr;
     const QPointF hoveredStationScreenPosition = event->position();
@@ -1303,17 +1367,24 @@ void ThreeDViewerViewportItem::hoverLeaveEvent(QHoverEvent *event)
 
 void ThreeDViewerViewportItem::fitToScene()
 {
-    controller_.fitToScene(snapshot().sceneModel);
+    controller_.fitToScene(snapshot().sceneModel,
+                           std::max(1, int(std::lround(width()))),
+                           std::max(1, int(std::lround(height()))));
 }
 
 void ThreeDViewerViewportItem::resetView()
 {
-    controller_.resetView(snapshot().sceneModel);
+    controller_.resetView(snapshot().sceneModel,
+                          std::max(1, int(std::lround(width()))),
+                          std::max(1, int(std::lround(height()))));
 }
 
 void ThreeDViewerViewportItem::setViewPreset(ThreeDViewerViewPreset preset)
 {
-    controller_.setViewPreset(preset, snapshot().sceneModel);
+    controller_.setViewPreset(preset,
+                              snapshot().sceneModel,
+                              std::max(1, int(std::lround(width()))),
+                              std::max(1, int(std::lround(height()))));
 }
 
 void ThreeDViewerViewportItem::rollLeft()
@@ -1349,28 +1420,6 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
     const ThreeDViewerBounds bounds = current.sceneModel.bounds();
     QSGNode *meshNode = nullptr;
 
-    const ThreeDViewerProjectedPoint origin = ThreeDViewerProjection::projectPoint(camera, {0.0, 0.0, 0.0}, viewportWidth, viewportHeight);
-    const ThreeDViewerProjectedPoint xAxis = ThreeDViewerProjection::projectPoint(camera, {40.0, 0.0, 0.0}, viewportWidth, viewportHeight);
-    const ThreeDViewerProjectedPoint yAxis = ThreeDViewerProjection::projectPoint(camera, {0.0, 40.0, 0.0}, viewportWidth, viewportHeight);
-    const ThreeDViewerProjectedPoint zAxis = ThreeDViewerProjection::projectPoint(camera, {0.0, 0.0, 40.0}, viewportWidth, viewportHeight);
-    if (origin.visible) {
-        if (xAxis.visible) {
-            QVector<QPointF> points;
-            points << origin.screenPosition << xAxis.screenPosition;
-            appendGeometryNode(root, points, QSGGeometry::DrawLines, QColor(QStringLiteral("#dc2626")), 1.3);
-        }
-        if (yAxis.visible) {
-            QVector<QPointF> points;
-            points << origin.screenPosition << yAxis.screenPosition;
-            appendGeometryNode(root, points, QSGGeometry::DrawLines, QColor(QStringLiteral("#16a34a")), 1.3);
-        }
-        if (zAxis.visible) {
-            QVector<QPointF> points;
-            points << origin.screenPosition << zAxis.screenPosition;
-            appendGeometryNode(root, points, QSGGeometry::DrawLines, QColor(QStringLiteral("#2563eb")), 1.3);
-        }
-    }
-
     if (current.layerVisibility.at(kSurfacesLayer)) {
         const QColor surfaceColor = QColor(QStringLiteral("#7c3aed"));
         for (const ThreeDViewerSurface &surface : current.sceneModel.surfaces) {
@@ -1391,7 +1440,7 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
                         surface.calibration[1] + surface.calibration[3] * double(column) + surface.calibration[5] * double(row),
                         surface.elevations.at(index),
                     };
-                    const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, point, viewportWidth, viewportHeight);
+                    const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, point, viewportWidth, viewportHeight, current.orthographicProjection);
                     if (!projected.visible) {
                         rowPoints.clear();
                         break;
@@ -1414,7 +1463,7 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
                         surface.calibration[1] + surface.calibration[3] * double(column) + surface.calibration[5] * double(row),
                         surface.elevations.at(index),
                     };
-                    const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, point, viewportWidth, viewportHeight);
+                    const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, point, viewportWidth, viewportHeight, current.orthographicProjection);
                     if (!projected.visible) {
                         columnPoints.clear();
                         break;
@@ -1443,9 +1492,9 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
                 const ThreeDViewerVec3 &v0 = mesh.vertices.at(triangle[0]);
                 const ThreeDViewerVec3 &v1 = mesh.vertices.at(triangle[1]);
                 const ThreeDViewerVec3 &v2 = mesh.vertices.at(triangle[2]);
-                const ThreeDViewerProjectedPoint p0 = ThreeDViewerProjection::projectPoint(camera, v0, viewportWidth, viewportHeight);
-                const ThreeDViewerProjectedPoint p1 = ThreeDViewerProjection::projectPoint(camera, v1, viewportWidth, viewportHeight);
-                const ThreeDViewerProjectedPoint p2 = ThreeDViewerProjection::projectPoint(camera, v2, viewportWidth, viewportHeight);
+                const ThreeDViewerProjectedPoint p0 = ThreeDViewerProjection::projectPoint(camera, v0, viewportWidth, viewportHeight, current.orthographicProjection);
+                const ThreeDViewerProjectedPoint p1 = ThreeDViewerProjection::projectPoint(camera, v1, viewportWidth, viewportHeight, current.orthographicProjection);
+                const ThreeDViewerProjectedPoint p2 = ThreeDViewerProjection::projectPoint(camera, v2, viewportWidth, viewportHeight, current.orthographicProjection);
                 if (!p0.visible || !p1.visible || !p2.visible) {
                     continue;
                 }
@@ -1453,7 +1502,7 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
                 const ThreeDViewerVec3 normal = normalizedOrFallback(cross(subtract(v1, v0), subtract(v2, v0)), {0.0, 0.0, 1.0});
                 const double diffuse = std::clamp(std::abs(dot(normal, lightDirection)), 0.0, 1.0);
                 const double averageDepth = (v0.z + v1.z + v2.z) / 3.0;
-                const QColor baseColor = sceneColorForMode(current.meshColorMode, mesh.surveyId, averageDepth, bounds);
+                const QColor baseColor = sceneColorForMode(current.meshColorMode, averageDepth, bounds);
                 const QColor color = scaledColor(baseColor, 0.45 + diffuse * 0.55, 190);
                 triangles.push_back(MeshTriangleRender{
                     {p0.screenPosition, p1.screenPosition, p2.screenPosition},
@@ -1510,12 +1559,12 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
 
             QPointF fromScreen;
             QPointF toScreen;
-            if (!ThreeDViewerProjection::projectLine(camera, fromStation->position, toStation->position, viewportWidth, viewportHeight, &fromScreen, &toScreen)) {
+            if (!ThreeDViewerProjection::projectLine(camera, fromStation->position, toStation->position, viewportWidth, viewportHeight, &fromScreen, &toScreen, current.orthographicProjection)) {
                 continue;
             }
 
             const double averageDepth = (fromStation->position.z + toStation->position.z) * 0.5;
-            const QColor baseColor = sceneColorForMode(current.meshColorMode, shot.surveyId, averageDepth, bounds);
+            const QColor baseColor = sceneColorForMode(current.meshColorMode, averageDepth, bounds);
             const QColor lineColor = shot.hidden ? scaledColor(baseColor, 0.45, 170)
                                                  : shot.surface ? scaledColor(baseColor, 0.85, 240)
                                                                 : scaledColor(baseColor, 0.78, 235);
@@ -1560,7 +1609,7 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
                 continue;
             }
 
-            const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight);
+            const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight, current.orthographicProjection);
             if (!projected.visible) {
                 continue;
             }
@@ -1601,7 +1650,7 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
             return;
         }
 
-        const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station->position, viewportWidth, viewportHeight);
+        const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station->position, viewportWidth, viewportHeight, current.orthographicProjection);
         if (!projected.visible) {
             return;
         }
@@ -1637,7 +1686,7 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
                 continue;
             }
 
-            const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight);
+            const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, station.position, viewportWidth, viewportHeight, current.orthographicProjection);
             if (!projected.visible) {
                 continue;
             }
@@ -1673,7 +1722,8 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
                                                 viewportWidth,
                                                 viewportHeight,
                                                 &fromScreen,
-                                                &toScreen)) {
+                                                &toScreen,
+                                                current.orthographicProjection)) {
             QVector<QPointF> linePoints;
             linePoints << fromScreen << toScreen;
             appendGeometryNode(root,
@@ -1689,23 +1739,29 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
         }
     }
 
-    appendBoundingBox(root, camera, bounds, viewportWidth, viewportHeight, QColor(QStringLiteral("#ff0000")));
-    const QPointF altitudeOrigin(20.0, double(viewportHeight) - 300.0);
-    const bool showAltitudeLegend = current.meshColorMode == ThreeDViewerMeshColorMode::Depth;
-    if (showAltitudeLegend) {
-        appendAltitudeLegend(root, window(), bounds, altitudeOrigin);
+    if (current.showBoundingBox) {
+        appendBoundingBox(root, camera, bounds, viewportWidth, viewportHeight, QColor(QStringLiteral("#ff0000")), current.orthographicProjection);
     }
-    const double hudRowY = altitudeOrigin.y() + 240.0;
-    appendCompassIndicator(root, window(), bounds, camera, viewportWidth, viewportHeight, QPointF(36.0, hudRowY));
-    appendViewAngleIndicator(root, window(), camera, QPointF(98.0, hudRowY));
-    appendScaleBar(root,
-                   window(),
-                   camera,
-                   bounds,
-                   QPointF(160.0, hudRowY - 20.0),
-                   viewportWidth,
-                   viewportHeight);
-    appendSceneStatisticsOverlay(root, window(), current.sceneModel, viewportWidth, viewportHeight);
+    const QPointF altitudeOrigin(20.0, double(viewportHeight) - 300.0);
+    if (current.showHud) {
+        const bool showAltitudeLegend = current.meshColorMode == ThreeDViewerMeshColorMode::Altitude;
+        if (showAltitudeLegend) {
+            appendAltitudeLegend(root, window(), bounds, altitudeOrigin);
+        }
+        const double hudRowY = altitudeOrigin.y() + 240.0;
+        appendCompassIndicator(root, window(), bounds, camera, viewportWidth, viewportHeight, QPointF(36.0, hudRowY));
+        appendViewAngleIndicator(root, window(), camera, QPointF(98.0, hudRowY));
+        appendScaleBar(root,
+                       window(),
+                       camera,
+                       bounds,
+                       QPointF(160.0, hudRowY - 20.0),
+                       viewportWidth,
+                       viewportHeight);
+    }
+    if (current.showInfo) {
+        appendSceneStatisticsOverlay(root, window(), current.sceneModel, viewportWidth, viewportHeight);
+    }
 
     const QFont cardTitleFont(QStringLiteral("Menlo"), 11, QFont::Bold);
     const QFont cardBodyFont(QStringLiteral("Menlo"), 10);
@@ -1808,7 +1864,8 @@ void ThreeDViewerViewportItem::mousePressEvent(QMouseEvent *event)
                                                                        pickableStationIds,
                                                                        event->position(),
                                                                        std::max(1, int(width())),
-                                                                       std::max(1, int(height())));
+                                                                       std::max(1, int(height())),
+                                                                       current.orthographicProjection);
             if (station != nullptr) {
                 {
                     QMutexLocker locker(&mutex_);
@@ -1888,6 +1945,10 @@ ThreeDViewerViewportItem::Snapshot ThreeDViewerViewportItem::snapshot() const
     current.featureVisibility = featureVisibility_;
     current.meshColorMode = meshColorMode_;
     current.measurementMode = measurementMode_;
+    current.orthographicProjection = orthographicProjection_;
+    current.showBoundingBox = showBoundingBox_;
+    current.showHud = showHud_;
+    current.showInfo = showInfo_;
     current.hasHoveredStation = hasHoveredStation_;
     current.hoveredStationId = hoveredStationId_;
     current.hoveredStationScreenPosition = hoveredStationScreenPosition_;
@@ -1936,6 +1997,7 @@ void ThreeDViewerViewportItem::rebuildAutoRotationDeclutterLocks()
     ThreeDViewerCamera camera;
     std::array<bool, 5> layerVisibility;
     ThreeDViewerLayerListModel::FeatureVisibility featureVisibility;
+    bool orthographic = false;
     {
         QMutexLocker locker(&mutex_);
         if (!autoRotationEnabled_) {
@@ -1945,6 +2007,7 @@ void ThreeDViewerViewportItem::rebuildAutoRotationDeclutterLocks()
         camera = cameraSnapshot_;
         layerVisibility = layerVisibility_;
         featureVisibility = featureVisibility_;
+        orthographic = orthographicProjection_;
     }
 
     const DeclutterLockSelection selection = selectDeclutterLocks(sceneModel,
@@ -1952,7 +2015,8 @@ void ThreeDViewerViewportItem::rebuildAutoRotationDeclutterLocks()
                                                                   layerVisibility,
                                                                   featureVisibility,
                                                                   int(std::round(width())),
-                                                                  int(std::round(height())));
+                                                                  int(std::round(height())),
+                                                                  orthographic);
     {
         QMutexLocker locker(&mutex_);
         if (!autoRotationEnabled_) {

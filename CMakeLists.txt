@@ -698,6 +698,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/folder-tree.svg
     resources/icons/lucide/folder-x.svg
     resources/icons/lucide/hand.svg
+    resources/icons/lucide/house.svg
     resources/icons/lucide/image.svg
     resources/icons/lucide/spell-check.svg
     resources/icons/lucide/map-pin.svg
@@ -730,6 +731,8 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/view-side.svg
     resources/icons/lucide/view-roll-left.svg
     resources/icons/lucide/view-roll-right.svg
+    resources/icons/lucide/rotate-ccw.svg
+    resources/icons/lucide/rotate-cw.svg
     resources/icons/lucide/zoom-in.svg
     resources/icons/lucide/zoom-out.svg
     resources/qml/three_d_viewer/ThreeDViewerViewport.qml

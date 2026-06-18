@@ -63,8 +63,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - The 3D viewer inspector now uses a Qt Quick/QML host embedded through `QQuickWidget`, with the inspector content rendered from a shared QML surface, grouped into scene/layer sections while the viewport is moving to a GPU-backed scene-graph host.
 - The viewport rendering now lives in a QQuickItem-backed scene-graph surface so the viewer can render through Qt Quick instead of QWidget painting.
 - Mesh groups now render through Qt Quick's built-in GPU vertex-color material on the scene graph path.
-- The 3D viewer inspector now exposes a model-coloring mode that switches the GPU model palette between survey-based and depth-based coloring.
-- The 3D viewer centerline now uses the same survey-based or depth-based palette as the meshes.
+- The 3D viewer inspector now exposes a model-coloring mode that switches the GPU model palette between altitude coloring and no coloring.
+- The 3D viewer centerline now uses the same altitude or uncolored palette as the meshes.
 - The 3D viewer viewport now draws a red bounding box around the current scene extent.
 - The 3D viewer viewport now overlays a compass, scale bar, and altitude legend when scene bounds are available.
 - The 3D viewer canvas now uses a black background to match the Loch-style presentation.
@@ -73,8 +73,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - The 3D viewer station markers and fully qualified station labels now use automatic screen-space decluttering instead of drawing every overlapping station annotation.
 - The 3D viewer viewport now shows hover details for station markers, including full station reference, and supports a ruler-toggle measurement mode for station-to-station distance, azimuth, and vertical difference.
 - The 3D viewer hover card layout now uses a more even padding balance and larger typography for station details.
-- The 3D viewer viewport now overlays cave length and cave depth, computed from underground centerline shots only and excluding surface, splay, duplicate, and surface geometry contributions. The altitude legend is shown only in depth coloring mode, the compass and view-angle indicator are grouped beneath it like Loch, the view-angle semicircle uses a horizontal split and signed upper/lower motion, the scale bar is a simple line with end ticks, and the altitude legend includes more intermediate labels.
-- The 3D viewer scene statistics overlay now uses larger typography for the project title and cave length/depth summary.
+- The 3D viewer viewport now overlays Underground Passages Length and Underground Depth, computed from underground centerline shots only and excluding surface, splay, duplicate, and surface geometry contributions. The altitude legend is shown only in depth coloring mode, the compass and view-angle indicator are grouped beneath it like Loch, the view-angle semicircle uses a horizontal split and signed upper/lower motion, the scale bar is a simple line with end ticks, and the altitude legend includes more intermediate labels.
+- The 3D viewer scene statistics overlay now uses larger typography for the project title and underground passages/depth summary.
 - The 3D viewer HUD scale bar is aligned to the compass row with a matching gap to the view-angle indicator.
 - The 3D viewer toolbar now uses arrow-based icons for `Top View` and `Side View`.
 - The 3D viewer core now exposes station qualified-name construction in the shared scene model and has broader `.lox` fixture-matrix coverage for survey hierarchy, shot flags, and synthetic terrain surface chunks.
@@ -87,6 +87,14 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Viewer fit/reset controls now live in the shared workspace command bar instead of a tab-local toolbar.
 - The 3D viewer layer list now blocks internal item-change recursion during tab construction and refresh.
 - The 3D viewer toolbar now has a play/stop automatic-rotation toggle, and the inspector exposes rotation speed in degrees per second.
+- The 3D viewer toolbar now orders view controls as reset, fit, orthogonal projection, top/side views, rotate controls, auto-rotation, and measurement, using a home icon for reset and standard rotate icons for manual yaw.
+- The 3D viewer inspector now exposes precise camera sliders for compass heading, tilt, distance, and focal length while keeping those values synchronized with viewport navigation; focal length is disabled in orthographic projection.
+- The 3D viewer Fit command now computes camera distance from the projected scene bounds using the current viewport aspect ratio, reducing excessive empty space around fitted `.lox` models.
+- The 3D viewer removed survey-based model coloring; Altitude is now the default model-coloring mode, and None renders meshes in one solid light-gray color.
+- The 3D viewer inspector Scene Settings section now appears after Layers and exposes default-on visibility toggles for the bounding box, full HUD overlay, and title/statistics overlay.
+- The 3D viewer viewport no longer draws standalone world X/Y/Z axis guide lines over the scene.
+- The 3D viewer Layers default now starts with Stations and Labels hidden, while underground centerline, meshes, and surfaces remain visible.
+- The 3D viewer inspector now uses consistent Title Case for English field and layer labels.
 - Continue the renderer refinement and the broader Qt Quick/QML shell migration once the GPU-backed viewport proves out the document-open workflow.
 
 ## Blocked / Needs Input

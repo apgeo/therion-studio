@@ -14,6 +14,8 @@ private slots:
     void projectsSceneCenterToViewportCenter();
     void rejectsPointsBehindCamera();
     void projectsLineEndpoints();
+    void orthographicProjectionKeepsScaleAcrossDepth();
+    void focalLengthChangesPerspectiveScale();
 };
 
 void ThreeDViewerProjectionTest::projectsSceneCenterToViewportCenter()
@@ -51,6 +53,34 @@ void ThreeDViewerProjectionTest::projectsLineEndpoints()
     QVERIFY(std::abs(fromScreen.x() - 400.0) < 1e-6);
     QVERIFY(std::abs(toScreen.x() - 400.0) < 1e-6);
     QVERIFY(fromScreen.y() > toScreen.y());
+}
+
+void ThreeDViewerProjectionTest::orthographicProjectionKeepsScaleAcrossDepth()
+{
+    ThreeDViewerCamera camera;
+    camera.setState({{0.0, 0.0, 0.0}, 0.0, 0.0, 10.0});
+
+    const ThreeDViewerProjectedPoint nearPoint = ThreeDViewerProjection::projectPoint(camera, {0.0, -1.0, 0.0}, 800, 600, true);
+    const ThreeDViewerProjectedPoint farPoint = ThreeDViewerProjection::projectPoint(camera, {-5.0, -1.0, 0.0}, 800, 600, true);
+
+    QVERIFY(nearPoint.visible);
+    QVERIFY(farPoint.visible);
+    QVERIFY(std::abs(nearPoint.screenPosition.y() - farPoint.screenPosition.y()) < 1e-6);
+}
+
+void ThreeDViewerProjectionTest::focalLengthChangesPerspectiveScale()
+{
+    ThreeDViewerCamera wideCamera;
+    wideCamera.setState({{0.0, 0.0, 0.0}, 0.0, 0.0, 10.0, 20.0});
+    ThreeDViewerCamera teleCamera;
+    teleCamera.setState({{0.0, 0.0, 0.0}, 0.0, 0.0, 10.0, 70.0});
+
+    const ThreeDViewerProjectedPoint widePoint = ThreeDViewerProjection::projectPoint(wideCamera, {0.0, 1.0, 0.0}, 800, 600);
+    const ThreeDViewerProjectedPoint telePoint = ThreeDViewerProjection::projectPoint(teleCamera, {0.0, 1.0, 0.0}, 800, 600);
+
+    QVERIFY(widePoint.visible);
+    QVERIFY(telePoint.visible);
+    QVERIFY(std::abs(telePoint.screenPosition.x() - 400.0) > std::abs(widePoint.screenPosition.x() - 400.0));
 }
 
 int runThreeDViewerProjectionTest(int argc, char **argv)

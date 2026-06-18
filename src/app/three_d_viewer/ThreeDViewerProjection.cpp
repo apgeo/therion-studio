@@ -19,7 +19,8 @@ QVector3D toVector3D(const ThreeDViewerVec3 &value)
 ThreeDViewerProjectedPoint ThreeDViewerProjection::projectPoint(const ThreeDViewerCamera &camera,
                                                                 const ThreeDViewerVec3 &point,
                                                                 int viewportWidth,
-                                                                int viewportHeight)
+                                                                int viewportHeight,
+                                                                bool orthographic)
 {
     ThreeDViewerProjectedPoint projected;
     if (viewportWidth <= 0 || viewportHeight <= 0) {
@@ -40,7 +41,8 @@ ThreeDViewerProjectedPoint ThreeDViewerProjection::projectPoint(const ThreeDView
     const double y = double(QVector3D::dotProduct(delta, up));
     const double halfHeight = std::max(1.0, double(viewportHeight) * 0.5);
     const double halfWidth = std::max(1.0, double(viewportWidth) * 0.5);
-    const double scale = halfHeight / (depth * std::tan(ThreeDViewerCamera::defaultFieldOfViewRadians() * 0.5));
+    const double projectionDepth = orthographic ? camera.state().distance : depth;
+    const double scale = halfHeight / (projectionDepth * std::tan(camera.fieldOfViewRadians() * 0.5));
 
     projected.screenPosition = QPointF(halfWidth + x * scale, halfHeight - y * scale);
     projected.depth = depth;
@@ -54,10 +56,11 @@ bool ThreeDViewerProjection::projectLine(const ThreeDViewerCamera &camera,
                                          int viewportWidth,
                                          int viewportHeight,
                                          QPointF *fromScreen,
-                                         QPointF *toScreen)
+                                         QPointF *toScreen,
+                                         bool orthographic)
 {
-    const ThreeDViewerProjectedPoint projectedFrom = projectPoint(camera, from, viewportWidth, viewportHeight);
-    const ThreeDViewerProjectedPoint projectedTo = projectPoint(camera, to, viewportWidth, viewportHeight);
+    const ThreeDViewerProjectedPoint projectedFrom = projectPoint(camera, from, viewportWidth, viewportHeight, orthographic);
+    const ThreeDViewerProjectedPoint projectedTo = projectPoint(camera, to, viewportWidth, viewportHeight, orthographic);
     if (!projectedFrom.visible || !projectedTo.visible) {
         return false;
     }

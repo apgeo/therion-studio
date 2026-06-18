@@ -19,12 +19,19 @@ public:
 
     const ThreeDViewerCamera &camera() const;
 
-    void fitToScene(const ThreeDViewerSceneModel &sceneModel);
-    void resetView(const ThreeDViewerSceneModel &sceneModel);
-    void setViewPreset(ThreeDViewerViewPreset preset, const ThreeDViewerSceneModel &sceneModel);
+    void fitToScene(const ThreeDViewerSceneModel &sceneModel, int viewportWidth = 0, int viewportHeight = 0);
+    void resetView(const ThreeDViewerSceneModel &sceneModel, int viewportWidth = 0, int viewportHeight = 0);
+    void setViewPreset(ThreeDViewerViewPreset preset,
+                       const ThreeDViewerSceneModel &sceneModel,
+                       int viewportWidth = 0,
+                       int viewportHeight = 0);
     void rotateLeft();
     void rotateRight();
     void rotateByRadians(double radians);
+    void setFacingDegrees(double degrees);
+    void setTiltDegrees(double degrees);
+    void setDistanceMeters(double distanceMeters);
+    void setFocalLengthMm(double focalLengthMm);
 
     bool mousePress(Qt::MouseButton button, const QPoint &position);
     bool mouseMove(const QPoint &position, int viewportHeight);

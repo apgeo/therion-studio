@@ -4,6 +4,21 @@
 
 namespace TherionStudio
 {
+namespace
+{
+constexpr double kPi = 3.14159265358979323846;
+
+double degreesToRadians(double degrees)
+{
+    return degrees * kPi / 180.0;
+}
+
+double headingDegreesToYawRadians(double headingDegrees)
+{
+    const double headingRadians = degreesToRadians(headingDegrees);
+    return std::atan2(-std::cos(headingRadians), -std::sin(headingRadians));
+}
+} // namespace
 
 ThreeDViewerViewportController::ThreeDViewerViewportController(QObject *parent)
     : QObject(parent)
@@ -15,34 +30,38 @@ const ThreeDViewerCamera &ThreeDViewerViewportController::camera() const
     return camera_;
 }
 
-void ThreeDViewerViewportController::fitToScene(const ThreeDViewerSceneModel &sceneModel)
+void ThreeDViewerViewportController::fitToScene(const ThreeDViewerSceneModel &sceneModel, int viewportWidth, int viewportHeight)
 {
-    camera_.fitToBounds(sceneModel.bounds());
+    camera_.fitToBounds(sceneModel.bounds(), viewportWidth, viewportHeight);
     emitCameraChanged();
 }
 
-void ThreeDViewerViewportController::resetView(const ThreeDViewerSceneModel &sceneModel)
+void ThreeDViewerViewportController::resetView(const ThreeDViewerSceneModel &sceneModel, int viewportWidth, int viewportHeight)
 {
     camera_.resetToBounds(sceneModel.bounds());
+    camera_.fitToBounds(sceneModel.bounds(), viewportWidth, viewportHeight);
     emitCameraChanged();
 }
 
-void ThreeDViewerViewportController::setViewPreset(ThreeDViewerViewPreset preset, const ThreeDViewerSceneModel &sceneModel)
+void ThreeDViewerViewportController::setViewPreset(ThreeDViewerViewPreset preset,
+                                                   const ThreeDViewerSceneModel &sceneModel,
+                                                   int viewportWidth,
+                                                   int viewportHeight)
 {
     camera_.setViewPreset(preset);
-    camera_.fitToBounds(sceneModel.bounds());
+    camera_.fitToBounds(sceneModel.bounds(), viewportWidth, viewportHeight);
     emitCameraChanged();
 }
 
 void ThreeDViewerViewportController::rotateLeft()
 {
-    camera_.yawByRadians(3.14159265358979323846 / 12.0);
+    camera_.yawByRadians(kPi / 12.0);
     emitCameraChanged();
 }
 
 void ThreeDViewerViewportController::rotateRight()
 {
-    camera_.yawByRadians(-3.14159265358979323846 / 12.0);
+    camera_.yawByRadians(-kPi / 12.0);
     emitCameraChanged();
 }
 
@@ -53,6 +72,54 @@ void ThreeDViewerViewportController::rotateByRadians(double radians)
     }
 
     camera_.yawByRadians(radians);
+    emitCameraChanged();
+}
+
+void ThreeDViewerViewportController::setFacingDegrees(double degrees)
+{
+    ThreeDViewerCameraState state = camera_.state();
+    const double newYaw = std::remainder(headingDegreesToYawRadians(degrees), 2.0 * kPi);
+    if (std::abs(state.yaw - newYaw) < 1e-10) {
+        return;
+    }
+    state.yaw = newYaw;
+    camera_.setState(state);
+    emitCameraChanged();
+}
+
+void ThreeDViewerViewportController::setTiltDegrees(double degrees)
+{
+    ThreeDViewerCameraState state = camera_.state();
+    const double newPitch = ThreeDViewerCamera::clampPitch(degreesToRadians(degrees));
+    if (std::abs(state.pitch - newPitch) < 1e-10) {
+        return;
+    }
+    state.pitch = newPitch;
+    camera_.setState(state);
+    emitCameraChanged();
+}
+
+void ThreeDViewerViewportController::setDistanceMeters(double distanceMeters)
+{
+    ThreeDViewerCameraState state = camera_.state();
+    const double newDistance = ThreeDViewerCamera::clampDistance(distanceMeters);
+    if (std::abs(state.distance - newDistance) < 1e-10) {
+        return;
+    }
+    state.distance = newDistance;
+    camera_.setState(state);
+    emitCameraChanged();
+}
+
+void ThreeDViewerViewportController::setFocalLengthMm(double focalLengthMm)
+{
+    ThreeDViewerCameraState state = camera_.state();
+    const double newFocalLength = ThreeDViewerCamera::clampFocalLengthMm(focalLengthMm);
+    if (std::abs(state.focalLengthMm - newFocalLength) < 1e-10) {
+        return;
+    }
+    state.focalLengthMm = newFocalLength;
+    camera_.setState(state);
     emitCameraChanged();
 }
 

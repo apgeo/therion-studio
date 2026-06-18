@@ -155,6 +155,27 @@ bool ThreeDViewerTab::autoRotationEnabled() const
     return inspectorState_ != nullptr ? inspectorState_->autoRotationEnabled() : false;
 }
 
+void ThreeDViewerTab::setOrthographicProjection(bool orthographicProjection)
+{
+    if (orthographicProjection_ == orthographicProjection) {
+        return;
+    }
+
+    orthographicProjection_ = orthographicProjection;
+    if (inspectorState_ != nullptr) {
+        inspectorState_->setOrthographicProjection(orthographicProjection_);
+    }
+    if (viewport_ != nullptr) {
+        viewport_->setOrthographicProjection(orthographicProjection_);
+    }
+    emit orthographicProjectionChanged(orthographicProjection_);
+}
+
+bool ThreeDViewerTab::orthographicProjection() const
+{
+    return orthographicProjection_;
+}
+
 void ThreeDViewerTab::showFindBar(bool)
 {
 }
@@ -226,6 +247,45 @@ void ThreeDViewerTab::buildUi()
             viewport_->setAutoRotationSpeed(inspectorState_->autoRotationSpeed());
         }
     });
+    const auto syncSceneOverlayVisibility = [this] {
+        if (viewport_ != nullptr && inspectorState_ != nullptr) {
+            viewport_->setSceneOverlayVisibility(inspectorState_->showBoundingBox(),
+                                                 inspectorState_->showHud(),
+                                                 inspectorState_->showInfo());
+        }
+    };
+    connect(inspectorState_, &ThreeDViewerInspectorState::showBoundingBoxChanged, this, syncSceneOverlayVisibility);
+    connect(inspectorState_, &ThreeDViewerInspectorState::showHudChanged, this, syncSceneOverlayVisibility);
+    connect(inspectorState_, &ThreeDViewerInspectorState::showInfoChanged, this, syncSceneOverlayVisibility);
+    connect(inspectorState_, &ThreeDViewerInspectorState::cameraFacingDegreesChanged, this, [this] {
+        if (viewport_ != nullptr && inspectorState_ != nullptr) {
+            viewport_->setCameraFacingDegrees(inspectorState_->cameraFacingDegrees());
+        }
+    });
+    connect(inspectorState_, &ThreeDViewerInspectorState::cameraTiltDegreesChanged, this, [this] {
+        if (viewport_ != nullptr && inspectorState_ != nullptr) {
+            viewport_->setCameraTiltDegrees(inspectorState_->cameraTiltDegrees());
+        }
+    });
+    connect(inspectorState_, &ThreeDViewerInspectorState::cameraDistanceMetersChanged, this, [this] {
+        if (viewport_ != nullptr && inspectorState_ != nullptr) {
+            viewport_->setCameraDistanceMeters(inspectorState_->cameraDistanceMeters());
+        }
+    });
+    connect(inspectorState_, &ThreeDViewerInspectorState::cameraFocalLengthMmChanged, this, [this] {
+        if (viewport_ != nullptr && inspectorState_ != nullptr) {
+            viewport_->setCameraFocalLengthMm(inspectorState_->cameraFocalLengthMm());
+        }
+    });
+    connect(viewport_, &ThreeDViewerViewportWidget::cameraSettingsChanged, this, [this](double facingDegrees, double tiltDegrees, double distanceMeters, double focalLengthMm) {
+        if (inspectorState_ == nullptr) {
+            return;
+        }
+        inspectorState_->setCameraFacingDegrees(facingDegrees);
+        inspectorState_->setCameraTiltDegrees(tiltDegrees);
+        inspectorState_->setCameraDistanceMeters(distanceMeters);
+        inspectorState_->setCameraFocalLengthMm(focalLengthMm);
+    });
 
     inspectorWidget_ = new ThreeDViewerInspectorWidget(inspector);
     inspectorWidget_->setInspectorState(inspectorState_);
@@ -235,8 +295,17 @@ void ThreeDViewerTab::buildUi()
     if (viewport_ != nullptr && inspectorState_ != nullptr) {
         viewport_->setMeshColorMode(static_cast<ThreeDViewerMeshColorMode>(inspectorState_->meshColorMode()));
         viewport_->setMeasurementMode(inspectorState_->measurementMode());
+        viewport_->setOrthographicProjection(orthographicProjection_);
+        inspectorState_->setOrthographicProjection(orthographicProjection_);
+        viewport_->setCameraFacingDegrees(inspectorState_->cameraFacingDegrees());
+        viewport_->setCameraTiltDegrees(inspectorState_->cameraTiltDegrees());
+        viewport_->setCameraDistanceMeters(inspectorState_->cameraDistanceMeters());
+        viewport_->setCameraFocalLengthMm(inspectorState_->cameraFocalLengthMm());
         viewport_->setAutoRotationSpeed(inspectorState_->autoRotationSpeed());
         viewport_->setAutoRotationEnabled(inspectorState_->autoRotationEnabled());
+        viewport_->setSceneOverlayVisibility(inspectorState_->showBoundingBox(),
+                                             inspectorState_->showHud(),
+                                             inspectorState_->showInfo());
     }
 
     splitter_->addWidget(inspector);
@@ -273,8 +342,17 @@ void ThreeDViewerTab::loadSceneIntoView()
     if (inspectorState_ != nullptr) {
         viewport_->setMeshColorMode(static_cast<ThreeDViewerMeshColorMode>(inspectorState_->meshColorMode()));
         viewport_->setMeasurementMode(inspectorState_->measurementMode());
+        viewport_->setOrthographicProjection(orthographicProjection_);
+        inspectorState_->setOrthographicProjection(orthographicProjection_);
+        viewport_->setCameraFacingDegrees(inspectorState_->cameraFacingDegrees());
+        viewport_->setCameraTiltDegrees(inspectorState_->cameraTiltDegrees());
+        viewport_->setCameraDistanceMeters(inspectorState_->cameraDistanceMeters());
+        viewport_->setCameraFocalLengthMm(inspectorState_->cameraFocalLengthMm());
         viewport_->setAutoRotationSpeed(inspectorState_->autoRotationSpeed());
         viewport_->setAutoRotationEnabled(inspectorState_->autoRotationEnabled());
+        viewport_->setSceneOverlayVisibility(inspectorState_->showBoundingBox(),
+                                             inspectorState_->showHud(),
+                                             inspectorState_->showInfo());
     }
     viewport_->fitToScene();
 }

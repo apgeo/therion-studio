@@ -37,6 +37,8 @@ public:
     bool measurementMode() const;
     void setAutoRotationEnabled(bool autoRotationEnabled);
     bool autoRotationEnabled() const;
+    void setOrthographicProjection(bool orthographicProjection);
+    bool orthographicProjection() const;
     void showFindBar(bool replaceMode = false);
     void hideFindBar();
     void goToLine(int lineNumber);
@@ -46,6 +48,7 @@ signals:
     void titleChanged();
     void measurementModeChanged(bool measurementMode);
     void autoRotationEnabledChanged(bool autoRotationEnabled);
+    void orthographicProjectionChanged(bool orthographicProjection);
 
 private:
     void buildUi();
@@ -63,6 +66,7 @@ private:
     ThreeDViewerInspectorState *inspectorState_ = nullptr;
     ThreeDViewerInspectorWidget *inspectorWidget_ = nullptr;
     ThreeDViewerLayerListModel *layerModel_ = nullptr;
+    bool orthographicProjection_ = false;
 };
 
 } // namespace TherionStudio

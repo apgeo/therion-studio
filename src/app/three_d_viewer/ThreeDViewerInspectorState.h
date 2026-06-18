@@ -17,7 +17,15 @@ class ThreeDViewerInspectorState final : public QObject
     Q_PROPERTY(int meshColorMode READ meshColorMode WRITE setMeshColorMode NOTIFY meshColorModeChanged)
     Q_PROPERTY(bool measurementMode READ measurementMode WRITE setMeasurementMode NOTIFY measurementModeChanged)
     Q_PROPERTY(bool autoRotationEnabled READ autoRotationEnabled WRITE setAutoRotationEnabled NOTIFY autoRotationEnabledChanged)
+    Q_PROPERTY(bool orthographicProjection READ orthographicProjection WRITE setOrthographicProjection NOTIFY orthographicProjectionChanged)
+    Q_PROPERTY(bool showBoundingBox READ showBoundingBox WRITE setShowBoundingBox NOTIFY showBoundingBoxChanged)
+    Q_PROPERTY(bool showHud READ showHud WRITE setShowHud NOTIFY showHudChanged)
+    Q_PROPERTY(bool showInfo READ showInfo WRITE setShowInfo NOTIFY showInfoChanged)
     Q_PROPERTY(double autoRotationSpeed READ autoRotationSpeed WRITE setAutoRotationSpeed NOTIFY autoRotationSpeedChanged)
+    Q_PROPERTY(double cameraFacingDegrees READ cameraFacingDegrees WRITE setCameraFacingDegrees NOTIFY cameraFacingDegreesChanged)
+    Q_PROPERTY(double cameraTiltDegrees READ cameraTiltDegrees WRITE setCameraTiltDegrees NOTIFY cameraTiltDegreesChanged)
+    Q_PROPERTY(double cameraDistanceMeters READ cameraDistanceMeters WRITE setCameraDistanceMeters NOTIFY cameraDistanceMetersChanged)
+    Q_PROPERTY(double cameraFocalLengthMm READ cameraFocalLengthMm WRITE setCameraFocalLengthMm NOTIFY cameraFocalLengthMmChanged)
     Q_PROPERTY(QString caveLengthText READ caveLengthText NOTIFY sceneMetricsChanged)
     Q_PROPERTY(QString caveDepthText READ caveDepthText NOTIFY sceneMetricsChanged)
     Q_PROPERTY(int surveyCount READ surveyCount NOTIFY sceneMetricsChanged)
@@ -41,8 +49,32 @@ public:
     bool autoRotationEnabled() const;
     void setAutoRotationEnabled(bool autoRotationEnabled);
 
+    bool orthographicProjection() const;
+    void setOrthographicProjection(bool orthographicProjection);
+
+    bool showBoundingBox() const;
+    void setShowBoundingBox(bool showBoundingBox);
+
+    bool showHud() const;
+    void setShowHud(bool showHud);
+
+    bool showInfo() const;
+    void setShowInfo(bool showInfo);
+
     double autoRotationSpeed() const;
     void setAutoRotationSpeed(double autoRotationSpeed);
+
+    double cameraFacingDegrees() const;
+    void setCameraFacingDegrees(double cameraFacingDegrees);
+
+    double cameraTiltDegrees() const;
+    void setCameraTiltDegrees(double cameraTiltDegrees);
+
+    double cameraDistanceMeters() const;
+    void setCameraDistanceMeters(double cameraDistanceMeters);
+
+    double cameraFocalLengthMm() const;
+    void setCameraFocalLengthMm(double cameraFocalLengthMm);
 
     QString caveLengthText() const;
     QString caveDepthText() const;
@@ -59,15 +91,31 @@ signals:
     void meshColorModeChanged();
     void measurementModeChanged();
     void autoRotationEnabledChanged();
+    void orthographicProjectionChanged();
+    void showBoundingBoxChanged();
+    void showHudChanged();
+    void showInfoChanged();
     void autoRotationSpeedChanged();
+    void cameraFacingDegreesChanged();
+    void cameraTiltDegreesChanged();
+    void cameraDistanceMetersChanged();
+    void cameraFocalLengthMmChanged();
     void sceneMetricsChanged();
 
 private:
     QString filePath_;
-    ThreeDViewerMeshColorMode meshColorMode_ = ThreeDViewerMeshColorMode::Survey;
+    ThreeDViewerMeshColorMode meshColorMode_ = ThreeDViewerMeshColorMode::Altitude;
     bool measurementMode_ = false;
     bool autoRotationEnabled_ = false;
+    bool orthographicProjection_ = false;
+    bool showBoundingBox_ = true;
+    bool showHud_ = true;
+    bool showInfo_ = true;
     double autoRotationSpeed_ = 30.0;
+    double cameraFacingDegrees_ = 311.0;
+    double cameraTiltDegrees_ = 26.0;
+    double cameraDistanceMeters_ = 120.0;
+    double cameraFocalLengthMm_ = 35.0;
     QString caveLengthText_;
     QString caveDepthText_;
     int surveyCount_ = 0;

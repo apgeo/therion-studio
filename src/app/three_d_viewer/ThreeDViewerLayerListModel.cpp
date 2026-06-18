@@ -340,11 +340,11 @@ QString ThreeDViewerLayerListModel::featureLabel(Layer layer, Feature feature) c
     case Feature::Entrance:
         return tr("Entrances");
     case Feature::Fixed:
-        return layer == Layer::Centerline ? tr("Fixed") : tr("Fixed stations");
+        return layer == Layer::Centerline ? tr("Fixed") : tr("Fixed Stations");
     case Feature::Continuation:
         return tr("Continuations");
     case Feature::OtherStation:
-        return tr("Other stations");
+        return tr("Other Stations");
     case Feature::Count:
         break;
     }

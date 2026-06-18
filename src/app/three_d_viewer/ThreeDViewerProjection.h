@@ -20,14 +20,16 @@ public:
     static ThreeDViewerProjectedPoint projectPoint(const ThreeDViewerCamera &camera,
                                                    const ThreeDViewerVec3 &point,
                                                    int viewportWidth,
-                                                   int viewportHeight);
+                                                   int viewportHeight,
+                                                   bool orthographic = false);
     static bool projectLine(const ThreeDViewerCamera &camera,
                             const ThreeDViewerVec3 &from,
                             const ThreeDViewerVec3 &to,
                             int viewportWidth,
                             int viewportHeight,
                             QPointF *fromScreen,
-                            QPointF *toScreen);
+                            QPointF *toScreen,
+                            bool orthographic = false);
 };
 
 } // namespace TherionStudio

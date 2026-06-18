@@ -6,6 +6,14 @@ Rectangle {
     id: root
     color: "#f6f6f6"
 
+    function distanceToSlider(distance) {
+        return Math.log(Math.max(4, distance)) / Math.LN10
+    }
+
+    function sliderToDistance(sliderValue) {
+        return Math.pow(10, sliderValue)
+    }
+
     Flickable {
         id: flick
         anchors.fill: parent
@@ -22,7 +30,7 @@ Rectangle {
 
             GroupBox {
                 Layout.fillWidth: true
-                title: qsTr("Scene")
+                title: qsTr("Camera")
 
                 ColumnLayout {
                     width: parent.width
@@ -34,19 +42,30 @@ Rectangle {
 
                         Label {
                             Layout.preferredWidth: 120
-                            text: qsTr("Model coloring")
+                            text: qsTr("Compass")
                             color: "#202020"
                         }
 
-                        ComboBox {
+                        Slider {
+                            id: cameraFacingSlider
                             Layout.fillWidth: true
-                            model: [qsTr("Survey"), qsTr("Depth")]
-                            currentIndex: inspectorState ? inspectorState.meshColorMode : 0
-                            onActivated: {
+                            from: 0
+                            to: 359
+                            stepSize: 1
+                            live: true
+                            value: inspectorState ? inspectorState.cameraFacingDegrees : 0
+                            onMoved: {
                                 if (inspectorState) {
-                                    inspectorState.meshColorMode = currentIndex
+                                    inspectorState.cameraFacingDegrees = value
                                 }
                             }
+                        }
+
+                        Label {
+                            Layout.preferredWidth: 64
+                            horizontalAlignment: Text.AlignRight
+                            text: qsTr("%1°").arg(Math.round(cameraFacingSlider.value))
+                            color: "#202020"
                         }
                     }
 
@@ -56,21 +75,21 @@ Rectangle {
 
                         Label {
                             Layout.preferredWidth: 120
-                            text: qsTr("Rotation speed")
+                            text: qsTr("Tilt")
                             color: "#202020"
                         }
 
                         Slider {
-                            id: rotationSpeedSlider
+                            id: cameraTiltSlider
                             Layout.fillWidth: true
-                            from: 5
+                            from: -90
                             to: 90
                             stepSize: 1
                             live: true
-                            value: inspectorState ? inspectorState.autoRotationSpeed : 30
+                            value: inspectorState ? inspectorState.cameraTiltDegrees : 0
                             onMoved: {
                                 if (inspectorState) {
-                                    inspectorState.autoRotationSpeed = value
+                                    inspectorState.cameraTiltDegrees = value
                                 }
                             }
                         }
@@ -78,9 +97,88 @@ Rectangle {
                         Label {
                             Layout.preferredWidth: 64
                             horizontalAlignment: Text.AlignRight
-                            text: qsTr("%1°/s").arg(Math.round(rotationSpeedSlider.value))
+                            text: qsTr("%1°").arg(Math.round(cameraTiltSlider.value))
                             color: "#202020"
                         }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Label {
+                            Layout.preferredWidth: 120
+                            text: qsTr("Distance")
+                            color: "#202020"
+                        }
+
+                        Slider {
+                            id: cameraDistanceSlider
+                            Layout.fillWidth: true
+                            from: root.distanceToSlider(4)
+                            to: root.distanceToSlider(inspectorState ? Math.max(500, inspectorState.cameraDistanceMeters * 2) : 500)
+                            stepSize: 0.001
+                            live: true
+                            value: root.distanceToSlider(inspectorState ? inspectorState.cameraDistanceMeters : 120)
+                            onMoved: {
+                                if (inspectorState) {
+                                    inspectorState.cameraDistanceMeters = root.sliderToDistance(value)
+                                }
+                            }
+                        }
+
+                        Label {
+                            Layout.preferredWidth: 64
+                            horizontalAlignment: Text.AlignRight
+                            text: qsTr("%1 m").arg(Math.round(root.sliderToDistance(cameraDistanceSlider.value)))
+                            color: "#202020"
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        opacity: inspectorState && inspectorState.orthographicProjection ? 0.45 : 1.0
+
+                        Label {
+                            Layout.preferredWidth: 120
+                            text: qsTr("Focal Length")
+                            color: "#202020"
+                        }
+
+                        Slider {
+                            id: cameraFocalLengthSlider
+                            Layout.fillWidth: true
+                            enabled: inspectorState ? !inspectorState.orthographicProjection : true
+                            from: 10
+                            to: 80
+                            stepSize: 1
+                            live: true
+                            value: inspectorState ? inspectorState.cameraFocalLengthMm : 35
+                            onMoved: {
+                                if (inspectorState) {
+                                    inspectorState.cameraFocalLengthMm = value
+                                }
+                            }
+                        }
+
+                        Label {
+                            Layout.preferredWidth: 64
+                            enabled: cameraFocalLengthSlider.enabled
+                            horizontalAlignment: Text.AlignRight
+                            text: qsTr("%1 mm").arg(Math.round(cameraFocalLengthSlider.value))
+                            color: "#202020"
+                        }
+                    }
+
+                    Label {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 120
+                        visible: inspectorState ? inspectorState.orthographicProjection : false
+                        text: qsTr("Focal length is disabled in orthographic projection.")
+                        wrapMode: Text.WordWrap
+                        color: "#606060"
+                        font.pointSize: Math.max(8, Qt.application.font.pointSize - 1)
                     }
                 }
             }
@@ -116,6 +214,101 @@ Rectangle {
                                     layerModel.setLayerVisible(rowIndex, checkState === Qt.Checked)
                                 }
                             }
+                        }
+                    }
+                }
+            }
+
+            GroupBox {
+                Layout.fillWidth: true
+                title: qsTr("Scene Settings")
+
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 8
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Label {
+                            Layout.preferredWidth: 120
+                            text: qsTr("Model Coloring")
+                            color: "#202020"
+                        }
+
+                        ComboBox {
+                            Layout.fillWidth: true
+                            model: [qsTr("Altitude"), qsTr("None")]
+                            currentIndex: inspectorState ? inspectorState.meshColorMode : 0
+                            onActivated: {
+                                if (inspectorState) {
+                                    inspectorState.meshColorMode = currentIndex
+                                }
+                            }
+                        }
+                    }
+
+                    CheckBox {
+                        text: qsTr("Show Bounding Box")
+                        checked: inspectorState ? inspectorState.showBoundingBox : true
+                        onToggled: {
+                            if (inspectorState) {
+                                inspectorState.showBoundingBox = checked
+                            }
+                        }
+                    }
+
+                    CheckBox {
+                        text: qsTr("Show Head-Up Display")
+                        checked: inspectorState ? inspectorState.showHud : true
+                        onToggled: {
+                            if (inspectorState) {
+                                inspectorState.showHud = checked
+                            }
+                        }
+                    }
+
+                    CheckBox {
+                        text: qsTr("Show Title & Stats")
+                        checked: inspectorState ? inspectorState.showInfo : true
+                        onToggled: {
+                            if (inspectorState) {
+                                inspectorState.showInfo = checked
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Label {
+                            Layout.preferredWidth: 120
+                            text: qsTr("Rotation Speed")
+                            color: "#202020"
+                        }
+
+                        Slider {
+                            id: rotationSpeedSlider
+                            Layout.fillWidth: true
+                            from: 5
+                            to: 90
+                            stepSize: 1
+                            live: true
+                            value: inspectorState ? inspectorState.autoRotationSpeed : 30
+                            onMoved: {
+                                if (inspectorState) {
+                                    inspectorState.autoRotationSpeed = value
+                                }
+                            }
+                        }
+
+                        Label {
+                            Layout.preferredWidth: 64
+                            horizontalAlignment: Text.AlignRight
+                            text: qsTr("%1°/s").arg(Math.round(rotationSpeedSlider.value))
+                            color: "#202020"
                         }
                     }
                 }

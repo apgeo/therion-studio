@@ -12,11 +12,14 @@ class ThreeDViewerCameraTest : public QObject
 
 private slots:
     void fitCentersAndScalesScene();
+    void fitUsesViewportAspectRatio();
     void resetRestoresDefaultOrientation();
     void appliesViewPresets();
     void turnsAroundBlueAxis();
+    void topViewRotationKeepsYawVisible();
     void pitchSignFlipsForwardVectorZ();
     void orbitPanAndZoomModifyState();
+    void clampsFocalLengthAndChangesFieldOfView();
 };
 
 void ThreeDViewerCameraTest::fitCentersAndScalesScene()
@@ -33,6 +36,24 @@ void ThreeDViewerCameraTest::fitCentersAndScalesScene()
     QCOMPARE(state.target.y, 0.0);
     QCOMPARE(state.target.z, -10.0);
     QVERIFY(state.distance > 40.0);
+}
+
+void ThreeDViewerCameraTest::fitUsesViewportAspectRatio()
+{
+    ThreeDViewerBounds bounds;
+    bounds.include({-50.0, -5.0, -5.0});
+    bounds.include({50.0, 5.0, 5.0});
+
+    ThreeDViewerCamera fallbackCamera;
+    fallbackCamera.fitToBounds(bounds);
+
+    ThreeDViewerCamera viewportCamera;
+    viewportCamera.fitToBounds(bounds, 1600, 900);
+
+    QCOMPARE(viewportCamera.state().target.x, 0.0);
+    QCOMPARE(viewportCamera.state().target.y, 0.0);
+    QCOMPARE(viewportCamera.state().target.z, 0.0);
+    QVERIFY(viewportCamera.state().distance < fallbackCamera.state().distance);
 }
 
 void ThreeDViewerCameraTest::resetRestoresDefaultOrientation()
@@ -61,7 +82,7 @@ void ThreeDViewerCameraTest::appliesViewPresets()
 
     ThreeDViewerCameraState top = camera.state();
     QVERIFY(std::abs(top.yaw + 0.85) < 1e-12);
-    QVERIFY(top.pitch > 1.2);
+    QVERIFY(std::abs(top.pitch - 3.14159265358979323846 * 0.5) < 1e-12);
 
     camera.setViewPreset(ThreeDViewerViewPreset::Side);
     const ThreeDViewerCameraState side = camera.state();
@@ -86,6 +107,20 @@ void ThreeDViewerCameraTest::turnsAroundBlueAxis()
     QCOMPARE(after.target.x, before.target.x);
     QCOMPARE(after.target.y, before.target.y);
     QCOMPARE(after.target.z, before.target.z);
+}
+
+void ThreeDViewerCameraTest::topViewRotationKeepsYawVisible()
+{
+    ThreeDViewerCamera camera;
+    camera.setViewPreset(ThreeDViewerViewPreset::Top);
+
+    const ThreeDViewerVec3 before = camera.rightVector();
+    camera.yawByRadians(3.14159265358979323846 / 4.0);
+    const ThreeDViewerVec3 after = camera.rightVector();
+
+    QVERIFY(std::abs(before.x - after.x) > 0.1 || std::abs(before.y - after.y) > 0.1);
+    QCOMPARE(before.z, 0.0);
+    QCOMPARE(after.z, 0.0);
 }
 
 void ThreeDViewerCameraTest::pitchSignFlipsForwardVectorZ()
@@ -119,6 +154,20 @@ void ThreeDViewerCameraTest::orbitPanAndZoomModifyState()
 
     const double panScale = camera.screenPanScale(100);
     QVERIFY(panScale > 0.0);
+}
+
+void ThreeDViewerCameraTest::clampsFocalLengthAndChangesFieldOfView()
+{
+    ThreeDViewerCamera camera;
+    camera.setState({{0.0, 0.0, 0.0}, 0.0, 0.0, 1.0, 0.0});
+    QCOMPARE(camera.state().distance, 4.0);
+    QCOMPARE(camera.state().focalLengthMm, 10.0);
+
+    const double wideFieldOfView = camera.fieldOfViewRadians();
+    camera.setState({{0.0, 0.0, 0.0}, 0.0, 0.0, 100.0, 80.0});
+
+    QCOMPARE(camera.state().focalLengthMm, 80.0);
+    QVERIFY(camera.fieldOfViewRadians() < wideFieldOfView);
 }
 
 int runThreeDViewerCameraTest(int argc, char **argv)

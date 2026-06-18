@@ -16,6 +16,10 @@
         <translation>Zastavit automatickou rotaci</translation>
     </message>
     <message>
+        <source>Orthogonal Projection</source>
+        <translation>Ortografická projekce</translation>
+    </message>
+    <message>
         <source>Open project cancelled</source>
         <translation type="vanished">Otevření projektu zrušeno</translation>
     </message>
@@ -5417,12 +5421,79 @@ subtype blocks</translation>
         <translation type="unfinished">Scéna</translation>
     </message>
     <message>
-        <source>Cave length</source>
-        <translation type="unfinished">Délka jeskyně</translation>
+        <source>Underground Passages Length</source>
+        <translation type="unfinished">Délka podzemních tahů</translation>
     </message>
     <message>
-        <source>Cave depth</source>
-        <translation type="unfinished">Hloubka jeskyně</translation>
+        <source>Underground Depth</source>
+        <translation type="unfinished">Podzemní hloubka</translation>
+    </message>
+</context>
+<context>
+    <name>ThreeDViewerLayerListModel</name>
+    <message>
+        <source>Underground</source>
+        <translation>Podzemí</translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation>Vše</translation>
+    </message>
+    <message>
+        <source>Surface</source>
+        <translation>Povrch</translation>
+    </message>
+    <message>
+        <source>Splay</source>
+        <translation>Splay</translation>
+    </message>
+    <message>
+        <source>Duplicate</source>
+        <translation>Duplicitní</translation>
+    </message>
+    <message>
+        <source>Hidden</source>
+        <translation>Skryté</translation>
+    </message>
+    <message>
+        <source>Entrances</source>
+        <translation>Vchody</translation>
+    </message>
+    <message>
+        <source>Fixed</source>
+        <translation>Fixované</translation>
+    </message>
+    <message>
+        <source>Fixed Stations</source>
+        <translation>Fixované body</translation>
+    </message>
+    <message>
+        <source>Continuations</source>
+        <translation>Pokračování</translation>
+    </message>
+    <message>
+        <source>Other Stations</source>
+        <translation>Ostatní body</translation>
+    </message>
+    <message>
+        <source>Centerline</source>
+        <translation>Polygon</translation>
+    </message>
+    <message>
+        <source>Stations</source>
+        <translation>Body</translation>
+    </message>
+    <message>
+        <source>Labels</source>
+        <translation>Popisky</translation>
+    </message>
+    <message>
+        <source>Meshes</source>
+        <translation>Modely</translation>
+    </message>
+    <message>
+        <source>Surfaces</source>
+        <translation>Povrchy</translation>
     </message>
 </context>
 <context>
@@ -5434,11 +5505,11 @@ subtype blocks</translation>
     </message>
     <message>
         <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="37"/>
-        <source>Model coloring</source>
+        <source>Model Coloring</source>
         <translation type="unfinished">Barvení modelu</translation>
     </message>
     <message>
-        <source>Rotation speed</source>
+        <source>Rotation Speed</source>
         <translation>Rychlost rotace</translation>
     </message>
     <message>
@@ -5446,14 +5517,66 @@ subtype blocks</translation>
         <translation>%1°/s</translation>
     </message>
     <message>
-        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="43"/>
-        <source>Survey</source>
-        <translation type="unfinished">Survey</translation>
+        <source>Camera</source>
+        <translation>Kamera</translation>
     </message>
     <message>
-        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="43"/>
-        <source>Depth</source>
-        <translation type="unfinished">Hloubka</translation>
+        <source>Compass</source>
+        <translation>Kompas</translation>
+    </message>
+    <message>
+        <source>Tilt</source>
+        <translation>Sklon</translation>
+    </message>
+    <message>
+        <source>Distance</source>
+        <translation>Vzdálenost</translation>
+    </message>
+    <message>
+        <source>Focal Length</source>
+        <translation>Ohnisková vzdálenost</translation>
+    </message>
+    <message>
+        <source>%1°</source>
+        <translation>%1°</translation>
+    </message>
+    <message>
+        <source>%1 mm</source>
+        <translation>%1 mm</translation>
+    </message>
+    <message>
+        <source>%1 m</source>
+        <translation>%1 m</translation>
+    </message>
+    <message>
+        <source>Focal length is disabled in orthographic projection.</source>
+        <translation>Ohnisková vzdálenost je v ortografické projekci vypnutá.</translation>
+    </message>
+    <message>
+        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="51"/>
+        <source>Altitude</source>
+        <translation>Výškopis</translation>
+    </message>
+    <message>
+        <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="51"/>
+        <source>None</source>
+        <translation>Bez barvení</translation>
+    </message>
+    <message>
+        <source>Show Bounding Box</source>
+        <translation>Zobrazit bounding box</translation>
+    </message>
+    <message>
+        <source>Show Head-Up Display</source>
+        <translation>Zobrazit průhledový displej</translation>
+    </message>
+    <message>
+        <source>Show Title &amp; Stats</source>
+        <translation>Zobrazit název a statistiky</translation>
+    </message>
+    <message>
+        <source>Scene Settings</source>
+        <translation>Nastavení scény</translation>
     </message>
     <message>
         <location filename="../resources/qml/three_d_viewer/ThreeDViewerInspector.qml" line="61"/>

@@ -176,7 +176,9 @@ ThreeDViewerLoxLoader::Result ThreeDViewerLoxLoader::loadFile(const QString &pat
 {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        return {.error = QStringLiteral("Unable to open .lox file: %1").arg(file.errorString())};
+        Result result;
+        result.error = QStringLiteral("Unable to open .lox file: %1").arg(file.errorString());
+        return result;
     }
     return loadBytes(file.readAll());
 }

@@ -108,7 +108,7 @@ QColor altitudeColor(double normalized)
     const double clamped = std::clamp(normalized, 0.0, 1.0);
     const double hue = 0.78 - clamped * 0.78;
     const double value = 0.95 - clamped * 0.15;
-    return QColor::fromHsvF(hue, 1.0, value, 0.95);
+    return QColor::fromHsvF(static_cast<float>(hue), 1.0F, static_cast<float>(value), 0.95F);
 }
 
 ThreeDViewerVec3 boundsCenter(const ThreeDViewerBounds &bounds)
@@ -215,24 +215,6 @@ QPointF centeredTextOrigin(const QFont &font, const QString &text, const QPointF
     const QRectF bounds = metrics.boundingRect(text);
     return QPointF(center.x() - bounds.width() * 0.5,
                    center.y() - bounds.height() * 0.5);
-}
-
-QVector<QPointF> projectPolyline(const ThreeDViewerCamera &camera,
-                                 const QVector<ThreeDViewerVec3> &points,
-                                 int viewportWidth,
-                                 int viewportHeight,
-                                 bool orthographic)
-{
-    QVector<QPointF> projectedPoints;
-    projectedPoints.reserve(points.size());
-    for (const ThreeDViewerVec3 &point : points) {
-        const ThreeDViewerProjectedPoint projected = ThreeDViewerProjection::projectPoint(camera, point, viewportWidth, viewportHeight, orthographic);
-        if (!projected.visible) {
-            return {};
-        }
-        projectedPoints.push_back(projected.screenPosition);
-    }
-    return projectedPoints;
 }
 
 void appendBoundingBox(QSGNode *root,
@@ -1071,14 +1053,17 @@ struct MeshTriangleRender
 QColor depthColor(double depth, const ThreeDViewerBounds &bounds)
 {
     if (!bounds.valid || bounds.maximum.z <= bounds.minimum.z + 0.000001) {
-        return QColor::fromHsvF(0.66, 0.85, 0.95, 0.75);
+        return QColor::fromHsvF(0.66F, 0.85F, 0.95F, 0.75F);
     }
 
     const double normalized = std::clamp((depth - bounds.minimum.z) / (bounds.maximum.z - bounds.minimum.z), 0.0, 1.0);
     const double hue = 0.66 * (1.0 - normalized);
     const double saturation = 0.88;
     const double value = 0.92 - normalized * 0.18;
-    return QColor::fromHsvF(hue, saturation, value, 0.75);
+    return QColor::fromHsvF(static_cast<float>(hue),
+                            static_cast<float>(saturation),
+                            static_cast<float>(value),
+                            0.75F);
 }
 
 QColor sceneColorForMode(ThreeDViewerMeshColorMode mode,

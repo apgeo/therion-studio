@@ -286,6 +286,7 @@ sudo apt-get install \
   qml6-module-qtquick-controls \
   qml6-module-qtquick-layouts \
   qml6-module-qtquick-templates \
+  qml6-module-qtquick-window \
   qt6-svg-dev \
   qt6-tools-dev \
   qt6-tools-dev-tools

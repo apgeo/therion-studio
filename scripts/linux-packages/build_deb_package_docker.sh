@@ -42,7 +42,7 @@ deb_platform_label="${THERION_STUDIO_DEB_PLATFORM_LABEL:-ubuntu-26.04}"
 deb_architecture_label="${THERION_STUDIO_DEB_ARCHITECTURE_LABEL:-$default_deb_architecture_label}"
 deb_build_image="${DEB_BUILD_IMAGE:-ubuntu:26.04}"
 deb_build_platform="${DEB_BUILD_PLATFORM:-${DOCKER_PLATFORM:-$default_docker_platform}}"
-deb_qt_packages="${DEB_QT_PACKAGES:-qt6-base-dev,qt6-base-dev-tools,qt6-declarative-dev,qml6-module-qtqml-workerscript,qml6-module-qtquick-controls,qml6-module-qtquick-layouts,qml6-module-qtquick-templates,qt6-qpa-plugins,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools}"
+deb_qt_packages="${DEB_QT_PACKAGES:-qt6-base-dev,qt6-base-dev-tools,qt6-declarative-dev,qml6-module-qtqml-workerscript,qml6-module-qtquick-controls,qml6-module-qtquick-layouts,qml6-module-qtquick-templates,qml6-module-qtquick-window,qt6-qpa-plugins,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools}"
 
 docker run --rm \
     --platform "$deb_build_platform" \

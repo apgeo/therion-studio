@@ -48,6 +48,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Continue migrating touched hand-rolled tests to QTest where the dependency/runtime boundary is already clear.
 - Keep `python3 scripts/check_structure_constraints.py` green and preserve guardrails against map-editor source mutation bypasses.
 - Keep the explicit user-confirmation gate before every `git commit`.
+- Keep optional sample-data dependent tests from aborting CI when fixture directories are absent.
 
 ### UI Cleanup
 

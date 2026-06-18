@@ -10,17 +10,18 @@
 #include <QFontMetrics>
 #include <QFontMetricsF>
 #include <QGuiApplication>
+#include <QImage>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QPainter>
 #include <QQuickWindow>
 #include <QRectF>
 #include <QMutexLocker>
 #include <QSGFlatColorMaterial>
 #include <QSGGeometryNode>
+#include <QSGSimpleTextureNode>
 #include <QSGVertexColorMaterial>
-#include <QSGTextNode>
 #include <QSet>
-#include <QTextLayout>
 #include <QWheelEvent>
 #include <QLocale>
 
@@ -145,21 +146,35 @@ void appendTextNode(QSGNode *root,
         return;
     }
 
-    QSGTextNode *textNode = window->createTextNode();
-    if (textNode == nullptr) {
+    const QFontMetricsF metrics(font);
+    const qreal width = std::ceil(std::max<qreal>(1.0, metrics.horizontalAdvance(text)));
+    const qreal height = std::ceil(std::max<qreal>(1.0, metrics.height()));
+    const qreal devicePixelRatio = window->effectiveDevicePixelRatio();
+    QImage image(QSize(static_cast<int>(std::ceil(width * devicePixelRatio)),
+                       static_cast<int>(std::ceil(height * devicePixelRatio))),
+                 QImage::Format_ARGB32_Premultiplied);
+    if (image.isNull()) {
+        return;
+    }
+    image.setDevicePixelRatio(devicePixelRatio);
+    image.fill(Qt::transparent);
+
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::TextAntialiasing, true);
+    painter.setPen(color);
+    painter.setFont(font);
+    painter.drawText(QPointF(0.0, metrics.ascent()), text);
+    painter.end();
+
+    QSGTexture *texture = window->createTextureFromImage(image);
+    if (texture == nullptr) {
         return;
     }
 
-    textNode->setColor(color);
-    textNode->setTextStyle(QSGTextNode::Normal);
-    textNode->setRenderType(QSGTextNode::QtRendering);
-
-    QTextLayout layout(text, font);
-    layout.beginLayout();
-    QTextLine line = layout.createLine();
-    line.setLineWidth(10000.0);
-    layout.endLayout();
-    textNode->addTextLayout(position, &layout);
+    auto *textNode = new QSGSimpleTextureNode;
+    textNode->setTexture(texture);
+    textNode->setOwnsTexture(true);
+    textNode->setRect(QRectF(position, QSizeF(width, height)));
     root->appendChildNode(textNode);
 }
 

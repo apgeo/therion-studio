@@ -75,7 +75,7 @@ The old Therion Loch sources in `therion/loch` remain useful as a behavioral ref
   - meshes without centerline coverage,
   - terrain surfaces and surface bitmap chunks.
 - Add assertions for station fully qualified names, survey titles, shot flags, and scene statistics on those fixtures.
-- The current sample `.lox` fixture matrix covers nested survey hierarchy, mesh groups, station flags, and surface/duplicate/splay shot flags, but does not yet contain terrain surface chunks.
+- The current sample `.lox` fixture matrix covers nested survey hierarchy, mesh groups, station flags, and surface/duplicate/splay shot flags. Terrain surface chunks are covered by a synthetic loader fixture; a real Therion-exported terrain fixture is still missing.
 - Decide whether surface bitmap chunks should be represented in the scene model or explicitly ignored with documented rationale.
 - Keep malformed-input coverage strict and ensure loader errors remain actionable.
 
@@ -109,7 +109,7 @@ The old Therion Loch sources in `therion/loch` remain useful as a behavioral ref
 
 ## Recommended Next Slices
 
-1. Add or generate a `.lox` fixture that contains terrain surface chunks and, if available, surface bitmap chunks.
+1. Add or generate a real Therion-exported `.lox` fixture that contains terrain surface chunks and, if available, surface bitmap chunks.
 2. Add a label-density strategy for large scenes, starting with a simple user-facing label mode or automatic declutter.
 3. Profile the current Qt Quick scene-graph renderer on a large real cave and record the first concrete bottleneck before refactoring.
 4. Add project-aware generated-artifact discovery only after the desired compile/open workflow is specified.

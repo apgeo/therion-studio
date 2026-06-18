@@ -1415,7 +1415,10 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
 
     appendBoundingBox(root, camera, bounds, viewportWidth, viewportHeight, QColor(QStringLiteral("#ff0000")));
     const QPointF altitudeOrigin(20.0, double(viewportHeight) - 300.0);
-    appendAltitudeLegend(root, window(), bounds, altitudeOrigin);
+    const bool showAltitudeLegend = current.meshColorMode == ThreeDViewerMeshColorMode::Depth;
+    if (showAltitudeLegend) {
+        appendAltitudeLegend(root, window(), bounds, altitudeOrigin);
+    }
     const double hudRowY = altitudeOrigin.y() + 240.0;
     appendCompassIndicator(root, window(), bounds, camera, viewportWidth, viewportHeight, QPointF(36.0, hudRowY));
     appendViewAngleIndicator(root, window(), camera, QPointF(98.0, hudRowY));

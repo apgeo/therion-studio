@@ -64,7 +64,7 @@ Required capabilities:
 - the 3D viewer shall let the user switch model coloring between survey-based coloring and depth-based coloring
 - the 3D viewer shall color centerline shots using the same survey-based or depth-based palette as the meshes
 - the 3D viewer shall render a bounding box around the loaded 3D scene extent
-- the 3D viewer shall show a screen-space compass, scale bar, and altitude legend when scene bounds are available
+- the 3D viewer shall show a screen-space compass and scale bar when scene bounds are available, and shall show the altitude legend only when model coloring is set to depth
 - support file selection, multi-tab workflows, and recent project reopening
 - preserve folder expansion state where practical
 
@@ -301,7 +301,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The 3D viewer shall apply the selected model-coloring mode to centerline shots as well as meshes.
 - The 3D viewer toolbar shall expose a measurement toggle with a ruler icon that activates station-to-station measurement.
 - The 3D viewer viewport shall draw a visible wireframe bounding box for the current scene extent when the scene has valid bounds.
-- The 3D viewer viewport shall show a compass, view-angle indicator, scale bar, and altitude legend as screen-space overlays when scene bounds are available, with the compass and view-angle indicator placed together below the altitude legend and the scale bar positioned beside that control group. The altitude legend shall show multiple intermediate labels between the scene minimum and maximum elevations. The view-angle indicator shall render as a right-side semicircle split by a horizontal center line, and its needle shall move in the upper half for above-scene views and in the lower half for below-scene views.
+- The 3D viewer viewport shall show a compass, view-angle indicator, and scale bar as screen-space overlays when scene bounds are available, with the compass and view-angle indicator placed together below the altitude legend area and the scale bar positioned beside that control group. The altitude legend shall be shown only when model coloring is set to depth, and it shall show multiple intermediate labels between the scene minimum and maximum elevations. The view-angle indicator shall render as a right-side semicircle split by a horizontal center line, and its needle shall move in the upper half for above-scene views and in the lower half for below-scene views.
 - The 3D viewer viewport shall show the full station reference and depth when the pointer hovers a station marker.
 - The 3D viewer station markers and fully qualified station labels shall use automatic screen-space decluttering so visible station annotations do not overlap heavily in dense views while station hover and measurement picking remain available for all stations.
 - The 3D viewer viewport shall show a cave length and cave depth summary overlay for the loaded scene, derived from underground centerline shots only and excluding surface, splay, and duplicate shots as well as surface geometry.

@@ -12,7 +12,6 @@
 #include <QMouseEvent>
 #include <QQuickWindow>
 #include <QMutexLocker>
-#include <QSet>
 #include <QSGFlatColorMaterial>
 #include <QSGGeometryNode>
 #include <QSGVertexColorMaterial>
@@ -653,56 +652,6 @@ qreal appendTextCard(QSGNode *root,
     return cardRect.height();
 }
 
-QString surveyPathForId(const ThreeDViewerSceneModel &sceneModel, quint32 surveyId)
-{
-    if (surveyId == 0) {
-        return {};
-    }
-
-    QStringList components;
-    QSet<quint32> visited;
-    quint32 currentSurveyId = surveyId;
-    for (int guard = 0; guard < 64 && currentSurveyId != 0; ++guard) {
-        if (visited.contains(currentSurveyId)) {
-            break;
-        }
-        visited.insert(currentSurveyId);
-
-        const ThreeDViewerSurvey *survey = nullptr;
-        for (const ThreeDViewerSurvey &candidate : sceneModel.surveys) {
-            if (candidate.id == currentSurveyId) {
-                survey = &candidate;
-                break;
-            }
-        }
-        if (survey == nullptr) {
-            break;
-        }
-
-        const QString surveyName = survey->name.isEmpty() ? survey->title : survey->name;
-        if (surveyName.isEmpty()) {
-            break;
-        }
-
-        components.append(surveyName);
-        currentSurveyId = survey->parentId;
-    }
-
-    return components.join(QLatin1Char('.'));
-}
-
-QString stationQualifiedName(const ThreeDViewerSceneModel &sceneModel, const ThreeDViewerStation &station)
-{
-    const QString surveyPath = surveyPathForId(sceneModel, station.surveyId);
-    if (surveyPath.isEmpty()) {
-        return station.name;
-    }
-    if (station.name.isEmpty()) {
-        return QStringLiteral("@%1").arg(surveyPath);
-    }
-    return QStringLiteral("%1@%2").arg(station.name, surveyPath);
-}
-
 const ThreeDViewerStation *pickStationAtPosition(const ThreeDViewerSceneModel &sceneModel,
                                                  const ThreeDViewerCamera &camera,
                                                  const QPointF &screenPosition,
@@ -748,8 +697,7 @@ const ThreeDViewerStation *stationById(const ThreeDViewerSceneModel &sceneModel,
 
 QString stationDetailsText(const ThreeDViewerSceneModel &sceneModel, const ThreeDViewerStation &station)
 {
-    const QString surveyName = surveyPathForId(sceneModel, station.surveyId);
-    const QString qualifiedName = stationQualifiedName(sceneModel, station);
+    const QString qualifiedName = sceneModel.stationQualifiedName(station);
     const QString comment = station.comment.trimmed();
     QStringList lines;
     if (!qualifiedName.isEmpty()) {
@@ -770,8 +718,8 @@ QString measurementText(const ThreeDViewerSceneModel &sceneModel,
                         const ThreeDViewerStation &startStation,
                         const ThreeDViewerStation &endStation)
 {
-    const QString startName = stationQualifiedName(sceneModel, startStation);
-    const QString endName = stationQualifiedName(sceneModel, endStation);
+    const QString startName = sceneModel.stationQualifiedName(startStation);
+    const QString endName = sceneModel.stationQualifiedName(endStation);
     const double dx = endStation.position.x - startStation.position.x;
     const double dy = endStation.position.y - startStation.position.y;
     const double dz = endStation.position.z - startStation.position.z;
@@ -1453,9 +1401,9 @@ QSGNode *ThreeDViewerViewportItem::updatePaintNode(QSGNode *oldNode, UpdatePaint
                : measurementStartStation != nullptr
                    ? QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Start")
                          + QStringLiteral(": ")
-                         + (stationQualifiedName(current.sceneModel, *measurementStartStation).isEmpty()
+                         + (current.sceneModel.stationQualifiedName(*measurementStartStation).isEmpty()
                                 ? QStringLiteral("?")
-                                : stationQualifiedName(current.sceneModel, *measurementStartStation))
+                                : current.sceneModel.stationQualifiedName(*measurementStartStation))
                          + QStringLiteral("\n")
                          + QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Click another station to finish.")
                    : QCoreApplication::translate("TherionStudio::ThreeDViewerViewportRenderer", "Click a station to start measuring."))

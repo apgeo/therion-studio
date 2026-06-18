@@ -982,6 +982,7 @@ therion_add_core_qtest_runner(TherionCoreQTests
     tests/core/ThreeDViewerCameraTest.cpp
     tests/core/TherionFileTypesTest.cpp
     tests/core/ThreeDViewerLoxLoaderTest.cpp
+    tests/core/ThreeDViewerSceneModelTest.cpp
     tests/core/ThreeDViewerSceneStatisticsTest.cpp
     tests/core/TherionSourceTextTest.cpp
     tests/core/TherionTokenRulesTest.cpp)

@@ -1,159 +1,123 @@
-# 3D Viewer Integration Plan
+# 3D Viewer Remaining Work Plan
 
-This plan describes a cautious path toward a minimal GPU-accelerated 3D viewer in Therion Studio. The existing Therion Loch sources in `therion/loch` are useful as a behavioral and format reference, but the new feature should use neutral `3d_viewer` naming and should not import the old Loch GUI architecture wholesale.
+This plan tracks the remaining work for the read-only 3D `.lox` viewer in Therion Studio. The initial integration is no longer speculative: the loader, neutral scene model, Qt Quick scene-graph viewport, toolbar controls, inspector, overlays, measurement mode, and basic tests exist. Future work should refine the current implementation rather than restart the earlier discovery phases.
+
+The old Therion Loch sources in `therion/loch` remain useful as a behavioral reference for rendering conventions, overlays, and format semantics, but Therion Studio should continue using neutral `three_d_viewer` naming and should not import the Loch GUI architecture wholesale.
+
+## Current Implementation State
+
+- `.lox` files open in a read-only 3D viewer tab.
+- `.lox` loading lives in `ThreeDViewerLoxLoader` under `src/core/`.
+- The neutral scene model lives in `ThreeDViewerSceneModel` and currently covers surveys, stations, shots, mesh groups, terrain surfaces, station flags, LRUD data, shot flags, and scene bounds.
+- Camera orbit, pan, zoom, fit, reset, top view, side view, and blue-axis rotation are owned by `ThreeDViewerCamera` / `ThreeDViewerViewportController`.
+- The viewport is a Qt Quick `QQuickItem` scene-graph surface hosted in the existing Qt Widgets shell.
+- The viewer renders centerline, stations, labels, mesh groups, surfaces, a red scene bounding box, and Loch-style screen overlays.
+- The model coloring mode supports survey and depth palettes and applies consistently to meshes and centerline.
+- The measurement workflow is toolbar-driven with station hover highlighting and station-to-station distance, azimuth, and vertical difference output.
+- The viewport overlays cave length and cave depth computed from underground centerline shots while excluding surface, splay, duplicate, and surface geometry contributions.
+- The inspector is intentionally narrow: model-coloring control plus layer visibility toggles.
+- Focused QTest coverage exists for loader behavior, camera math, scene statistics, projection, inspector state/widget, layer model, viewport widget loading, and viewport controller behavior.
 
 ## Goals
 
-- Provide a minimal 3D cave viewer inside Therion Studio.
-- Use GPU-accelerated rendering through modern Qt facilities.
-- Use the existing Therion Loch implementation as a reference for data formats, camera behavior, scene organization, and rendering behavior.
-- Keep the first version read-only and explicitly separated from 2D map editing.
-- Keep loading, parsing, scene-model construction, and process/file access in C++ services rather than QML.
-- Preserve the existing Qt Widgets application while allowing a focused Qt Quick/QML viewport where it provides clear rendering value.
+- Keep the viewer read-only and explicitly separated from `.th`, `.th2`, and `thconfig` source mutation.
+- Preserve the C++ ownership boundary for loading, parsing, scene-model construction, camera state, and file/process interaction.
+- Keep Qt Quick scoped to presentation, input, HUD rendering, and scene-graph drawing.
+- Improve practical usability on real caves before adding broad format support.
+- Keep the feature cross-platform: macOS, Windows, and Linux must remain viable graphics/deployment targets.
 
 ## Non-Goals
 
 - Do not port the old Loch wxWidgets UI into Therion Studio.
-- Do not attempt full Loch feature parity in the first slice.
-- Do not introduce live 3D editing or source mutation from the viewer.
+- Do not add live 3D editing or source mutation from the viewer.
 - Do not move Therion execution, file IO, parsing, or project indexing into QML.
 - Do not bind the rest of the application to a new QML architecture as part of this work.
-- Do not depend on legacy immediate-mode OpenGL unless it is isolated behind a narrow renderer adapter and justified by a discovery spike.
+- Do not add `.3d` or `.plt` import until the `.lox` path is stable and there is a concrete compatibility need.
+- Do not add speculative rendering abstractions until profiling shows a real bottleneck or platform limitation.
 
-## Recommended Direction
+## Architecture Guardrails
 
-Use a C++ data/model backend first, then add a Qt Quick-based viewport once the loader and scene contract are stable. Prefer Qt Quick 3D if the required geometry can be represented as lines, points, labels, and simple meshes with acceptable performance. If Qt Quick 3D cannot represent cave-viewer rendering, picking, or large-cave performance well enough, use a lower-level custom renderer through a Qt Quick integration point such as `QQuickFramebufferObject` or an equivalent Qt 6 rendering abstraction.
+- `src/core/ThreeDViewer*` owns format loading, neutral model data, scene statistics, and camera math that can be tested without widgets.
+- `src/app/three_d_viewer/` owns the read-only shell, inspector state, layer model, projection helper, viewport controller, and Qt Quick host.
+- QML files under `resources/qml/three_d_viewer/` should remain thin presentation surfaces backed by C++ state.
+- The viewer shall not call `DocumentFile` or mutate open source documents.
+- Production dependencies should continue to be composed at tab/main-window boundaries rather than hidden behind UI constructors.
+- User-visible strings must remain translatable and documented in `docs/USER_MANUAL.md` when workflows change.
 
-The first viewer should be a preview surface, not a full Loch replacement. It should open compiled 3D output or a well-defined Therion 3D artifact, render the main cave geometry, and provide predictable navigation.
+## Remaining Task Backlog
 
-The first implementation slice should keep Qt Quick scoped to the inspector host until the loader and scene contract are stable. The current application links Qt Core, Widgets, Svg, Concurrent, and Test, but not Qt Quick or Qt Quick 3D. A `.lox` loader and neutral scene model can be implemented and tested before making packaging and runtime decisions for the viewport.
+### 1. Rendering Correctness And Visual Quality
 
-## Discovery Findings
+- Compare centerline, mesh, surface, station, label, altitude legend, compass, view-angle indicator, scale bar, and bounding-box rendering against Loch on a small set of known `.lox` files.
+- Add targeted fixes for visual mismatches that affect navigation or interpretation, not cosmetic Loch parity for its own sake.
+- Improve label legibility and density handling. The likely first slice is a user-facing label mode or decluttering policy (`Auto`, `All`, `None`) rather than always drawing every label.
+- Evaluate station marker rendering for dense caves and keep hover/picking usable when stations and labels are hidden.
+- Decide whether terrain surface rendering should stay enabled by default when large or visually dominant.
 
-- Therion exports Loch data through `thexpmodel::export_lox_file` in `therion/src/therion-core/thexpmodel.cxx`.
-- The shared `.lox` data structures and import/export implementation live in `therion/src/common-utils/lxFile.h` and `therion/src/common-utils/lxFile.cxx`.
-- Loch opens `.lox`, Compass `.plt`, and Survex `.3d`, but `.lox` is the richest native artifact and should be the MVP target.
-- `.lox` contains chunked binary records for surveys, stations, shots, scrap wall meshes, terrain surfaces, and surface bitmaps.
-- Loch's runtime model in `therion/loch/lxData.*` converts `lxFile` records into wx/VTK/OpenGL-oriented data structures.
-- The new Studio viewer should not reuse `lxData` directly because it pulls in wx and VTK concepts; it should translate `.lox` into a small Studio-owned scene model.
-- Loch's OpenGL renderer and setup dialogs are useful behavioral references, but should not become ownership boundaries in the new implementation.
+### 2. Performance And Scalability
 
-## Architecture
+- Profile the scene-graph renderer on small, medium, and large `.lox` files.
+- Track frame time, load time, memory footprint, node count, vertex count, and label count.
+- Batch or cache static geometry where profiling shows repeated scene-graph rebuild cost.
+- Add spatial or screen-space indexing for station hover and measurement picking if dense projects make linear picking visibly slow.
+- Add label decluttering or level-of-detail before attempting expensive text rendering for every station in large scenes.
+- Keep GPU-dependent performance tests separate from fast core/service tests.
 
-Introduce a focused feature area, for example:
+### 3. Data Semantics And Loader Coverage
 
-```text
-src/app/3d_viewer/
-  ThreeDViewerWidget.*
-  ThreeDViewerController.*
-  ThreeDViewerSceneModel.*
-  ThreeDViewerCamera.*
-  ThreeDViewerLoadService.*
-  qml/
-    ThreeDViewport.qml
-```
+- Extend `.lox` fixture coverage beyond one sample cave, including:
+  - nested survey namespaces,
+  - surface shots,
+  - splay shots,
+  - duplicate shots,
+  - hidden shots,
+  - stations with entrance/fixed/continuation flags,
+  - meshes without centerline coverage,
+  - terrain surfaces and surface bitmap chunks.
+- Add assertions for station fully qualified names, survey titles, shot flags, and scene statistics on those fixtures.
+- The current sample `.lox` fixture matrix covers nested survey hierarchy, mesh groups, station flags, and surface/duplicate/splay shot flags, but does not yet contain terrain surface chunks.
+- Decide whether surface bitmap chunks should be represented in the scene model or explicitly ignored with documented rationale.
+- Keep malformed-input coverage strict and ensure loader errors remain actionable.
 
-The exact file list should be created only as implementation needs become clear.
+### 4. Project Workflow Integration
 
-Ownership rules:
+- Add a project-aware way to find or open generated `.lox` artifacts from the active project once the runner/artifact workflow is stable.
+- Report missing, stale, unsupported, or failed `.lox` artifacts with actionable user-facing messages.
+- Avoid implicit compile/run side effects from opening the viewer; any compile integration should remain an explicit project action.
+- Consider optional camera/layer/coloring persistence only after the read-only workflow is stable and the persistence key is clear.
 
-- `ThreeDViewerLoadService` owns loading compiled 3D artifacts and converting them into neutral scene data.
-- `ThreeDViewerSceneModel` exposes renderable points, lines, labels, meshes, visibility flags, extents, and metadata.
-- `ThreeDViewerCamera` owns orbit, pan, zoom, fit, reset, projection mode, and view state.
-- QML owns the inspector surface first, then later viewport presentation, input gestures, small overlay controls, and bindings to the C++ model.
-- Production dependencies should be passed through explicit composition boundaries.
-- No viewer class should mutate `.th`, `.th2`, or `thconfig` source in the MVP.
+### 5. Cross-Platform Graphics And Packaging
 
-## MVP Scope
+- Verify the Qt Quick scene-graph viewport on macOS, Windows, and Linux with packaged builds, not only local developer runs.
+- Confirm deployment includes required Qt Quick/QML modules and resources.
+- Check behavior under different graphics backends where Qt selects Metal, Direct3D, OpenGL, or software fallbacks.
+- Keep any backend-specific workaround isolated in the viewport host or renderer, not in core scene/model code.
 
-- Load one `.lox` cave artifact selected by the user or produced by an explicit project action.
-- Render centerline geometry.
-- Render station points and optional station labels.
-- Render basic walls, surfaces, or meshes only if they are available from the chosen artifact with low implementation risk.
-- Provide orbit, pan, zoom, fit-to-scene, and reset-view controls.
-- Provide visibility toggles for at least centerline, stations, and labels.
-- Show loading and error states with actionable messages.
-- Keep the viewer read-only.
+### 6. Accessibility And UI Polish
 
-## Phase Plan
+- Add or verify keyboard-accessible toolbar controls and focus behavior for the 3D viewer tab.
+- Keep dark/light application chrome coherent while the 3D canvas remains Loch-style black.
+- Ensure inspector controls remain usable in narrow sidebar widths.
+- Keep hover and measurement cards readable for long fully qualified station names.
+- Review translatable UI strings whenever labels, tooltips, or errors change.
 
-### Phase 1 - Discovery Spike
+### 7. Future Compatibility
 
-- Use `.lox` as the first supported 3D artifact.
-- Treat `lxFile` as the file-format reference, not as the final Studio scene model.
-- Treat `lxData` as the reference for converting stations, shots, LRUD walls, scrap walls, surfaces, and surface bitmaps into renderable structures.
-- Defer Qt Quick 3D versus custom Qt Quick renderer selection until a loader-backed scene model exists.
-- Keep the first implementation slice below the viewport: loader, neutral scene data, bounds, and tests.
+- Leave Compass `.plt` and Survex `.3d` import as future compatibility work until there is a concrete user need.
+- If future formats are added, convert them into the same `ThreeDViewerSceneModel` rather than adding format-specific render paths.
+- Avoid importing old Loch runtime data structures directly; treat them as format/behavior reference only.
 
-Deliverable: a `.lox` MVP data contract and a small loader/model implementation plan.
+## Recommended Next Slices
 
-### Phase 2 - Read-Only Data Core
+1. Add or generate a `.lox` fixture that contains terrain surface chunks and, if available, surface bitmap chunks.
+2. Add a label-density strategy for large scenes, starting with a simple user-facing label mode or automatic declutter.
+3. Profile the current Qt Quick scene-graph renderer on a large real cave and record the first concrete bottleneck before refactoring.
+4. Add project-aware generated-artifact discovery only after the desired compile/open workflow is specified.
 
-- Add a small C++ loader/model layer for `.lox`.
-- Convert loaded data into a neutral scene model with stable identifiers where possible.
-- Add bounds/extents computation for fit-to-scene.
-- Add QTest coverage for loader behavior, malformed input handling, scene bounds, and camera math.
-- Add a minimal fixture corpus for one small cave artifact.
+## Verification Strategy
 
-Deliverable: loadable scene data without a production viewport.
-
-### Phase 3 - Minimal GPU Viewport
-
-- Keep the inspector host in Qt Quick/QML and move the rendering surface to a QQuickItem-backed Qt Quick scene graph host.
-- Render centerline, stations, labels, and simple meshes/surfaces in batched scene-graph nodes where practical.
-- Add orbit, pan, zoom, fit, reset, and preset view controls.
-- Keep UI controls minimal and consistent with existing Therion Studio tool surfaces.
-- Verify the viewport on macOS first, then leave explicit Windows/Linux verification gates.
-
-Deliverable: a usable read-only 3D preview for a small fixture.
-
-### Phase 4 - Product Integration
-
-- Add an explicit menu, toolbar, tab, or dock entrypoint for opening the viewer.
-- Wire project-aware artifact selection only after the artifact contract is clear.
-- Add clear errors for missing compiled output, stale output, unsupported format, and load failures.
-- Add optional persistence for viewer visibility and camera state only after the viewport behavior is stable.
-
-Deliverable: a user-accessible viewer that does not affect source documents.
-
-### Phase 5 - Viewer Expansion
-
-- Add walls, surfaces, entrances, fixed points, bounding boxes, or LRUD visualization based on the selected artifact and user value.
-- Add station/object picking and focus if it can be done without coupling the viewer to editor mutation.
-- Add project compile/run integration when Therion runner error handling and artifact paths are stable.
-- Add larger corpus/performance fixtures and profiling.
-
-Deliverable: incremental 3D-viewer capabilities, still behind stable model and renderer boundaries.
-
-## Testing Strategy
-
-- Use QTest for new C++ tests.
-- Keep loader, scene-model, and camera tests separate from GUI/rendering tests where practical.
-- Use small deterministic artifact fixtures for loader and bounds tests.
-- Start with loader/model tests before introducing any Qt Quick runtime dependency.
-- Use rendering smoke tests only after the viewport is stable and the platform/runtime setup is known.
-- Keep large corpus, performance, or GPU-dependent tests separate from fast core/service QTest runners.
-
-## Risks And Open Questions
-
-- `.lox` is the first target artifact, but `.3d` and `.plt` import can remain future compatibility work.
-- Qt Quick 3D may not be ideal for dense line rendering, label placement, or large cave models.
-- A custom renderer may be more durable but increases implementation and packaging risk.
-- Adding Qt Quick or Qt Quick 3D changes the deployment surface; keep it out of the loader/model slice.
-- Cross-platform Qt Quick, graphics API, and deployment behavior must be verified on macOS, Windows, and Linux.
-- Reusing Loch source code directly may carry architecture, dependency, or licensing constraints that need review.
-- Large project performance may require spatial indexing, level-of-detail, or batched geometry earlier than expected.
-
-## Next Implementation Slice
-
-Add the next viewport slice on top of the existing widget shell:
-
-- keep the QQuickItem-backed scene-graph renderer as the active viewport path and keep the camera/controller boundary intact
-- keep `ThreeDViewerSceneModel` as the shared scene contract for surveys, stations, shots, mesh groups, surfaces, and bounds
-- keep `ThreeDViewerLoxLoader` as the `.lox` loader and structured error reporter
-- keep `ThreeDViewerTab` as the read-only shell with toolbar, inspector, and layer toggles
-- add QTest coverage for viewport-host loading and controller behavior if the GPU viewport needs additional regression gates
-
-## Release Position
-
-This is post-`v2026.6.5` planning work. The next valuable step is the viewport/rendering slice on top of the existing shell.
+- Run `python3 scripts/check_structure_constraints.py` before each 3D-viewer change.
+- Run `TherionCoreQTests` for loader, scene statistics, and camera/model changes.
+- Run `ThreeDViewerQTests` for viewport shell, inspector, layer model, projection, and controller changes.
+- For renderer or QML changes, build `therion_app` and manually open representative `.lox` files.
+- For packaging or graphics-backend changes, verify at least one packaged build per supported platform before considering the task complete.

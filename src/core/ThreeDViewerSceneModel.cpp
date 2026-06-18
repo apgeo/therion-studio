@@ -1,5 +1,8 @@
 #include "ThreeDViewerSceneModel.h"
 
+#include <QSet>
+#include <QStringList>
+
 #include <algorithm>
 
 namespace TherionStudio
@@ -61,6 +64,56 @@ ThreeDViewerBounds ThreeDViewerSceneModel::bounds() const
 bool ThreeDViewerSceneModel::isEmpty() const
 {
     return surveys.isEmpty() && stations.isEmpty() && shots.isEmpty() && meshGroups.isEmpty() && surfaces.isEmpty();
+}
+
+QString ThreeDViewerSceneModel::surveyPathForId(quint32 surveyId) const
+{
+    if (surveyId == 0) {
+        return {};
+    }
+
+    QStringList components;
+    QSet<quint32> visited;
+    quint32 currentSurveyId = surveyId;
+    for (int guard = 0; guard < 64 && currentSurveyId != 0; ++guard) {
+        if (visited.contains(currentSurveyId)) {
+            break;
+        }
+        visited.insert(currentSurveyId);
+
+        const ThreeDViewerSurvey *survey = nullptr;
+        for (const ThreeDViewerSurvey &candidate : surveys) {
+            if (candidate.id == currentSurveyId) {
+                survey = &candidate;
+                break;
+            }
+        }
+        if (survey == nullptr) {
+            break;
+        }
+
+        const QString surveyName = survey->name.isEmpty() ? survey->title : survey->name;
+        if (surveyName.isEmpty()) {
+            break;
+        }
+
+        components.append(surveyName);
+        currentSurveyId = survey->parentId;
+    }
+
+    return components.join(QLatin1Char('.'));
+}
+
+QString ThreeDViewerSceneModel::stationQualifiedName(const ThreeDViewerStation &station) const
+{
+    const QString surveyPath = surveyPathForId(station.surveyId);
+    if (surveyPath.isEmpty()) {
+        return station.name;
+    }
+    if (station.name.isEmpty()) {
+        return QStringLiteral("@%1").arg(surveyPath);
+    }
+    return QStringLiteral("%1@%2").arg(station.name, surveyPath);
 }
 
 } // namespace TherionStudio

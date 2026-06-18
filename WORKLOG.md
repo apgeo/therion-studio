@@ -51,8 +51,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 
 - Continue `plans/GUI_CLEANUP.md` in independently shippable slices.
 - Keep style policy, UI construction, presentation contracts, and source/model logic separated.
-- Keep `plans/3D_VIEWER_PLAN.md` as the planning reference for any post-release 3D viewer work before implementation starts.
-- Start 3D viewer implementation with a `.lox` loader and neutral scene model before adding Qt Quick/QML viewport dependencies.
+- Keep `plans/3D_VIEWER_PLAN.md` as the planning reference for remaining 3D viewer refinement work.
 
 ### 3D Viewer
 
@@ -77,6 +76,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - The 3D viewer scene statistics overlay now uses larger typography for the project title and cave length/depth summary.
 - The 3D viewer HUD scale bar is aligned to the compass row with a matching gap to the view-angle indicator.
 - The 3D viewer toolbar now uses arrow-based icons for `Top View` and `Side View`.
+- The 3D viewer core now exposes station qualified-name construction in the shared scene model and has broader `.lox` fixture-matrix coverage for survey hierarchy and shot flags.
 - The transitional QWidget viewport renderer has been removed now that the scene-graph viewport is the sole active render path.
 - The viewport controller is now split out from the widget shell so camera interaction and camera-change signaling can be reused by future render surfaces.
 - The layer inspector is now backed by a shared list model so the QWidget view and future QML UI can use the same visibility/count state.

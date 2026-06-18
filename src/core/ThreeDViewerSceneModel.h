@@ -98,6 +98,8 @@ struct ThreeDViewerSceneModel
 
     ThreeDViewerBounds bounds() const;
     bool isEmpty() const;
+    QString surveyPathForId(quint32 surveyId) const;
+    QString stationQualifiedName(const ThreeDViewerStation &station) const;
 };
 
 } // namespace TherionStudio

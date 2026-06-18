@@ -44,10 +44,10 @@ jobs:
             runner_label: ubuntu-24.04-arm
     env:
       APPIMAGE_BUILD_IMAGE: debian:13
-      APPIMAGE_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-declarative-dev,qt6-qpa-plugins,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
+      APPIMAGE_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-declarative-dev,qml6-module-qtqml-workerscript,qml6-module-qtquick-controls,qml6-module-qtquick-layouts,qt6-qpa-plugins,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
       DEB_BUILD_IMAGE: ubuntu:26.04
       DEB_PLATFORM_LABEL: ubuntu-26.04
-      DEB_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-declarative-dev,qt6-qpa-plugins,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
+      DEB_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-declarative-dev,qml6-module-qtqml-workerscript,qml6-module-qtquick-controls,qml6-module-qtquick-layouts,qt6-qpa-plugins,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
       PACKAGE_BUILD_TYPE: ${{ inputs.build_type || 'Release' }}
       PACKAGE_SOURCE_REF: ${{ inputs.source_ref || github.ref_name }}
 

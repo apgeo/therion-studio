@@ -50,6 +50,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Keep the explicit user-confirmation gate before every `git commit`.
 - Keep optional sample-data dependent tests from aborting CI when fixture directories are absent.
 - Keep shared workspace command bars palette-aware across light and dark appearance changes.
+- Keep Linux CI/package Qt runtime module lists aligned with QML inspector imports.
+- Keep UI smoke tests deterministic across platform event-loop timing differences.
 
 ### UI Cleanup
 

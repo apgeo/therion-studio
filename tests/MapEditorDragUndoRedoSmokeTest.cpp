@@ -8,6 +8,7 @@
 
 #include <QApplication>
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QEventLoop>
 #include <QFile>
 #include <QGraphicsEllipseItem>
@@ -25,6 +26,7 @@
 #include <QTemporaryDir>
 #include <QTextBlock>
 #include <QTextLayout>
+#include <QThread>
 #include <QTimer>
 #include <QTreeView>
 #include <QVBoxLayout>
@@ -755,6 +757,26 @@ MapEditableGeometryVertexItem *findSelectedLineVertex(QGraphicsScene *scene)
     }
 
     return nullptr;
+}
+
+MapEditableGeometryVertexItem *waitForSelectedLineVertex(QGraphicsScene *scene,
+                                                         int expectedLineNumber,
+                                                         int expectedVertexIndex,
+                                                         int timeoutMs = 500)
+{
+    const qint64 deadline = QDateTime::currentMSecsSinceEpoch() + timeoutMs;
+    MapEditableGeometryVertexItem *lastSelected = nullptr;
+    while (QDateTime::currentMSecsSinceEpoch() <= deadline) {
+        pumpEvents();
+        lastSelected = findSelectedLineVertex(scene);
+        if (lastSelected != nullptr
+            && lastSelected->lineNumber() == expectedLineNumber
+            && lastSelected->vertexIndex() == expectedVertexIndex) {
+            return lastSelected;
+        }
+        QThread::msleep(5);
+    }
+    return lastSelected;
 }
 
 int selectedSourceLineNumber(QGraphicsScene *scene)
@@ -1667,8 +1689,7 @@ int runDragUndoRedoSmoke()
     }
 
     textEditor->goToLineColumn(8, 3);
-    pumpEvents();
-    auto *selectedVertexFromSmooth = findSelectedLineVertex(mapView->scene());
+    auto *selectedVertexFromSmooth = waitForSelectedLineVertex(mapView->scene(), 4, 2);
     if (!expect(selectedVertexFromSmooth != nullptr,
                 "Moving text cursor to a smooth-option row should select the corresponding map vertex.")) {
         return 1;
@@ -1678,8 +1699,7 @@ int runDragUndoRedoSmoke()
         return 1;
     }
     textEditor->goToLineColumn(9, 3);
-    pumpEvents();
-    auto *selectedVertexFromSubtype = findSelectedLineVertex(mapView->scene());
+    auto *selectedVertexFromSubtype = waitForSelectedLineVertex(mapView->scene(), 4, 2);
     if (!expect(selectedVertexFromSubtype != nullptr,
                 "Moving text cursor to subtype-option row should select the current line vertex.")) {
         return 1;
@@ -1689,8 +1709,7 @@ int runDragUndoRedoSmoke()
         return 1;
     }
     textEditor->goToLineColumn(10, 3);
-    pumpEvents();
-    auto *selectedVertexFromGenericOption = findSelectedLineVertex(mapView->scene());
+    auto *selectedVertexFromGenericOption = waitForSelectedLineVertex(mapView->scene(), 4, 2);
     if (!expect(selectedVertexFromGenericOption != nullptr,
                 "Moving text cursor to an arbitrary line option row should select the current line vertex.")) {
         return 1;

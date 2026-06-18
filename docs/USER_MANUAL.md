@@ -1,6 +1,6 @@
 # Therion Studio User Manual
 
-Last updated: 2026-06-13
+Last updated: 2026-06-16
 
 This guide covers everyday workflows in Therion Studio. It intentionally focuses on using the application, not on the full Therion language reference. Therion source syntax, command names, options, and serialized document content stay in canonical Therion form.
 
@@ -26,6 +26,7 @@ Therion Studio is a desktop editor for Therion cave-mapping projects. It provide
 
 - project file browsing
 - text editing for `.th`, `.th2`, and Therion config files
+- a read-only 3D viewer for compiled `.lox` artifacts
 - structure navigation for `survey`, `centerline`, `map`, and `scrap` objects
 - visual map editing for `.th2` files
 - an integrated Therion run console
@@ -100,8 +101,11 @@ When a project is open, the welcome tab shows the active project name and path. 
 
 - Double-click a file in `Files`.
 - `.th2` files open in the map editor.
+- `.lox` files open in the 3D viewer.
 - `.th`, `thconfig`, `*.thconfig`, `thconfig.*`, `.log`, `.txt`, and ordinary text files open in the text editor.
 - Unsupported files, such as images or PDF, show an `Unsupported file` message with `Open in External App`.
+
+The 3D viewer is read-only. Its toolbar provides `Reset`, `Fit`, `Orthogonal Projection`, `Top View`, `Side View`, `Rotate Left`, `Rotate Right`, `Auto Rotate`, and `Measure` controls, left-drag orbit navigation, right- or middle-drag pan navigation, mouse-wheel zoom, arrow-key navigation, and rotate buttons that spin the view around the blue/world axis. Left and right arrow keys rotate around the world Z axis; up and down arrow keys adjust camera tilt. `Fit` frames the loaded scene bounds using the current camera orientation and viewport shape. `Orthogonal Projection` switches between perspective and orthographic viewport projection without changing the scene data. The `Auto Rotate` toolbar button uses a play icon when stopped and a square stop icon while running; it rotates the view around the world Z axis. The inspector panel follows the active application color palette, lets you switch `Model Coloring` between `Altitude` and `None`, adjust `Rotation Speed`, and precisely set `Compass`, `Tilt`, `Distance`, and `Focal Length`; focal length is disabled in orthographic projection because it only affects perspective projection. The `Scene Settings` section appears after `Layers` and lets you toggle `Show Bounding Box`, `Show Head-Up Display`, and `Show Title & Stats`; `Show Head-Up Display` controls the altitude legend, compass, view-angle indicator, and scale bar. `Altitude` is the default and colors centerline and meshes by model Z coordinate. `None` renders meshes in one solid light-gray color. Mesh surfaces use smoothed per-vertex lighting so cave shape remains readable on the black viewport background. The layer controls use clean names without visible item counts, show centerline sublayers for shot classes found in the loaded `.lox` file, and show station sublayers only when the scene contains multiple entrance, fixed, or other station classes. By default, underground centerline, meshes, and surfaces are visible; stations, labels, surface centerline shots, splay shots, duplicate shots, and hidden shot sublayers start hidden. The top-level `Stations` checkbox is the master station-marker switch; station sublayers only narrow the visible station categories when `Stations` is enabled. Station markers and labels are shown only for stations attached to currently visible centerline shots, but `Labels` is independent from station marker visibility and can show names even when `Stations` is disabled. The viewport overlays `Underground Passages Length` and `Underground Depth` computed from underground centerline shots only, while the measurement tool is a toggle: click the ruler button, then click two stations on visible centerline shots to inspect their 3D distance, azimuth, and vertical difference; click the ruler button again to leave measurement mode. Station markers and fully qualified station labels are automatically decluttered in dense views. Hover a station attached to a visible centerline shot to see its full reference and model Z coordinate in a floating detail card near the cursor, even if station labels or markers are hidden. The 3D canvas uses a black background, draws a red bounding box around the loaded 3D scene extent when bounds are available, and does not draw standalone world X/Y/Z axis guide lines. It overlays an altitude legend only when model coloring is set to `Altitude` and the head-up display is visible. The compass, right-side view-angle semicircle, and scale bar remain visible when scene bounds are valid, with the scale bar rendered as a simple line with end ticks beside that control cluster. The altitude legend includes multiple intermediate elevation labels. The view-angle needle moves through the upper half for above-scene views and through the lower half for below-scene views.
 
 ### 3.4 Create and Manage Files
 

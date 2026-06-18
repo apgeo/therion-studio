@@ -129,7 +129,7 @@ jobs:
             --base https://download.qt.io `
             --timeout 30 `
             --outputdir "$env:RUNNER_WORKSPACE\Qt" `
-            --archives qtbase qtsvg qttools
+            --archives qtbase qtsvg qttools qtdeclarative
           $qtRoot = Get-ChildItem -Path "$env:RUNNER_WORKSPACE\Qt\$env:PACKAGE_QT_VERSION" -Directory |
             Where-Object { $_.Name -like "*msvc2022_64" } |
             Select-Object -First 1

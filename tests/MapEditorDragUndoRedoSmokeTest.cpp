@@ -8,6 +8,7 @@
 
 #include <QApplication>
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QEventLoop>
 #include <QFile>
 #include <QGraphicsEllipseItem>
@@ -25,6 +26,7 @@
 #include <QTemporaryDir>
 #include <QTextBlock>
 #include <QTextLayout>
+#include <QThread>
 #include <QTimer>
 #include <QTreeView>
 #include <QVBoxLayout>
@@ -755,6 +757,37 @@ MapEditableGeometryVertexItem *findSelectedLineVertex(QGraphicsScene *scene)
     }
 
     return nullptr;
+}
+
+struct SelectedLineVertexSnapshot
+{
+    int lineNumber = 0;
+    int vertexIndex = -1;
+};
+
+std::optional<SelectedLineVertexSnapshot> waitForSelectedLineVertex(QGraphicsScene *scene,
+                                                                    int expectedLineNumber,
+                                                                    int expectedVertexIndex,
+                                                                    int timeoutMs = 500)
+{
+    const qint64 deadline = QDateTime::currentMSecsSinceEpoch() + timeoutMs;
+    std::optional<SelectedLineVertexSnapshot> lastSelected;
+    while (QDateTime::currentMSecsSinceEpoch() <= deadline) {
+        pumpEvents();
+        if (MapEditableGeometryVertexItem *selected = findSelectedLineVertex(scene)) {
+            lastSelected = SelectedLineVertexSnapshot{
+                selected->lineNumber(),
+                selected->vertexIndex(),
+            };
+        }
+        if (lastSelected.has_value()
+            && lastSelected->lineNumber == expectedLineNumber
+            && lastSelected->vertexIndex == expectedVertexIndex) {
+            return lastSelected;
+        }
+        QThread::msleep(5);
+    }
+    return lastSelected;
 }
 
 int selectedSourceLineNumber(QGraphicsScene *scene)
@@ -1667,35 +1700,35 @@ int runDragUndoRedoSmoke()
     }
 
     textEditor->goToLineColumn(8, 3);
-    pumpEvents();
-    auto *selectedVertexFromSmooth = findSelectedLineVertex(mapView->scene());
-    if (!expect(selectedVertexFromSmooth != nullptr,
+    const std::optional<SelectedLineVertexSnapshot> selectedVertexFromSmooth =
+        waitForSelectedLineVertex(mapView->scene(), 4, 2);
+    if (!expect(selectedVertexFromSmooth.has_value(),
                 "Moving text cursor to a smooth-option row should select the corresponding map vertex.")) {
         return 1;
     }
-    if (!expect(selectedVertexFromSmooth->lineNumber() == 4 && selectedVertexFromSmooth->vertexIndex() == 2,
+    if (!expect(selectedVertexFromSmooth->lineNumber == 4 && selectedVertexFromSmooth->vertexIndex == 2,
                 "Text-to-map sync should map smooth-option row to the current line vertex.")) {
         return 1;
     }
     textEditor->goToLineColumn(9, 3);
-    pumpEvents();
-    auto *selectedVertexFromSubtype = findSelectedLineVertex(mapView->scene());
-    if (!expect(selectedVertexFromSubtype != nullptr,
+    const std::optional<SelectedLineVertexSnapshot> selectedVertexFromSubtype =
+        waitForSelectedLineVertex(mapView->scene(), 4, 2);
+    if (!expect(selectedVertexFromSubtype.has_value(),
                 "Moving text cursor to subtype-option row should select the current line vertex.")) {
         return 1;
     }
-    if (!expect(selectedVertexFromSubtype->lineNumber() == 4 && selectedVertexFromSubtype->vertexIndex() == 2,
+    if (!expect(selectedVertexFromSubtype->lineNumber == 4 && selectedVertexFromSubtype->vertexIndex == 2,
                 "Text-to-map sync should map subtype-option row to the current line vertex.")) {
         return 1;
     }
     textEditor->goToLineColumn(10, 3);
-    pumpEvents();
-    auto *selectedVertexFromGenericOption = findSelectedLineVertex(mapView->scene());
-    if (!expect(selectedVertexFromGenericOption != nullptr,
+    const std::optional<SelectedLineVertexSnapshot> selectedVertexFromGenericOption =
+        waitForSelectedLineVertex(mapView->scene(), 4, 2);
+    if (!expect(selectedVertexFromGenericOption.has_value(),
                 "Moving text cursor to an arbitrary line option row should select the current line vertex.")) {
         return 1;
     }
-    if (!expect(selectedVertexFromGenericOption->lineNumber() == 4 && selectedVertexFromGenericOption->vertexIndex() == 2,
+    if (!expect(selectedVertexFromGenericOption->lineNumber == 4 && selectedVertexFromGenericOption->vertexIndex == 2,
                 "Text-to-map sync should map arbitrary line option rows to the current line vertex.")) {
         return 1;
     }

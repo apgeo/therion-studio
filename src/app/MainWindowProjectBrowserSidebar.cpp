@@ -27,6 +27,7 @@
 #include <QModelIndex>
 #include <QPainter>
 #include <QPen>
+#include <QPalette>
 #include <QPixmap>
 #include <QPoint>
 #include <QPushButton>
@@ -108,7 +109,8 @@ protected:
             return;
         }
 
-        if (!QFileInfo(filePath).isFile() || !TherionStudio::isTherionProjectFilePath(filePath)) {
+        if (!QFileInfo(filePath).isFile() || !(TherionStudio::isTherionProjectFilePath(filePath)
+                                               || TherionStudio::isThreeDViewerArtifactFilePath(filePath))) {
             return;
         }
 
@@ -507,7 +509,9 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
             });
         }
 
-        if (!itemInfo.isFile() || !TherionStudio::isTherionProjectFilePath(itemPath)) {
+        if (!itemInfo.isFile()
+            || !(TherionStudio::isTherionProjectFilePath(itemPath)
+                 || TherionStudio::isThreeDViewerArtifactFilePath(itemPath))) {
             menu.addAction(tr("Open Externally"), this, [this, itemPath]() {
                 if (!QDesktopServices::openUrl(QUrl::fromLocalFile(itemPath))) {
                     QMessageBox::warning(this,

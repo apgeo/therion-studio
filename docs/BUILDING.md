@@ -105,6 +105,9 @@ cpack --config build-win\CPackConfig.cmake
 Use a matching toolchain/Qt pair on Windows. If `CMAKE_PREFIX_PATH` points to
 `...\msvc2022_64`, configure with MSVC (`cl`). Mixing MinGW (`g++`) with MSVC Qt
 libraries causes link failures with unresolved `__imp__` Qt symbols.
+The Qt installation must include Qt Declarative and Qt Quick Controls 2 modules
+so CMake can resolve the `Qt6Quick`, `Qt6Qml`, `Qt6QuickWidgets`, and
+`Qt6QuickControls2` packages used by the 3D viewer.
 
 CPack runs the CMake install step internally. The install step runs Qt deployment on Windows,
 copying the required Qt runtime next to the installed `bin/TherionStudio.exe`, including
@@ -275,7 +278,17 @@ which builds and smoke-tests generated release artifacts in containers.
 On supported Ubuntu and Debian-family systems, install the development dependencies with:
 
 ```sh
-sudo apt-get install qt6-base-dev qt6-base-dev-tools qt6-svg-dev qt6-tools-dev qt6-tools-dev-tools
+sudo apt-get install \
+  qt6-base-dev \
+  qt6-base-dev-tools \
+  qt6-declarative-dev \
+  qml6-module-qtqml-workerscript \
+  qml6-module-qtquick-controls \
+  qml6-module-qtquick-layouts \
+  qml6-module-qtquick-templates \
+  qt6-svg-dev \
+  qt6-tools-dev \
+  qt6-tools-dev-tools
 ```
 
 Then use the same CMake configure/build flow as macOS.

@@ -33,6 +33,7 @@ The application is primarily used to:
 - browse Therion project files and folders
 - edit Therion source files with syntax highlighting and assistance
 - visually inspect and edit TH2 map data
+- inspect compiled 3D `.lox` artifacts in a read-only viewer tab
 - review survey structure and map object relationships
 - run the Therion command-line tool and inspect its output
 
@@ -57,8 +58,13 @@ Required capabilities:
 - create a new empty project folder from `File -> New Project -> Empty Project...`
 - create a new project from a bundled template when no project exists or from `File -> New Project -> Project from Template...`
 - display project files and subfolders
-- recognize common Therion-related file types such as `.th`, `.th2`, `thconfig`, `*.thconfig`, and `thconfig.*`
+- recognize common Therion-related file types such as `.th`, `.th2`, `thconfig`, `*.thconfig`, and `thconfig.*`, plus compiled 3D `.lox` artifacts
 - open files in editor tabs
+- opening a `.lox` file shall create a read-only 3D viewer tab with Reset, Fit, orthogonal-projection toggle, Top/Side view, rotate-left/rotate-right, automatic-rotation, and measurement controls, plus orbit, pan, zoom, arrow-key yaw/tilt navigation, precise camera-orientation, distance, and focal-length adjustment, and world-blue-axis rotation navigation; Fit shall frame the current 3D scene bounds using the active camera orientation and viewport aspect ratio
+- the 3D viewer shall let the user switch model coloring between altitude-based coloring and no model coloring
+- the 3D viewer shall color centerline shots using the same altitude-based or uncolored palette as the meshes
+- the 3D viewer shall render a bounding box around the loaded 3D scene extent
+- the 3D viewer shall show a screen-space compass and scale bar when scene bounds are available, and shall show the altitude legend only when model coloring is set to Altitude
 - support file selection, multi-tab workflows, and recent project reopening
 - preserve folder expansion state where practical
 
@@ -290,6 +296,20 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The project root context menu shall offer creation actions for new folders, `.th` files, `.th2` files, and `thconfig` files.
 - A supported Therion file row shall be shown with a Therion document icon; an unsupported file shall use a generic document icon.
 - A `.th2` file shall offer an explicit "Open in Map Editor" action.
+- A `.lox` file shall open in a read-only 3D viewer tab and shall not be offered for map editing.
+- The 3D viewer inspector shall expose a model-coloring control that allows switching between altitude-based coloring and no coloring. Altitude-based coloring shall be the default. The inspector shall expose a Scene Settings section after Layers with visibility toggles for the bounding box, the head-up display, and the title/statistics overlay, all enabled by default.
+- The 3D viewer inspector shall expose compass heading, camera-tilt, camera-distance, focal-length, and automatic-rotation speed controls, shall follow the active application color palette, and the 3D viewer toolbar shall expose one play/stop toggle that starts and stops rotation around the world Z axis. The focal-length control shall be disabled while orthographic projection is active because it only affects perspective projection.
+- The 3D viewer toolbar shall expose an orthogonal-projection toggle that switches the viewport between perspective projection and orthographic projection without changing loaded scene data.
+- The 3D viewer inspector layer controls shall display clean layer names without visible item counts, shall expose data-driven centerline sublayer checkboxes for shot classes present in the loaded `.lox` scene, and shall expose disjoint station sublayer checkboxes only when the scene contains multiple present entrance, fixed, or other station classes. Centerline sublayers shall default to underground shots visible and surface, splay, duplicate, and hidden shots hidden. The top-level Stations and Labels layers shall default hidden, while Meshes and Surfaces shall default visible. The top-level Stations checkbox shall be the master switch for station marker rendering, while station sublayer checkboxes shall only narrow the rendered station categories when the master switch is enabled. Station markers and station labels shall be shown only for stations attached to currently visible centerline shots. Station labels shall use a single independent layer checkbox and shall not require station markers to be visible.
+- The 3D viewer shall apply the selected model-coloring mode to centerline shots as well as meshes. The no-coloring mode shall render meshes with one solid light-gray color.
+- The 3D viewer mesh renderer shall use smoothed per-vertex lighting so mesh shape remains readable on the black viewport background.
+- The 3D viewer toolbar shall expose a measurement toggle with a ruler icon that activates station-to-station measurement.
+- The 3D viewer viewport shall draw a visible wireframe bounding box for the current scene extent when the scene has valid bounds.
+- The 3D viewer viewport shall not draw standalone world X/Y/Z axis guide lines over the scene.
+- The 3D viewer viewport shall show a compass, view-angle indicator, and scale bar as screen-space overlays when scene bounds are available, with the compass and view-angle indicator placed together below the altitude legend area and the scale bar positioned beside that control group. The altitude legend shall be part of the head-up display, shall be shown only when model coloring is set to Altitude and the head-up display is visible, and shall show multiple intermediate labels between the scene minimum and maximum elevations. The view-angle indicator shall render as a right-side semicircle split by a horizontal center line, and its needle shall move in the upper half for above-scene views and in the lower half for below-scene views.
+- The 3D viewer viewport shall show the full station reference and model Z coordinate when the pointer hovers a station marker.
+- The 3D viewer station markers and fully qualified station labels shall use automatic screen-space decluttering so visible station annotations do not overlap heavily in dense views while station hover and measurement picking remain available for stations attached to currently visible centerline shots even when station markers or labels are hidden.
+- The 3D viewer viewport shall show an Underground Passages Length and Underground Depth summary overlay for the loaded scene, derived from underground centerline shots only and excluding surface, splay, and duplicate shots as well as surface geometry.
 - Unsupported files shall offer an "Open Externally" action.
 - File rows shall offer duplicate, rename, and delete actions; deleting an open file shall ask for confirmation, close the corresponding open document after any unsaved-change close prompt is resolved, and then delete the file.
 - Folder rows shall offer rename and delete actions.

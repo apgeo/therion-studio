@@ -3,6 +3,7 @@
 #include "LucideIconFactory.h"
 #include "MainWindowDocumentHelpers.h"
 #include "WorkspaceCommandBarStyle.h"
+#include "three_d_viewer/ThreeDViewerTab.h"
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
 #include "ui/ApplicationControlMetrics.h"
@@ -247,7 +248,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceModeSwitcher_ = new QWidget(workspaceHost);
     workspaceModeSwitcher_->setObjectName(QStringLiteral("workspaceCommandBar"));
     workspaceModeSwitcher_->setAttribute(Qt::WA_StyledBackground, true);
-    workspaceModeSwitcher_->setStyleSheet(TherionStudio::workspaceCommandBarStyleSheet(palette().color(QPalette::Base),
+    workspaceModeSwitcher_->setStyleSheet(TherionStudio::workspaceCommandBarStyleSheet(palette().color(QPalette::Window),
                                                                                         false,
                                                                                         false));
     auto *hostLayout = new WorkspaceCommandFlowLayout(workspaceModeSwitcher_);
@@ -302,6 +303,36 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     hostLayout->addWidget(workspaceZoomGroup_);
     workspaceZoomSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
     hostLayout->addWidget(workspaceZoomSeparator_);
+    workspaceThreeDViewerGroup_ = new QWidget(workspaceModeSwitcher_);
+    auto *viewerLayout = new QHBoxLayout(workspaceThreeDViewerGroup_);
+    viewerLayout->setContentsMargins(0, 0, 0, 0);
+    viewerLayout->setSpacing(4);
+    workspaceThreeDViewerResetButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Reset 3D View"), QStringLiteral("house"));
+    workspaceThreeDViewerFitButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Fit 3D View"), QStringLiteral("scan"));
+    workspaceThreeDViewerOrthographicButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Orthogonal Projection"), QStringLiteral("square-plus"));
+    workspaceThreeDViewerOrthographicButton_->setCheckable(true);
+    workspaceThreeDViewerMeasureButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Measure points"), QStringLiteral("ruler"));
+    workspaceThreeDViewerMeasureButton_->setCheckable(true);
+    workspaceThreeDViewerAutoRotateButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Start Auto Rotation"), QStringLiteral("play"));
+    workspaceThreeDViewerAutoRotateButton_->setCheckable(true);
+    workspaceThreeDViewerTopViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Top View"), QStringLiteral("arrow-big-down"));
+    workspaceThreeDViewerSideViewButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Side View"), QStringLiteral("arrow-big-right"));
+    workspaceThreeDViewerRollLeftButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Left"), QStringLiteral("rotate-cw"));
+    workspaceThreeDViewerRollRightButton_ = createWorkspaceIconButton(workspaceThreeDViewerGroup_, tr("Rotate Right"), QStringLiteral("rotate-ccw"));
+    viewerLayout->addWidget(workspaceThreeDViewerResetButton_);
+    viewerLayout->addWidget(workspaceThreeDViewerFitButton_);
+    viewerLayout->addWidget(createWorkspaceToolbarSeparator(workspaceThreeDViewerGroup_));
+    viewerLayout->addWidget(workspaceThreeDViewerOrthographicButton_);
+    viewerLayout->addWidget(workspaceThreeDViewerTopViewButton_);
+    viewerLayout->addWidget(workspaceThreeDViewerSideViewButton_);
+    viewerLayout->addWidget(createWorkspaceToolbarSeparator(workspaceThreeDViewerGroup_));
+    viewerLayout->addWidget(workspaceThreeDViewerRollLeftButton_);
+    viewerLayout->addWidget(workspaceThreeDViewerRollRightButton_);
+    viewerLayout->addWidget(workspaceThreeDViewerAutoRotateButton_);
+    viewerLayout->addWidget(createWorkspaceToolbarSeparator(workspaceThreeDViewerGroup_));
+    viewerLayout->addWidget(workspaceThreeDViewerMeasureButton_);
+    hostLayout->addWidget(workspaceThreeDViewerGroup_);
+    workspaceThreeDViewerGroup_->setVisible(false);
     workspaceMapToolsGroup_ = new QWidget(workspaceModeSwitcher_);
     auto *mapToolsLayout = new QHBoxLayout(workspaceMapToolsGroup_);
     mapToolsLayout->setContentsMargins(0, 0, 0, 0);
@@ -370,6 +401,28 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     connect(workspaceZoomOutButton_, &QToolButton::clicked, this, &MainWindow::triggerZoomOutForActiveDocument);
     connect(workspaceFitButton_, &QToolButton::clicked, this, &MainWindow::triggerFitForActiveDocument);
     connect(workspaceFitBackgroundButton_, &QToolButton::clicked, this, &MainWindow::triggerFitWithBackgroundForActiveDocument);
+    connect(workspaceThreeDViewerFitButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerFitForActiveDocument);
+    connect(workspaceThreeDViewerResetButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerResetForActiveDocument);
+    connect(workspaceThreeDViewerMeasureButton_, &QToolButton::toggled, this, [this](bool checked) {
+        if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+            viewerTab->setMeasurementMode(checked);
+        }
+    });
+    connect(workspaceThreeDViewerAutoRotateButton_, &QToolButton::toggled, this, [this](bool checked) {
+        if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+            viewerTab->setAutoRotationEnabled(checked);
+        }
+        updateThreeDViewerAutoRotationButton(checked);
+    });
+    connect(workspaceThreeDViewerOrthographicButton_, &QToolButton::toggled, this, [this](bool checked) {
+        if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+            viewerTab->setOrthographicProjection(checked);
+        }
+    });
+    connect(workspaceThreeDViewerTopViewButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerTopViewForActiveDocument);
+    connect(workspaceThreeDViewerSideViewButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerSideViewForActiveDocument);
+    connect(workspaceThreeDViewerRollLeftButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerRollLeftForActiveDocument);
+    connect(workspaceThreeDViewerRollRightButton_, &QToolButton::clicked, this, &MainWindow::triggerThreeDViewerRollRightForActiveDocument);
     connect(workspaceSelectButton_, &QToolButton::clicked, this, &MainWindow::triggerSelectForActiveDocument);
     connect(workspaceCompleteDraftButton_, &QToolButton::clicked, this, &MainWindow::triggerCompleteDraftForActiveDocument);
     connect(workspaceInsertScrapButton_, &QToolButton::clicked, this, &MainWindow::triggerInsertScrapForActiveDocument);
@@ -429,6 +482,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceCompileSeparator_->setVisible(false);
     workspaceCompileCurrentConfigButton_->setVisible(false);
     workspaceZoomSeparator_->setVisible(false);
+    workspaceThreeDViewerGroup_->setVisible(false);
     workspaceModeSwitcher_->setVisible(true);
     if (editorAreaLayout_ != nullptr) {
         editorAreaLayout_->insertWidget(0, workspaceModeSwitcher_);
@@ -454,6 +508,16 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspaceZoomOutButton_ == nullptr
         || workspaceFitButton_ == nullptr
         || workspaceFitBackgroundButton_ == nullptr
+        || workspaceThreeDViewerGroup_ == nullptr
+        || workspaceThreeDViewerFitButton_ == nullptr
+        || workspaceThreeDViewerResetButton_ == nullptr
+        || workspaceThreeDViewerMeasureButton_ == nullptr
+        || workspaceThreeDViewerAutoRotateButton_ == nullptr
+        || workspaceThreeDViewerOrthographicButton_ == nullptr
+        || workspaceThreeDViewerTopViewButton_ == nullptr
+        || workspaceThreeDViewerSideViewButton_ == nullptr
+        || workspaceThreeDViewerRollLeftButton_ == nullptr
+        || workspaceThreeDViewerRollRightButton_ == nullptr
         || workspaceMapToolsGroup_ == nullptr
         || workspaceSelectButton_ == nullptr
         || workspaceCompleteDraftButton_ == nullptr
@@ -475,8 +539,11 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     refreshWorkspaceIconTheme();
     auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(tabWidget);
     auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget);
+    auto *viewerTab = qobject_cast<TherionStudio::ThreeDViewerTab *>(tabWidget);
     const bool showMapModes = mapTab != nullptr;
     const bool showTextModes = textTab != nullptr;
+    const bool showThreeDViewerModes = viewerTab != nullptr;
+    const bool showEditorActions = !showThreeDViewerModes;
     const bool showCompileCurrentConfig = showTextModes && !currentDocumentTherionConfigPath().isEmpty();
     const bool mapPaneDetached = mapTab != nullptr && mapTab->isMapPaneDetached();
     const bool embeddedMapSurfaceActive = mapTab != nullptr
@@ -484,7 +551,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         && mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Visual;
     const bool showZoomTools = showMapModes && !mapPaneDetached;
     const bool showMapTools = showMapModes && !mapPaneDetached;
-    QColor commandBarBackground = palette().color(QPalette::Base);
+    QColor commandBarBackground = palette().color(QPalette::Window);
     if (showTextModes && textTab != nullptr) {
         const QColor sourceSurface = textTab->sourceSurfaceColor();
         if (sourceSurface.isValid()) {
@@ -498,44 +565,108 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceModeSwitcher_->setVisible(true);
     workspaceMapModeSwitcher_->setVisible(showMapModes);
     workspaceTextModeSwitcher_->setVisible(showTextModes);
-    workspaceNewDocumentButton_->setVisible(true);
-    workspaceEditSeparator_->setVisible(tabWidget != nullptr);
-    workspaceHistorySeparator_->setVisible(showZoomTools);
-    workspaceZoomGroup_->setVisible(showZoomTools);
-    workspaceZoomSeparator_->setVisible(showZoomTools);
-    workspaceMapToolsGroup_->setVisible(showMapTools);
-    workspaceSaveButton_->setEnabled(tabWidget != nullptr);
+    workspaceThreeDViewerGroup_->setVisible(showThreeDViewerModes);
+    workspaceNewDocumentButton_->setVisible(showEditorActions);
+    workspaceEditSeparator_->setVisible(showEditorActions && tabWidget != nullptr);
+    workspaceHistorySeparator_->setVisible(showEditorActions && showZoomTools);
+    workspaceZoomGroup_->setVisible(showEditorActions && showZoomTools);
+    workspaceZoomSeparator_->setVisible(showEditorActions && showZoomTools);
+    workspaceThreeDViewerFitButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerResetButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerMeasureButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerAutoRotateButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerOrthographicButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerTopViewButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerSideViewButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerRollLeftButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerRollRightButton_->setEnabled(showThreeDViewerModes);
+    {
+        const QSignalBlocker measureBlocker(workspaceThreeDViewerMeasureButton_);
+        workspaceThreeDViewerMeasureButton_->setChecked(showThreeDViewerModes
+                                                           && currentThreeDViewerTab() != nullptr
+                                                           && currentThreeDViewerTab()->measurementMode());
+    }
+    {
+        const bool autoRotationEnabled = showThreeDViewerModes
+            && currentThreeDViewerTab() != nullptr
+            && currentThreeDViewerTab()->autoRotationEnabled();
+        const QSignalBlocker autoRotationBlocker(workspaceThreeDViewerAutoRotateButton_);
+        workspaceThreeDViewerAutoRotateButton_->setChecked(autoRotationEnabled);
+        updateThreeDViewerAutoRotationButton(autoRotationEnabled);
+    }
+    {
+        const bool orthographicProjection = showThreeDViewerModes
+            && currentThreeDViewerTab() != nullptr
+            && currentThreeDViewerTab()->orthographicProjection();
+        const QSignalBlocker orthographicBlocker(workspaceThreeDViewerOrthographicButton_);
+        workspaceThreeDViewerOrthographicButton_->setChecked(orthographicProjection);
+    }
+    workspaceMapToolsGroup_->setVisible(showEditorActions && showMapTools);
+    workspaceSaveButton_->setVisible(showEditorActions);
+    workspaceSaveButton_->setEnabled(showEditorActions && tabWidget != nullptr);
     const bool canUndo = documentCanUndoForWidget(tabWidget);
     const bool canRedo = documentCanRedoForWidget(tabWidget);
-    workspaceUndoButton_->setEnabled(canUndo);
-    workspaceRedoButton_->setEnabled(canRedo);
+    workspaceUndoButton_->setVisible(showEditorActions);
+    workspaceRedoButton_->setVisible(showEditorActions);
+    workspaceUndoButton_->setEnabled(showEditorActions && canUndo);
+    workspaceRedoButton_->setEnabled(showEditorActions && canRedo);
     if (undoAction_ != nullptr) {
         undoAction_->setEnabled(canUndo);
     }
     if (redoAction_ != nullptr) {
         redoAction_->setEnabled(canRedo);
     }
-    workspaceCompileSeparator_->setVisible(showCompileCurrentConfig);
-    workspaceCompileCurrentConfigButton_->setVisible(showCompileCurrentConfig);
-    workspaceCompileCurrentConfigButton_->setEnabled(showCompileCurrentConfig);
-    workspaceZoomInButton_->setEnabled(showZoomTools && embeddedMapSurfaceActive);
-    workspaceZoomOutButton_->setEnabled(showZoomTools && embeddedMapSurfaceActive);
-    workspaceFitButton_->setEnabled(showZoomTools && embeddedMapSurfaceActive);
-    workspaceFitBackgroundButton_->setEnabled(showZoomTools
+    workspaceCompileSeparator_->setVisible(showEditorActions && showCompileCurrentConfig);
+    workspaceCompileCurrentConfigButton_->setVisible(showEditorActions && showCompileCurrentConfig);
+    workspaceCompileCurrentConfigButton_->setEnabled(showEditorActions && showCompileCurrentConfig);
+    workspaceZoomInButton_->setVisible(showEditorActions);
+    workspaceZoomOutButton_->setVisible(showEditorActions);
+    workspaceFitButton_->setVisible(showEditorActions);
+    workspaceFitBackgroundButton_->setVisible(showEditorActions);
+    workspaceZoomInButton_->setEnabled(showEditorActions && showZoomTools && embeddedMapSurfaceActive);
+    workspaceZoomOutButton_->setEnabled(showEditorActions && showZoomTools && embeddedMapSurfaceActive);
+    workspaceFitButton_->setEnabled(showEditorActions && showZoomTools && embeddedMapSurfaceActive);
+    workspaceFitBackgroundButton_->setEnabled(showEditorActions && showZoomTools
                                               && embeddedMapSurfaceActive
                                               && mapTab != nullptr
                                               && mapTab->backgroundLayerCount() > 0);
-    workspaceSelectButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
-    workspaceCompleteDraftButton_->setEnabled(showMapTools
+    workspaceSelectButton_->setVisible(showEditorActions);
+    workspaceCompleteDraftButton_->setVisible(showEditorActions);
+    workspaceInsertScrapButton_->setVisible(showEditorActions);
+    workspacePointButton_->setVisible(showEditorActions);
+    workspaceLineButton_->setVisible(showEditorActions);
+    workspaceFreehandLineButton_->setVisible(showEditorActions);
+    workspaceAreaButton_->setVisible(showEditorActions);
+    workspaceSmartAreaButton_->setVisible(showEditorActions);
+    workspaceSelectButton_->setEnabled(showEditorActions && showMapTools && embeddedMapSurfaceActive);
+    workspaceCompleteDraftButton_->setEnabled(showEditorActions && showMapTools
                                               && embeddedMapSurfaceActive
                                               && mapTab != nullptr
                                               && mapTab->canCompleteDraftAction());
-    workspaceInsertScrapButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
-    workspacePointButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
-    workspaceLineButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
-    workspaceFreehandLineButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
-    workspaceAreaButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
-    workspaceSmartAreaButton_->setEnabled(showMapTools && embeddedMapSurfaceActive);
+    workspaceInsertScrapButton_->setEnabled(showEditorActions && showMapTools && embeddedMapSurfaceActive);
+    workspacePointButton_->setEnabled(showEditorActions && showMapTools && embeddedMapSurfaceActive);
+    workspaceLineButton_->setEnabled(showEditorActions && showMapTools && embeddedMapSurfaceActive);
+    workspaceFreehandLineButton_->setEnabled(showEditorActions && showMapTools && embeddedMapSurfaceActive);
+    workspaceAreaButton_->setEnabled(showEditorActions && showMapTools && embeddedMapSurfaceActive);
+    workspaceSmartAreaButton_->setEnabled(showEditorActions && showMapTools && embeddedMapSurfaceActive);
+    workspaceThreeDViewerFitButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerResetButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerMeasureButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerAutoRotateButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerOrthographicButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerTopViewButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerSideViewButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerRollLeftButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerRollRightButton_->setVisible(showThreeDViewerModes);
+    workspaceThreeDViewerFitButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerResetButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerMeasureButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerAutoRotateButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerOrthographicButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerTopViewButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerSideViewButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerRollLeftButton_->setEnabled(showThreeDViewerModes);
+    workspaceThreeDViewerRollRightButton_->setEnabled(showThreeDViewerModes);
 
     workspaceModeSwitcherSyncInProgress_ = true;
     if (showMapModes) {
@@ -607,6 +738,23 @@ void MainWindow::refreshWorkspaceIconTheme()
 
         button->setIcon(TherionStudio::themedLucideIcon(iconName, palette, button->iconSize().width(), devicePixelRatio));
     }
+}
+
+void MainWindow::updateThreeDViewerAutoRotationButton(bool autoRotationEnabled)
+{
+    if (workspaceThreeDViewerAutoRotateButton_ == nullptr) {
+        return;
+    }
+
+    const QString iconName = autoRotationEnabled ? QStringLiteral("square") : QStringLiteral("play");
+    const QString label = autoRotationEnabled ? tr("Stop Auto Rotation") : tr("Start Auto Rotation");
+    workspaceThreeDViewerAutoRotateButton_->setProperty("lucideIconName", iconName);
+    workspaceThreeDViewerAutoRotateButton_->setToolTip(label);
+    workspaceThreeDViewerAutoRotateButton_->setAccessibleName(label);
+    workspaceThreeDViewerAutoRotateButton_->setIcon(TherionStudio::themedLucideIcon(iconName,
+                                                                                     workspaceThreeDViewerAutoRotateButton_->palette(),
+                                                                                     workspaceThreeDViewerAutoRotateButton_->iconSize().width(),
+                                                                                     workspaceThreeDViewerAutoRotateButton_->devicePixelRatioF()));
 }
 
 void MainWindow::refreshWorkspaceModeSwitcherGeometry()
@@ -706,6 +854,48 @@ void MainWindow::triggerFitWithBackgroundForActiveDocument()
 {
     if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
         mapTab->triggerFitWithBackground();
+    }
+}
+
+void MainWindow::triggerThreeDViewerFitForActiveDocument()
+{
+    if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+        viewerTab->fitToScene();
+    }
+}
+
+void MainWindow::triggerThreeDViewerResetForActiveDocument()
+{
+    if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+        viewerTab->resetView();
+    }
+}
+
+void MainWindow::triggerThreeDViewerTopViewForActiveDocument()
+{
+    if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+        viewerTab->setTopView();
+    }
+}
+
+void MainWindow::triggerThreeDViewerSideViewForActiveDocument()
+{
+    if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+        viewerTab->setSideView();
+    }
+}
+
+void MainWindow::triggerThreeDViewerRollLeftForActiveDocument()
+{
+    if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+        viewerTab->rollViewLeft();
+    }
+}
+
+void MainWindow::triggerThreeDViewerRollRightForActiveDocument()
+{
+    if (auto *viewerTab = currentThreeDViewerTab(); viewerTab != nullptr) {
+        viewerTab->rollViewRight();
     }
 }
 

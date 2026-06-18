@@ -46,7 +46,7 @@ option(THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL
     "Run Qt's Linux runtime deployment script during install; intended for AppDir/AppImage builds"
     OFF)
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Core Widgets Svg Concurrent Test)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Widgets Svg Concurrent Test Quick QuickWidgets Qml QuickControls2)
 find_package(Qt6LinguistTools 6.4 QUIET)
 
 qt_standard_project_setup()
@@ -85,6 +85,14 @@ set(THERION_CORE_SOURCES
     src/core/TherionXviParser.cpp
     src/core/TherionXviParser.h
     src/core/TherionFileTypes.h
+    src/core/ThreeDViewerCamera.cpp
+    src/core/ThreeDViewerCamera.h
+    src/core/ThreeDViewerLoxLoader.cpp
+    src/core/ThreeDViewerLoxLoader.h
+    src/core/ThreeDViewerSceneModel.cpp
+    src/core/ThreeDViewerSceneModel.h
+    src/core/ThreeDViewerSceneStatistics.cpp
+    src/core/ThreeDViewerSceneStatistics.h
     src/core/TherionSourceText.h
     src/core/TherionStringUtils.h
     src/core/TherionTokenRules.h
@@ -234,7 +242,24 @@ set(THERION_APP_SOURCES
     src/app/TherionRunnerStartResultPresenter.cpp
     src/app/TherionRunnerStartResultPresenter.h
     src/app/TherionRunnerStartSuccessPresenter.cpp
-    src/app/TherionRunnerStartSuccessPresenter.h)
+    src/app/TherionRunnerStartSuccessPresenter.h
+    src/app/three_d_viewer/ThreeDViewerTab.cpp
+    src/app/three_d_viewer/ThreeDViewerTab.h
+    src/app/three_d_viewer/ThreeDViewerInspectorState.cpp
+    src/app/three_d_viewer/ThreeDViewerInspectorState.h
+    src/app/three_d_viewer/ThreeDViewerMeshColorMode.h
+    src/app/three_d_viewer/ThreeDViewerInspectorWidget.cpp
+    src/app/three_d_viewer/ThreeDViewerInspectorWidget.h
+    src/app/three_d_viewer/ThreeDViewerLayerListModel.cpp
+    src/app/three_d_viewer/ThreeDViewerLayerListModel.h
+    src/app/three_d_viewer/ThreeDViewerViewportController.cpp
+    src/app/three_d_viewer/ThreeDViewerViewportController.h
+    src/app/three_d_viewer/ThreeDViewerProjection.cpp
+    src/app/three_d_viewer/ThreeDViewerProjection.h
+    src/app/three_d_viewer/ThreeDViewerViewportItem.cpp
+    src/app/three_d_viewer/ThreeDViewerViewportItem.h
+    src/app/three_d_viewer/ThreeDViewerViewportWidget.cpp
+    src/app/three_d_viewer/ThreeDViewerViewportWidget.h)
 
 add_library(therion_app STATIC
     ${THERION_APP_SOURCES})
@@ -243,6 +268,12 @@ target_link_libraries(therion_app
     PUBLIC
         therion_core
         Qt6::Core
+        Qt6::Widgets
+        Qt6::Svg
+        Qt6::Quick
+        Qt6::QuickWidgets
+        Qt6::Qml
+        Qt6::QuickControls2
     PRIVATE
         therion_platform
         Qt6::Concurrent)
@@ -266,6 +297,7 @@ set(THERION_APP_UI_STYLE_SOURCES
 set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindow.cpp
     src/app/MainWindow.h
+    src/app/MainWindowFileOpen.cpp
     src/app/MainWindowUntitledDocumentWorkflow.cpp
     src/app/MainWindowTherionConsoleBootstrapper.cpp
     src/app/MainWindowTherionConsoleBootstrapper.h
@@ -666,6 +698,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/folder-tree.svg
     resources/icons/lucide/folder-x.svg
     resources/icons/lucide/hand.svg
+    resources/icons/lucide/house.svg
     resources/icons/lucide/image.svg
     resources/icons/lucide/spell-check.svg
     resources/icons/lucide/map-pin.svg
@@ -677,6 +710,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/pencil-line.svg
     resources/icons/lucide/pentagon.svg
     resources/icons/lucide/puzzle.svg
+    resources/icons/lucide/ruler.svg
     resources/icons/lucide/redo-2.svg
     resources/icons/lucide/save.svg
     resources/icons/lucide/scan.svg
@@ -684,14 +718,25 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/screen-share.svg
     resources/icons/lucide/monitor-x.svg
     resources/icons/lucide/spline.svg
+    resources/icons/lucide/square.svg
     resources/icons/lucide/square-dashed-mouse-pointer.svg
     resources/icons/lucide/square-plus.svg
     resources/icons/lucide/toy-brick.svg
     resources/icons/lucide/trash-2.svg
     resources/icons/lucide/undo-2.svg
     resources/icons/lucide/play.svg
+    resources/icons/lucide/arrow-big-down.svg
+    resources/icons/lucide/arrow-big-right.svg
+    resources/icons/lucide/view-top.svg
+    resources/icons/lucide/view-side.svg
+    resources/icons/lucide/view-roll-left.svg
+    resources/icons/lucide/view-roll-right.svg
+    resources/icons/lucide/rotate-ccw.svg
+    resources/icons/lucide/rotate-cw.svg
     resources/icons/lucide/zoom-in.svg
-    resources/icons/lucide/zoom-out.svg)
+    resources/icons/lucide/zoom-out.svg
+    resources/qml/three_d_viewer/ThreeDViewerViewport.qml
+    resources/qml/three_d_viewer/ThreeDViewerInspector.qml)
 
 qt_add_resources(TherionStudio "TherionStudioResources"
     PREFIX "/"
@@ -938,6 +983,11 @@ therion_add_core_unit_test(TherionDocumentParserTest
 
 therion_add_core_qtest_runner(TherionCoreQTests
     tests/core/CoreQTestMain.cpp
+    tests/core/ThreeDViewerCameraTest.cpp
+    tests/core/TherionFileTypesTest.cpp
+    tests/core/ThreeDViewerLoxLoaderTest.cpp
+    tests/core/ThreeDViewerSceneModelTest.cpp
+    tests/core/ThreeDViewerSceneStatisticsTest.cpp
     tests/core/TherionSourceTextTest.cpp
     tests/core/TherionTokenRulesTest.cpp)
 
@@ -1035,6 +1085,38 @@ qt_add_executable(MapEditorLogicQTests
     src/app/text_editor/map_editor/MapEditorUndoArbitrationService.h)
 
 target_link_libraries(MapEditorLogicQTests PRIVATE therion_core Qt6::Core Qt6::Gui Qt6::Test)
+
+qt_add_executable(ThreeDViewerQTests
+    tests/ThreeDViewerQTestMain.cpp
+    tests/ThreeDViewerProjectionTest.cpp
+    tests/ThreeDViewerLayerListModelTest.cpp
+    tests/ThreeDViewerInspectorStateTest.cpp
+    tests/ThreeDViewerInspectorWidgetTest.cpp
+    tests/ThreeDViewerViewportWidgetTest.cpp
+    tests/ThreeDViewerViewportControllerTest.cpp
+    src/app/three_d_viewer/ThreeDViewerLayerListModel.cpp
+    src/app/three_d_viewer/ThreeDViewerLayerListModel.h
+    src/app/three_d_viewer/ThreeDViewerInspectorState.cpp
+    src/app/three_d_viewer/ThreeDViewerInspectorState.h
+    src/app/three_d_viewer/ThreeDViewerMeshColorMode.h
+    src/app/three_d_viewer/ThreeDViewerInspectorWidget.cpp
+    src/app/three_d_viewer/ThreeDViewerInspectorWidget.h
+    src/app/three_d_viewer/ThreeDViewerViewportItem.cpp
+    src/app/three_d_viewer/ThreeDViewerViewportItem.h
+    src/app/three_d_viewer/ThreeDViewerViewportController.cpp
+    src/app/three_d_viewer/ThreeDViewerViewportController.h
+    src/app/three_d_viewer/ThreeDViewerProjection.cpp
+    src/app/three_d_viewer/ThreeDViewerProjection.h
+    src/app/three_d_viewer/ThreeDViewerViewportWidget.cpp
+    src/app/three_d_viewer/ThreeDViewerViewportWidget.h)
+
+target_link_libraries(ThreeDViewerQTests PRIVATE therion_core Qt6::Gui Qt6::Svg Qt6::Widgets Qt6::Quick Qt6::QuickWidgets Qt6::Qml Qt6::QuickControls2 Qt6::Test)
+
+qt_add_resources(ThreeDViewerQTests ThreeDViewerQTestsResources
+    PREFIX "/"
+    FILES
+        resources/qml/three_d_viewer/ThreeDViewerViewport.qml
+        resources/qml/three_d_viewer/ThreeDViewerInspector.qml)
 
 qt_add_executable(MapEditorObjectStyleCatalogTest
     tests/MapEditorObjectStyleCatalogTest.cpp
@@ -1411,6 +1493,7 @@ set(THERION_UNIT_TEST_TARGETS
     DocumentFileEncodingTest
     MapEditorInputPolicyTest
     MapEditorLogicQTests
+    ThreeDViewerQTests
     MapEditorInspectorDataTest
     MapEditorObjectStyleCatalogTest
     MapEditorObjectDetailsLogicTest

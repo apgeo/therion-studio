@@ -1852,7 +1852,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
     const QHash<int, QPainterPath> scrapClipPaths =
         scrapClipPathsForFeatures(geometryFeatures, sourceBounds, previewBounds);
     const MapEditorObjectStyleCatalog styleCatalog = mapEditorObjectStyleCatalog();
-    const qreal vertexRadius = 2.4;
+    const qreal vertexRadius = 3.4;
     auto markGeometryItem = [](QGraphicsItem *item) {
         if (item != nullptr) {
             item->setData(kMapItemRole, kMapItemGeometryValue);

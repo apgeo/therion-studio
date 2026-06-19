@@ -30,6 +30,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Keep release notes, package metadata, and CI artifact workflow aligned with `v2026.6.6`.
 - Keep Linux CI and package-builder Qt dependency lists aligned with the Qt Quick/QML-backed 3D viewer surface.
 - Keep Windows CI and installer Qt archive lists aligned with the Qt Quick/QML-backed 3D viewer surface.
+- Keep AppImage runtime-library staging aligned with Debian Qt runtime dependencies instead of masking missing
+  bundled libraries in smoke-test containers.
 
 ### Unified Source DOM / Transactions
 

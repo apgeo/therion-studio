@@ -103,6 +103,8 @@ should_bundle_runtime_library() {
         libmd4c.so* | \
         libpcre2-16.so* | \
         libpng16.so* | \
+        libproxy.so* | \
+        libduktape.so* | \
         libzstd.so*)
             return 0
             ;;

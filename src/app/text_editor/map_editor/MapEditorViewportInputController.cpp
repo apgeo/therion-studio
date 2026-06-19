@@ -211,7 +211,7 @@ QGraphicsItem *preferredMapHitItemForViewportPosition(MapEditorViewportInputCont
         if (!vertexLikeItem) {
             continue;
         }
-        if (!candidate->isVisible() && !candidate->data(kMapSceneSelectionGatedRole).toBool()) {
+        if (!candidate->isVisible()) {
             continue;
         }
         if (requireSelected && !candidate->isSelected()) {

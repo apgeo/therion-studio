@@ -293,10 +293,100 @@ int runSplitReferencedOpenLineFromSelectionPanelSmoke()
     pumpEvents();
     return 0;
 }
+
+int runHiddenLineControlDoesNotStealPathSelectionSmoke()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory for hidden-control selection smoke test.")) {
+        return 1;
+    }
+
+    const QString filePath = tempDir.filePath(QStringLiteral("hidden_control_selection.th2"));
+    QFile file(filePath);
+    if (!expect(file.open(QIODevice::WriteOnly | QIODevice::Text),
+                "Failed to create temporary TH2 file for hidden-control selection smoke test.")) {
+        return 1;
+    }
+
+    const QByteArray th2Contents =
+        "encoding utf-8\n"
+        "\n"
+        "scrap hidden-control-selection -projection plan\n"
+        "line contour\n"
+        "  0 50\n"
+        "  100 50\n"
+        "endline\n"
+        "line wall\n"
+        "  40 80\n"
+        "  50 50 60 80 80 80\n"
+        "endline\n"
+        "endscrap\n";
+    file.write(th2Contents);
+    file.close();
+
+    QtFileSystem fileSystem;
+    FakeSessionStore sessionStore;
+    QMainWindow hostWindow;
+    hostWindow.resize(960, 720);
+    auto *central = new QWidget(&hostWindow);
+    auto *layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), central);
+    layout->addWidget(mapTab);
+    hostWindow.setCentralWidget(central);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                "MapEditorTab failed to load TH2 file for hidden-control selection smoke test.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+    pumpEvents();
+
+    auto *mapView = mapTab->findChild<QGraphicsView *>();
+    if (!expect(mapView != nullptr && mapView->scene() != nullptr,
+                "Map view/scene was not found in hidden-control selection smoke test.")) {
+        return 1;
+    }
+    mapTab->triggerSelectMode();
+    pumpEvents();
+
+    QGraphicsPathItem *contourPath = findPathItemForLine(mapView->scene(), 4);
+    if (!expect(contourPath != nullptr, "Failed to find contour path item for hidden-control selection smoke test.")) {
+        return 1;
+    }
+
+    mapView->centerOn(contourPath);
+    pumpEvents();
+    const QPoint contourViewportPoint =
+        mapView->mapFromScene(contourPath->mapToScene(contourPath->path().pointAtPercent(0.5)));
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, contourViewportPoint, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, contourViewportPoint, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+
+    if (!expect(mapTab->currentLineNumber() == 4,
+                "Clicking a contour path should not select a hidden wall control point at the same position.")) {
+        std::cerr << "Selected source line: " << mapTab->currentLineNumber() << '\n';
+        return 1;
+    }
+
+    hostWindow.close();
+    pumpEvents();
+    return 0;
+}
 }
 
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
-    return runSplitReferencedOpenLineFromSelectionPanelSmoke();
+    if (const int result = runSplitReferencedOpenLineFromSelectionPanelSmoke(); result != 0) {
+        return result;
+    }
+    return runHiddenLineControlDoesNotStealPathSelectionSmoke();
 }

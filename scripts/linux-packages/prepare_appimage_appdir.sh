@@ -95,16 +95,55 @@ should_bundle_runtime_library() {
     soname="$(basename "$lib_path")"
     case "$soname" in
         libb2.so* | \
+        libblkid.so* | \
+        libbrotlicommon.so* | \
+        libbrotlidec.so* | \
         libdouble-conversion.so* | \
+        libcom_err.so* | \
+        libcrypto.so* | \
+        libcurl-gnutls.so* | \
+        libffi.so* | \
+        libgio-2.0.so* | \
+        libglib-2.0.so* | \
+        libgmodule-2.0.so* | \
+        libgmp.so* | \
+        libgnutls.so* | \
         libgomp.so* | \
+        libgssapi_krb5.so* | \
         libgraphite2.so* | \
+        libgobject-2.0.so* | \
         libharfbuzz.so* | \
+        libhogweed.so* | \
         libicu*.so* | \
+        libidn2.so* | \
+        libk5crypto.so* | \
+        libkeyutils.so* | \
+        libkrb5.so* | \
+        libkrb5support.so* | \
+        liblber.so* | \
+        libldap.so* | \
         libmd4c.so* | \
+        libmount.so* | \
+        libnettle.so* | \
+        libnghttp2.so* | \
+        libnghttp3.so* | \
+        libngtcp2.so* | \
+        libngtcp2_crypto_gnutls.so* | \
+        libp11-kit.so* | \
         libpcre2-16.so* | \
+        libpcre2-8.so* | \
         libpng16.so* | \
         libproxy.so* | \
+        libpsl.so* | \
+        libpxbackend-*.so* | \
+        librtmp.so* | \
+        libsasl2.so* | \
+        libselinux.so* | \
+        libssh2.so* | \
+        libssl.so* | \
+        libtasn1.so* | \
         libduktape.so* | \
+        libunistring.so* | \
         libzstd.so*)
             return 0
             ;;
@@ -205,6 +244,8 @@ copy_runtime_library_pattern() {
         [[ -d "$root" ]] || continue
         while IFS= read -r match; do
             copy_library_family "$match" "$qt_bundle_lib_dir" || true
+            cp -aL "$match" "$qt_bundle_lib_dir/$(basename "$match")"
+            echo "Bundled required AppImage runtime library: $match" >&2
             found=0
         done < <(find "$root" -maxdepth 7 \( -type f -o -type l \) -name "$pattern" -print 2>/dev/null | sort)
     done

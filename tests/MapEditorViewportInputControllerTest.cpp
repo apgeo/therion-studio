@@ -44,7 +44,7 @@ int runBackspaceDeleteOnMapViewAndViewportTest()
     context.drawMode = []() { return MapEditorInteractiveDrawMode::None; };
     context.removeLineVertexFromSelection = [&removeVertexCalls]() {
         ++removeVertexCalls;
-        return false;
+        return true;
     };
     context.deleteSelectedObjectFromSelection = [&deleteObjectCalls]() {
         ++deleteObjectCalls;
@@ -59,10 +59,21 @@ int runBackspaceDeleteOnMapViewAndViewportTest()
                 "Backspace on focused map view should be handled by viewport input controller.")) {
         return 1;
     }
-    if (!expect(removeVertexCalls == 1 && deleteObjectCalls == 1,
-                "Backspace on map view should attempt vertex delete, then selected-object delete fallback.")) {
+    if (!expect(removeVertexCalls == 0 && deleteObjectCalls == 1,
+                "Backspace on a non-vertex selection should delete the selected object without deleting a focused segment vertex.")) {
         return 1;
     }
+
+    auto *vertexItem = new MapEditableGeometryVertexItem(77,
+                                                         QStringLiteral("line"),
+                                                         2,
+                                                         QPointF(0.0, 0.0),
+                                                         QRectF(-10.0, -10.0, 20.0, 20.0),
+                                                         QRectF(-10.0, -10.0, 20.0, 20.0));
+    vertexItem->setData(kMapSceneLineNumberRole, 77);
+    vertexItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineAnchor);
+    scene.addItem(vertexItem);
+    vertexItem->setSelected(true);
 
     QKeyEvent viewportBackspace(QEvent::KeyPress, Qt::Key_Backspace, Qt::NoModifier);
     const std::optional<bool> viewportResult = controller.handleEvent(view.viewport(), &viewportBackspace);
@@ -70,8 +81,8 @@ int runBackspaceDeleteOnMapViewAndViewportTest()
                 "Backspace on map viewport should be handled by viewport input controller.")) {
         return 1;
     }
-    if (!expect(removeVertexCalls == 2 && deleteObjectCalls == 2,
-                "Backspace on map viewport should attempt vertex delete, then selected-object delete fallback.")) {
+    if (!expect(removeVertexCalls == 1 && deleteObjectCalls == 1,
+                "Backspace on a selected line vertex should delete the vertex before falling back to object delete.")) {
         return 1;
     }
 
@@ -81,7 +92,7 @@ int runBackspaceDeleteOnMapViewAndViewportTest()
                 "Backspace with modifiers should stay unhandled so platform shortcuts can propagate.")) {
         return 1;
     }
-    if (!expect(removeVertexCalls == 2 && deleteObjectCalls == 2,
+    if (!expect(removeVertexCalls == 1 && deleteObjectCalls == 1,
                 "Backspace with modifiers should not trigger delete handlers.")) {
         return 1;
     }
@@ -916,6 +927,81 @@ int runHoveredPathDoesNotStealVisibleVertexPressTest()
     return 0;
 }
 
+int runHoveredPathDoesNotStealLinePointHandlePressTest()
+{
+    QGraphicsScene scene;
+    QGraphicsView view(&scene);
+    view.resize(240, 180);
+    view.show();
+
+    QString toolbarStatus;
+    bool primaryPointerInteractionActive = false;
+    bool pendingClickSelection = false;
+    QPointF pendingClickScenePosition;
+    QElapsedTimer pendingClickElapsed;
+    int pendingClickLineNumber = 0;
+    int pendingClickSourceVertexIndex = -1;
+    QString pendingClickGeometryKind;
+
+    MapEditorViewportInputContext context;
+    context.scene = &scene;
+    context.view = &view;
+    context.toolbarStatusNote = &toolbarStatus;
+    context.primaryPointerInteractionActive = &primaryPointerInteractionActive;
+    context.pendingClickSelection = &pendingClickSelection;
+    context.pendingClickScenePosition = &pendingClickScenePosition;
+    context.pendingClickElapsed = &pendingClickElapsed;
+    context.pendingClickLineNumber = &pendingClickLineNumber;
+    context.pendingClickSourceVertexIndex = &pendingClickSourceVertexIndex;
+    context.pendingClickGeometryKind = &pendingClickGeometryKind;
+    context.drawMode = []() { return MapEditorInteractiveDrawMode::None; };
+    context.handleInteractiveDrawClick = [](const QPointF &) {
+        return false;
+    };
+    context.refreshToolbarSummary = []() {};
+    context.updateCommandSurfaceState = []() {};
+
+    MapEditorViewportInputController controller(context);
+
+    QPainterPath contourPath;
+    contourPath.moveTo(10.0, 40.0);
+    contourPath.lineTo(90.0, 40.0);
+    auto *hoveredPathItem = scene.addPath(contourPath, QPen(Qt::cyan, 2.0));
+    hoveredPathItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
+    hoveredPathItem->setAcceptedMouseButtons(Qt::LeftButton);
+    hoveredPathItem->setData(kMapSceneLineNumberRole, 91);
+    hoveredPathItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineDetail);
+    hoveredPathItem->setData(kMapSceneInteractionHoverRole, true);
+
+    const QPointF handleScenePosition(50.0, 40.0);
+    auto *linePointHandle = scene.addRect(QRectF(handleScenePosition.x() - 5.0,
+                                                handleScenePosition.y() - 5.0,
+                                                10.0,
+                                                10.0),
+                                         QPen(Qt::red),
+                                         QBrush(Qt::yellow));
+    linePointHandle->setFlag(QGraphicsItem::ItemIsSelectable, true);
+    linePointHandle->setAcceptedMouseButtons(Qt::LeftButton);
+    linePointHandle->setData(kMapSceneLineNumberRole, 91);
+    linePointHandle->setData(kMapSceneOwnerVertexRole, 4);
+    linePointHandle->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineControlConnector);
+
+    const QPoint clickPosition = view.mapFromScene(handleScenePosition);
+    QMouseEvent press(QEvent::MouseButtonPress,
+                      QPointF(clickPosition),
+                      QPointF(view.viewport()->mapToGlobal(clickPosition)),
+                      Qt::LeftButton,
+                      Qt::LeftButton,
+                      Qt::NoModifier);
+    const std::optional<bool> handled = controller.handleEvent(view.viewport(), &press);
+    if (!expect(!handled.has_value(),
+                "A highlighted path must not steal primary press events from a visible line-point orientation handle.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 }
 
 int main(int argc, char **argv)
@@ -937,6 +1023,9 @@ int main(int argc, char **argv)
         return rc;
     }
     if (const int rc = runHoveredPathDoesNotStealVisibleVertexPressTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runHoveredPathDoesNotStealLinePointHandlePressTest(); rc != 0) {
         return rc;
     }
     return runResizeAutoFitSuppressesCommandSurfaceUpdateTest();

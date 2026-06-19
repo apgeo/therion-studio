@@ -108,6 +108,7 @@ qreal genericPathItemHitDistancePixels(const QGraphicsItem *item,
                                        const QTransform &viewTransform);
 
 bool isDistanceRankedPathSubtype(int subtype);
+bool isVertexLikeSelectionSubtype(int subtype);
 
 void clearPendingPrimarySelectionItem(MapEditorViewportInputContext &context)
 {
@@ -207,7 +208,9 @@ QGraphicsItem *nearestDirectVertexLikeItemForViewportPosition(MapEditorViewportI
         const bool vertexLikeItem = dynamic_cast<MapEditableGeometryVertexItem *>(candidate) != nullptr
             || subtype == kMapSceneSelectionSubtypeLineAnchor
             || subtype == kMapSceneSelectionSubtypeLineControl
-            || subtype == kMapSceneSelectionSubtypeAreaVertex;
+            || subtype == kMapSceneSelectionSubtypeLineControlConnector
+            || subtype == kMapSceneSelectionSubtypeAreaVertex
+            || subtype == kMapSceneSelectionSubtypePointOrientationHandle;
         if (!vertexLikeItem) {
             continue;
         }
@@ -610,6 +613,36 @@ bool isDistanceRankedPathSubtype(int subtype)
         || subtype == kMapSceneSelectionSubtypeAreaFill;
 }
 
+bool isVertexLikeSelectionSubtype(int subtype)
+{
+    return subtype == kMapSceneSelectionSubtypeLineAnchor
+        || subtype == kMapSceneSelectionSubtypeLineControl
+        || subtype == kMapSceneSelectionSubtypeLineControlConnector
+        || subtype == kMapSceneSelectionSubtypeAreaVertex
+        || subtype == kMapSceneSelectionSubtypePointOrientationHandle;
+}
+
+bool hasSelectedVertexLikeItem(const MapEditorViewportInputContext &context)
+{
+    if (context.scene == nullptr) {
+        return false;
+    }
+
+    const QList<QGraphicsItem *> selectedItems = context.scene->selectedItems();
+    for (const QGraphicsItem *item : selectedItems) {
+        if (item == nullptr) {
+            continue;
+        }
+        if (dynamic_cast<const MapEditableGeometryVertexItem *>(item) != nullptr) {
+            return true;
+        }
+        if (isVertexLikeSelectionSubtype(item->data(kMapSceneSelectionSubtypeRole).toInt())) {
+            return true;
+        }
+    }
+    return false;
+}
+
 qreal sceneRadiusForViewportPixels(const QGraphicsView *view, const QPoint &viewportPoint, int pixelRadius)
 {
     if (view == nullptr || pixelRadius <= 0) {
@@ -841,7 +874,9 @@ QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems,
             } else if (dynamic_cast<const MapEditableGeometryVertexItem *>(item) != nullptr
                        || subtype == kMapSceneSelectionSubtypeLineAnchor
                        || subtype == kMapSceneSelectionSubtypeLineControl
-                       || subtype == kMapSceneSelectionSubtypeAreaVertex) {
+                       || subtype == kMapSceneSelectionSubtypeLineControlConnector
+                       || subtype == kMapSceneSelectionSubtypeAreaVertex
+                       || subtype == kMapSceneSelectionSubtypePointOrientationHandle) {
                 distancePixels = vertexLikeItemHitDistancePixels(item, scenePosition.value(), viewTransform);
             }
         }
@@ -948,8 +983,10 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
 
         if ((keyEvent->key() == Qt::Key_Delete || keyEvent->key() == Qt::Key_Backspace)
             && deleteKeyNoModifier) {
-            if (context_.removeLineVertexFromSelection()) {
-                return true;
+            if (hasSelectedVertexLikeItem(context_)) {
+                if (context_.removeLineVertexFromSelection()) {
+                    return true;
+                }
             }
             if (context_.deleteSelectedObjectFromSelection
                 && context_.deleteSelectedObjectFromSelection()) {

@@ -189,6 +189,44 @@ copy_qt_plugin_groups() {
     done < "$roots_file"
 }
 
+copy_runtime_library_pattern() {
+    local pattern="$1"
+    local root
+    local match
+    local found=1
+    local -a roots=()
+
+    if [[ -n "$app_multiarch" ]]; then
+        roots+=("/usr/lib/$app_multiarch" "/lib/$app_multiarch")
+    fi
+    roots+=("/usr/lib" "/lib" "/usr/local/lib")
+
+    for root in "${roots[@]}"; do
+        [[ -d "$root" ]] || continue
+        for match in "$root"/$pattern; do
+            [[ -e "$match" ]] || continue
+            copy_library_family "$match" "$qt_bundle_lib_dir" || true
+            found=0
+        done
+    done
+
+    return "$found"
+}
+
+copy_required_runtime_libraries() {
+    local pattern
+    local -a patterns=(
+        libpxbackend-*.so*
+    )
+
+    for pattern in "${patterns[@]}"; do
+        if ! copy_runtime_library_pattern "$pattern"; then
+            echo "Unable to locate required AppImage runtime library: $pattern" >&2
+            exit 1
+        fi
+    done
+}
+
 plugin_roots="$(mktemp)"
 dependency_roots="$(mktemp)"
 trap 'rm -f "$plugin_roots" "$dependency_roots"' EXIT
@@ -202,6 +240,8 @@ while IFS= read -r binary; do
         copy_qt_library_family "$qt_lib" "$qt_bundle_lib_dir"
     done < <(collect_qt_dependencies "$binary")
 done < "$dependency_roots"
+
+copy_required_runtime_libraries
 
 runtime_dependencies_copied=1
 while [[ "$runtime_dependencies_copied" -eq 1 ]]; do

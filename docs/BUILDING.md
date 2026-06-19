@@ -182,8 +182,8 @@ deploy metadata. Because Debian's Qt shared libraries live in system library dir
 Linux deploy helper may exclude by default, the workflow also copies selected Qt plugin groups from
 the distro Qt plugin directory, copies the `ldd`-resolved `libQt6*.so*` runtime families into
 `AppDir/usr/lib`, stages selected non-glibc runtime libraries required by Debian's Qt stack such as
-`libproxy.so*`, writes an `AppRun` wrapper that sets `LD_LIBRARY_PATH` and `QT_PLUGIN_PATH`, and
-performs an offscreen AppDir launch sanity check before packaging through
+`libproxy.so*` and its dynamically loaded `libpxbackend-*.so*` backend, writes an `AppRun` wrapper
+that sets `LD_LIBRARY_PATH` and `QT_PLUGIN_PATH`, and performs an offscreen AppDir launch sanity check before packaging through
 `scripts/linux-packages/prepare_appimage_appdir.sh`. The workflow then packages the AppDir with pinned
 architecture-specific `appimagetool` 1.9.1 and pinned architecture-specific `type2-runtime`
 20251108 runtime inputs, all SHA256-verified before execution/use. The manifest records the

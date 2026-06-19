@@ -98,6 +98,11 @@ if ! find "$appdir/usr/lib" -maxdepth 1 -name "libduktape.so*" | grep -q .; then
     find "$appdir/usr/lib" -maxdepth 1 -type f -name "libduktape.so*" -print | sort >&2 || true
     exit 1
 fi
+if ! find "$appdir/usr/lib" -maxdepth 1 -name "libpxbackend-*.so*" | grep -q .; then
+    echo "AppImage AppDir is missing bundled libproxy backend runtime dependency" >&2
+    find "$appdir/usr/lib" -maxdepth 1 -type f -name "libpxbackend-*.so*" -print | sort >&2 || true
+    exit 1
+fi
 
 pushd build-linux-appimage >/dev/null
 wget -q "$APPIMAGETOOL_URL" -O appimagetool.AppImage

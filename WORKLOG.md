@@ -34,6 +34,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
   bundled libraries in smoke-test containers.
 - Keep AppImage package/smoke scripts diagnostic enough to identify whether missing runtime libraries were lost
   during AppDir staging or final AppImage packaging.
+- Keep dynamically loaded AppImage runtime backends, such as libproxy's `libpxbackend-*.so*`, staged explicitly
+  because they are not guaranteed to appear in direct `ldd` dependency scans.
 
 ### Unified Source DOM / Transactions
 

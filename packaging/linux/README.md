@@ -58,8 +58,9 @@ considered tested on Debian 13 and Ubuntu 26.04 only when both AppImage smoke ch
 - The AppImage workflow additionally runs `scripts/linux-packages/prepare_appimage_appdir.sh` to stage
   selected Qt plugin groups, stage `ldd`-resolved `libQt6*.so*` runtime families into
   `AppDir/usr/lib`, stage selected non-glibc runtime libraries required by Debian's Qt stack such as
-  `libproxy.so*`, write an `AppRun` wrapper that sets `LD_LIBRARY_PATH` and `QT_PLUGIN_PATH`, verify
-  the offscreen platform plugin, and launch-test the AppDir before packaging.
+  `libproxy.so*` and its dynamically loaded `libpxbackend-*.so*` backend, write an `AppRun` wrapper
+  that sets `LD_LIBRARY_PATH` and `QT_PLUGIN_PATH`, verify the offscreen platform plugin, and
+  launch-test the AppDir before packaging.
 - The final AppImage is produced with pinned architecture-specific `appimagetool` 1.9.1 and pinned
   architecture-specific `type2-runtime` 20251108 inputs, all SHA256-verified by the workflow before
   use.

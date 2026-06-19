@@ -209,6 +209,7 @@ void TherionSyntaxHighlighter::setSourceDocumentType(TherionSourceDocumentType s
     sourceDocumentType_ = sourceType;
     cachedValidationResult_ = {};
     cachedValidationRevision_ = -1;
+    sourceSnapshotCache_.clear();
     rehighlight();
 }
 
@@ -225,6 +226,7 @@ void TherionSyntaxHighlighter::loadPalette()
     validationCatalog_ = {};
     cachedValidationResult_ = {};
     cachedValidationRevision_ = -1;
+    sourceSnapshotCache_.clear();
 
     const bool darkPalette = applicationUsesDarkSyntaxPalette();
     baseTextFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#D4D4D4")) : QColor(QStringLiteral("#24292f")));
@@ -672,11 +674,20 @@ const TherionSourceValidationResult &TherionSyntaxHighlighter::cachedValidationR
 
     const int revision = document()->revision();
     if (revision != cachedValidationRevision_) {
+        const QString text = document()->toPlainText();
         TherionSourceDocumentMetadata metadata;
         metadata.sourceType = sourceDocumentType_;
         metadata.revisionId = revision;
-        cachedValidationResult_ =
-            TherionSourceValidator::validate(document()->toPlainText(), validationCatalog_, metadata);
+        const TherionSourceDocument &sourceDocument =
+            sourceSnapshotCache_.sourceDocument(text, metadata);
+        const TherionSourceLogicalDocument &logicalDocument =
+            sourceSnapshotCache_.logicalDocument(text,
+                                                 validationCatalog_,
+                                                 metadata,
+                                                 TherionSourceSnapshotCatalogKey::fromRevision(revision));
+        cachedValidationResult_ = TherionSourceValidator::validate(sourceDocument,
+                                                                   logicalDocument,
+                                                                   validationCatalog_);
         cachedValidationRevision_ = revision;
     }
     return cachedValidationResult_;

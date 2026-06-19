@@ -3,6 +3,7 @@
 #include "TextEditorCommandMetadata.h"
 #include "../../core/CommandCatalogStore.h"
 #include "../../core/TherionDocumentEditor.h"
+#include "../../core/TherionSourceSnapshotCache.h"
 #include "../../core/TherionSourceValidator.h"
 
 #include <QString>
@@ -412,6 +413,7 @@ private:
     int currentColumnNumber_ = 1;
     int highlightedLineNumber_ = 0;
     TextEditorCommandMetadata commandMetadata_;
+    mutable TherionSourceSnapshotCache validationSourceSnapshotCache_;
     QVector<TherionSourceDiagnostic> projectValidationDiagnostics_;
     QCompleter *completionCompleter_ = nullptr;
     QStringListModel *completionModel_ = nullptr;

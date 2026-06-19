@@ -91,6 +91,7 @@ void TextEditorTab::buildHelpPanel()
 
 void TextEditorTab::loadHelpMetadata()
 {
+    validationSourceSnapshotCache_.clear();
     if (contextHelpController_ != nullptr) {
         contextHelpController_->loadHelpMetadata();
     }
@@ -98,6 +99,7 @@ void TextEditorTab::loadHelpMetadata()
 
 void TextEditorTab::loadHelpMetadataFromCommandCatalog()
 {
+    validationSourceSnapshotCache_.clear();
     if (contextHelpController_ != nullptr) {
         contextHelpController_->loadHelpMetadataFromCommandCatalog();
     }

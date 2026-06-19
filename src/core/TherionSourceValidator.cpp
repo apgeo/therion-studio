@@ -805,29 +805,12 @@ void appendBlockDiagnostics(TherionSourceValidationResult *result,
         result->diagnostics.append(diagnostic);
     }
 }
-}
 
-TherionSourceValidationResult TherionSourceValidator::validate(const QString &contents)
-{
-    return validate(contents, {});
-}
-
-TherionSourceValidationResult TherionSourceValidator::validate(const QString &contents,
-                                                               const TherionSourceValidationCatalog &catalog)
-{
-    return validate(contents, catalog, {});
-}
-
-TherionSourceValidationResult TherionSourceValidator::validate(const QString &contents,
-                                                               const TherionSourceValidationCatalog &catalog,
-                                                               const TherionSourceDocumentMetadata &metadata)
+TherionSourceValidationResult validateSourceDocuments(const TherionSourceDocument &sourceDocument,
+                                                      const TherionSourceLogicalDocument &logicalDocument,
+                                                      bool validateCatalog)
 {
     TherionSourceValidationResult result;
-    const TherionSourceDocument sourceDocument = TherionSourceDocument::fromText(contents, metadata);
-    const TherionSourceLogicalDocument logicalDocument =
-        catalog.commandNames.isEmpty()
-            ? TherionSourceLogicalDocument::fromSourceDocument(sourceDocument)
-            : TherionSourceLogicalDocument::fromSourceDocument(sourceDocument, catalog);
     QHash<QString, QSet<QString>> lineIdsByScrapScope;
     for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
         const std::optional<TherionSourceLogicalArgumentRange> idRange = lineObjectIdRange(command);
@@ -878,15 +861,47 @@ TherionSourceValidationResult TherionSourceValidator::validate(const QString &co
             }
         }
 
-        if (!catalog.commandNames.isEmpty() && command.shouldValidateCommandCatalog()) {
+        if (validateCatalog && command.shouldValidateCommandCatalog()) {
             appendCommandCatalogDiagnostics(&result, command);
         }
     }
 
-    if (!catalog.commandNames.isEmpty()) {
+    if (validateCatalog) {
         appendBlockDiagnostics(&result, sourceDocument);
     }
     return result;
+}
+}
+
+TherionSourceValidationResult TherionSourceValidator::validate(const QString &contents)
+{
+    return validate(contents, {});
+}
+
+TherionSourceValidationResult TherionSourceValidator::validate(const QString &contents,
+                                                               const TherionSourceValidationCatalog &catalog)
+{
+    return validate(contents, catalog, {});
+}
+
+TherionSourceValidationResult TherionSourceValidator::validate(const QString &contents,
+                                                               const TherionSourceValidationCatalog &catalog,
+                                                               const TherionSourceDocumentMetadata &metadata)
+{
+    const TherionSourceDocument sourceDocument = TherionSourceDocument::fromText(contents, metadata);
+    const TherionSourceLogicalDocument logicalDocument =
+        catalog.commandNames.isEmpty()
+            ? TherionSourceLogicalDocument::fromSourceDocument(sourceDocument)
+            : TherionSourceLogicalDocument::fromSourceDocument(sourceDocument, catalog);
+    return validateSourceDocuments(sourceDocument, logicalDocument, !catalog.commandNames.isEmpty());
+}
+
+TherionSourceValidationResult TherionSourceValidator::validate(
+    const TherionSourceDocument &sourceDocument,
+    const TherionSourceLogicalDocument &logicalDocument,
+    const TherionSourceValidationCatalog &catalog)
+{
+    return validateSourceDocuments(sourceDocument, logicalDocument, !catalog.commandNames.isEmpty());
 }
 
 QVector<TherionSourceTextEdit> TherionSourceValidator::validationFixEdits(

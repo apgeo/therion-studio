@@ -8,6 +8,7 @@
 
 #include "../core/CommandCatalogStore.h"
 #include "../core/TherionSourceDocument.h"
+#include "../core/TherionSourceSnapshotCache.h"
 #include "../core/TherionSourceValidator.h"
 
 class QTextDocument;
@@ -53,6 +54,7 @@ private:
     QHash<QString, QSet<QString>> commandOptionIdValueTokens_;
     QSet<QString> closingDirectiveIdTokens_;
     TherionSourceValidationCatalog validationCatalog_;
+    TherionSourceSnapshotCache sourceSnapshotCache_;
     TherionSourceValidationResult cachedValidationResult_;
     QVector<TherionSourceDiagnostic> externalDiagnostics_;
     int cachedValidationRevision_ = -1;

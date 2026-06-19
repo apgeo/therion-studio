@@ -28,6 +28,7 @@ This plan tracks the long-running migration toward one shared, lossless Therion 
 - `TherionSourceSnapshotCache` provides the first narrow revision-keyed cache for physical and logical source projections. It only caches snapshots with positive source revisions, and catalog-backed logical projections require an explicit catalog revision key.
 - Raw context-help token lookup now reuses `TherionSourceSnapshotCache` keyed by the editor document revision instead of reparsing the full document for each help-token lookup.
 - Raw completion scope analysis, cursor token context, and required-argument tooltip lookup now reuse the same revision-keyed source snapshot cache from `RawEditorCompletionController`.
+- Raw validation tooltips and syntax-highlighter validation underlines now validate against cached physical/logical source projections instead of reparsing full document text in each consumer.
 
 ## Remaining Slices
 
@@ -38,14 +39,6 @@ Goal: stop reparsing full documents for cursor movement, context help, completio
 - Expand `TherionSourceSnapshotCache` into Structure/Validation only after stale-projection behavior is covered.
 - Keep cache ownership outside widgets; UI shells should request snapshots by document revision or explicit text input through a narrow collaborator.
 - Add invalidation tests for text edits, undo/redo, document reload, source type changes, and catalog refresh.
-
-### Slice 3 - Raw Editor Consumer Migration
-
-Goal: make Raw mode a projection over the shared source snapshot instead of a set of local parsing passes.
-
-- Route syntax highlighting and validation underlines through the cached logical document where practical.
-- Preserve current source ranges and false-positive behavior while migrating one consumer at a time.
-- Add focused regressions for continuation lines, block-content rows, quoted strings, options with embedded values, and thconfig-specific command applicability.
 
 ### Slice 4 - Blocks Consumer Migration
 

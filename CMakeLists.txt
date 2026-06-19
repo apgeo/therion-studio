@@ -987,6 +987,7 @@ therion_add_core_qtest_runner(TherionCoreQTests
     tests/core/TherionSourceDocumentTest.cpp
     tests/core/TherionSourceLogicalDocumentTest.cpp
     tests/core/TherionSourceSnapshotCacheTest.cpp
+    tests/core/TherionSourceValidatorProjectionTest.cpp
     tests/core/TherionSourceTextTest.cpp
     tests/core/TherionTokenRulesTest.cpp)
 

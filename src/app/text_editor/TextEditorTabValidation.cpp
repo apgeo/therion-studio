@@ -24,10 +24,17 @@ TherionSourceValidationResult TextEditorTab::validateDocument() const
     metadata.sourceType = therionSourceDocumentTypeForFilePath(filePath_);
     metadata.revisionId = documentRevision();
 
+    const QString text = editor_->toPlainText();
+    const TherionSourceValidationCatalog catalog = validationCatalogFromCommandMetadata(commandMetadata_);
+    const TherionSourceDocument &sourceDocument =
+        validationSourceSnapshotCache_.sourceDocument(text, metadata);
+    const TherionSourceLogicalDocument &logicalDocument =
+        validationSourceSnapshotCache_.logicalDocument(text,
+                                                       catalog,
+                                                       metadata,
+                                                       TherionSourceSnapshotCatalogKey::fromRevision(metadata.revisionId));
     TherionSourceValidationResult result =
-        TherionSourceValidator::validate(editor_->toPlainText(),
-                                         validationCatalogFromCommandMetadata(commandMetadata_),
-                                         metadata);
+        TherionSourceValidator::validate(sourceDocument, logicalDocument, catalog);
     if (!isTherionConfigFilePath(filePath_)) {
         return result;
     }

@@ -88,6 +88,16 @@ cp "$desktop_file" "$appdir/therion-studio.desktop"
 cp "$icon_file" "$appdir/therion-studio.png"
 ln -sf therion-studio.png "$appdir/.DirIcon"
 bash scripts/linux-packages/prepare_appimage_appdir.sh "$appdir"
+if ! find "$appdir/usr/lib" -maxdepth 1 -name "libproxy.so.1*" | grep -q .; then
+    echo "AppImage AppDir is missing bundled libproxy.so.1" >&2
+    find "$appdir/usr/lib" -maxdepth 1 -type f -name "libproxy.so*" -print | sort >&2 || true
+    exit 1
+fi
+if ! find "$appdir/usr/lib" -maxdepth 1 -name "libduktape.so*" | grep -q .; then
+    echo "AppImage AppDir is missing bundled libduktape.so runtime dependency" >&2
+    find "$appdir/usr/lib" -maxdepth 1 -type f -name "libduktape.so*" -print | sort >&2 || true
+    exit 1
+fi
 
 pushd build-linux-appimage >/dev/null
 wget -q "$APPIMAGETOOL_URL" -O appimagetool.AppImage

@@ -32,6 +32,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Keep Windows CI and installer Qt archive lists aligned with the Qt Quick/QML-backed 3D viewer surface.
 - Keep AppImage runtime-library staging aligned with Debian Qt runtime dependencies instead of masking missing
   bundled libraries in smoke-test containers.
+- Keep AppImage package/smoke scripts diagnostic enough to identify whether missing runtime libraries were lost
+  during AppDir staging or final AppImage packaging.
 
 ### Unified Source DOM / Transactions
 

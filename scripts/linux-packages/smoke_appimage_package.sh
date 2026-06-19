@@ -58,6 +58,10 @@ set -e
 if [[ "$exit_code" -ne 0 && "$exit_code" -ne 124 ]]; then
     echo "AppImage launch failed with exit code $exit_code" >&2
     cat /tmp/therion-studio-appimage-launch.log >&2
+    echo "Bundled libproxy runtime libraries:" >&2
+    find /tmp/appimage_extracted_* -path "*/usr/lib/libproxy.so*" -print 2>/dev/null | sort >&2 || true
+    echo "Bundled libduktape runtime libraries:" >&2
+    find /tmp/appimage_extracted_* -path "*/usr/lib/libduktape.so*" -print 2>/dev/null | sort >&2 || true
     exit "$exit_code"
 fi
 if [[ "$exit_code" -eq 124 ]]; then

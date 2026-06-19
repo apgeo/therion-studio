@@ -18,6 +18,7 @@
 
 #include "../../../core/TherionCommandSyntax.h"
 #include "../../../core/TherionSourceLogicalDocument.h"
+#include "../../../core/TherionSourceSnapshotCache.h"
 
 #include <utility>
 
@@ -109,8 +110,13 @@ void RawEditorCompletionPopupController::triggerCompletionPopup()
             if (block.isValid()) {
                 const int lineNumber = block.blockNumber() + 1;
                 const int columnNumber = cursor.positionInBlock() + 1;
-                const TherionSourceLogicalDocument logicalDocument =
-                    TherionSourceLogicalDocument::fromText(context_.editor->toPlainText());
+                TherionSourceDocumentMetadata metadata;
+                metadata.revisionId = context_.editor->document() != nullptr
+                    ? context_.editor->document()->revision()
+                    : 0;
+                const TherionSourceLogicalDocument &logicalDocument = context_.sourceSnapshotCache != nullptr
+                    ? context_.sourceSnapshotCache->logicalDocument(context_.editor->toPlainText(), metadata)
+                    : TherionSourceLogicalDocument::fromText(context_.editor->toPlainText(), metadata);
                 const TherionSourceLogicalCommand *logicalCommand = logicalDocument.commandAtPhysicalLine(lineNumber);
                 if (logicalCommand == nullptr) {
                     return;

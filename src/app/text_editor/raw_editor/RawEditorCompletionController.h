@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../../core/TherionSourceSnapshotCache.h"
+
 #include <functional>
 
 #include <QEvent>
@@ -73,5 +75,6 @@ private:
     RawEditorCompletionContextAnalyzer contextAnalyzer() const;
 
     RawEditorCompletionControllerContext context_;
+    mutable TherionSourceSnapshotCache sourceSnapshotCache_;
 };
 }

@@ -11,6 +11,7 @@ class QStringListModel;
 namespace TherionStudio
 {
 struct TextEditorCommandMetadata;
+class TherionSourceSnapshotCache;
 struct TherionParsedLine;
 struct RawEditorCompletionContext;
 struct RawEditorCompletionSuggestionContext;
@@ -23,6 +24,7 @@ struct RawEditorCompletionPopupContext
     const TextEditorCommandMetadata *metadata = nullptr;
     QString projectRootPath;
     QString filePath;
+    TherionSourceSnapshotCache *sourceSnapshotCache = nullptr;
     std::function<QString(const QString &)> normalizedDirectiveToken;
     std::function<QString(const QString &)> openingDirectiveForClosingToken;
     std::function<bool(const QString &, const TherionParsedLine &)> isContainerDirectiveInstance;

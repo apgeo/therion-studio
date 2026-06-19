@@ -129,6 +129,7 @@ void RawEditorCompletionController::triggerCompletionPopup()
     context.metadata = &commandMetadata();
     context.projectRootPath = context_.projectRootPath ? context_.projectRootPath() : QString();
     context.filePath = context_.filePath ? context_.filePath() : QString();
+    context.sourceSnapshotCache = &sourceSnapshotCache_;
     context.normalizedDirectiveToken = context_.normalizedDirectiveToken;
     context.openingDirectiveForClosingToken = context_.openingDirectiveForClosingToken;
     context.isContainerDirectiveInstance = context_.isContainerDirectiveInstance;

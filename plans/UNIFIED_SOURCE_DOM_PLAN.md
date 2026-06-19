@@ -25,6 +25,8 @@ This plan tracks the long-running migration toward one shared, lossless Therion 
 - `TextEditorSourceTransactionController` is the current central source-transaction seam for source snapshots, undo labels, revision checks, projection invalidation, and selection restoration hooks.
 - Map editor source writes are partially routed through `applySourceTextChangeWithSnapshot`, but several projection/rewrite helpers still own local source-shape knowledge.
 - `TherionSourceDocumentTest` and `TherionSourceLogicalDocumentTest` now run inside `TherionCoreQTests`, with QTest coverage for physical/logical source snapshot roles, ranges, metadata, continuation handling, and catalog metadata.
+- `TherionSourceSnapshotCache` provides the first narrow revision-keyed cache for physical and logical source projections. It only caches snapshots with positive source revisions, and catalog-backed logical projections require an explicit catalog revision key.
+- Raw context-help token lookup now reuses `TherionSourceSnapshotCache` keyed by the editor document revision instead of reparsing the full document for each help-token lookup.
 
 ## Remaining Slices
 
@@ -32,8 +34,8 @@ This plan tracks the long-running migration toward one shared, lossless Therion 
 
 Goal: stop reparsing full documents for cursor movement, context help, completion, structure refresh, and unrelated inspector/UI updates.
 
-- Introduce a narrow revision-keyed source snapshot/projection cache for `TherionSourceDocument` and `TherionSourceLogicalDocument`.
-- Keep cache ownership outside widgets; UI shells should request snapshots by document revision or explicit text input.
+- Expand `TherionSourceSnapshotCache` from Raw context help into one completion path, then Structure/Validation only after stale-projection behavior is covered.
+- Keep cache ownership outside widgets; UI shells should request snapshots by document revision or explicit text input through a narrow collaborator.
 - Add invalidation tests for text edits, undo/redo, document reload, source type changes, and catalog refresh.
 
 ### Slice 3 - Raw Editor Consumer Migration

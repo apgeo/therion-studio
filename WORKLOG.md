@@ -29,7 +29,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 ### Unified Source DOM / Transactions
 
 - Tighten source-file reference resolution while preserving Therion namespace semantics from `docs/THERION_COMPATIBILITY.md`.
-- Slice 2 - Introduce a narrow revision-keyed cache for `TherionSourceDocument` and `TherionSourceLogicalDocument` so Raw, Structure, Validation, and inspector workflows do not reparse on cursor/UI-only changes.
+- Slice 2 - Expand `TherionSourceSnapshotCache` from Raw context help into one completion path, then Structure/Validation once stale-projection behavior is covered for text edits, undo/redo, document reload, source type changes, and catalog refresh.
 - Slice 3 - Migrate Raw editor highlighting, context help, completion token context, tooltips, and validation underlines to the cached logical document one consumer at a time.
 - Slice 4 - Migrate Blocks cards/details/move planning toward shared logical command and option ranges while preserving one source transaction per user-visible change.
 - Slice 5 - Migrate Map/TH2 object discovery, generic option parsing, reference resolution, and Smart Area insert planning to shared logical commands while keeping map geometry parsing map-specific.

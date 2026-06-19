@@ -1,0 +1,160 @@
+#include "../../src/core/TherionSourceSnapshotCache.h"
+#include "../../src/core/TherionCommandSyntax.h"
+
+#include <QtTest/QtTest>
+
+using namespace TherionStudio;
+
+namespace
+{
+class TherionSourceSnapshotCacheTest : public QObject
+{
+    Q_OBJECT
+
+private slots:
+    void cachesSourceDocumentsByRevisionMetadata();
+    void doesNotCacheUnrevisionedSourceDocuments();
+    void invalidatesLogicalDocumentsWhenSourceRevisionChanges();
+    void invalidatesLogicalDocumentsWhenDocumentTypeChanges();
+    void invalidatesCatalogLogicalDocumentsWhenCatalogRevisionChanges();
+    void clearInvalidatesCachedSnapshots();
+};
+
+TherionSourceDocumentMetadata metadataForRevision(int revisionId)
+{
+    TherionSourceDocumentMetadata metadata;
+    metadata.sourceType = TherionSourceDocumentType::TherionSource;
+    metadata.encodingName = QStringLiteral("UTF-8");
+    metadata.revisionId = revisionId;
+    return metadata;
+}
+
+TherionSourceValidationCatalog catalogWithSourceCommand()
+{
+    TherionSourceValidationCatalog catalog;
+    catalog.commandNames = {QStringLiteral("source")};
+    catalog.commandDocumentTypes.insert(QStringLiteral("source"), {QStringLiteral("thconfig")});
+    return catalog;
+}
+
+void TherionSourceSnapshotCacheTest::cachesSourceDocumentsByRevisionMetadata()
+{
+    TherionSourceSnapshotCache cache;
+    const TherionSourceDocumentMetadata metadata = metadataForRevision(10);
+
+    const TherionSourceDocument &first = cache.sourceDocument(QStringLiteral("survey a\n"), metadata);
+    const TherionSourceDocument &second = cache.sourceDocument(QStringLiteral("survey ignored\n"), metadata);
+
+    QCOMPARE(&second, &first);
+    QCOMPARE(second.toText(), QStringLiteral("survey a\n"));
+
+    TherionSourceDocumentMetadata nextMetadata = metadata;
+    nextMetadata.revisionId = 11;
+    const TherionSourceDocument &third = cache.sourceDocument(QStringLiteral("survey b\n"), nextMetadata);
+
+    QCOMPARE(third.toText(), QStringLiteral("survey b\n"));
+    QCOMPARE(third.revisionId(), 11);
+}
+
+void TherionSourceSnapshotCacheTest::doesNotCacheUnrevisionedSourceDocuments()
+{
+    TherionSourceSnapshotCache cache;
+    const TherionSourceDocumentMetadata metadata;
+
+    const TherionSourceDocument &first = cache.sourceDocument(QStringLiteral("survey a\n"), metadata);
+    const QString firstText = first.toText();
+    const TherionSourceDocument &second = cache.sourceDocument(QStringLiteral("survey b\n"), metadata);
+
+    QCOMPARE(firstText, QStringLiteral("survey a\n"));
+    QCOMPARE(second.toText(), QStringLiteral("survey b\n"));
+}
+
+void TherionSourceSnapshotCacheTest::invalidatesLogicalDocumentsWhenSourceRevisionChanges()
+{
+    TherionSourceSnapshotCache cache;
+    const TherionSourceLogicalDocument &first =
+        cache.logicalDocument(QStringLiteral("survey a\n"), metadataForRevision(1));
+    const TherionSourceLogicalDocument &second =
+        cache.logicalDocument(QStringLiteral("survey ignored\n"), metadataForRevision(1));
+
+    QCOMPARE(&second, &first);
+    QCOMPARE(second.commands().constFirst().parsed.tokens.at(1), QStringLiteral("a"));
+
+    const TherionSourceLogicalDocument &third =
+        cache.logicalDocument(QStringLiteral("survey b\n"), metadataForRevision(2));
+
+    QCOMPARE(third.commands().constFirst().parsed.tokens.at(1), QStringLiteral("b"));
+    QCOMPARE(third.metadata().revisionId, 2);
+}
+
+void TherionSourceSnapshotCacheTest::invalidatesLogicalDocumentsWhenDocumentTypeChanges()
+{
+    TherionSourceSnapshotCache cache;
+    TherionSourceDocumentMetadata sourceMetadata = metadataForRevision(1);
+    TherionSourceDocumentMetadata mapMetadata = sourceMetadata;
+    mapMetadata.sourceType = TherionSourceDocumentType::TherionMap;
+
+    const TherionSourceLogicalDocument &source =
+        cache.logicalDocument(QStringLiteral("survey a\n"), sourceMetadata);
+    const TherionSourceDocumentType sourceType = source.metadata().sourceType;
+    const TherionSourceLogicalDocument &map =
+        cache.logicalDocument(QStringLiteral("scrap s1\n"), mapMetadata);
+
+    QVERIFY(sourceType == TherionSourceDocumentType::TherionSource);
+    QVERIFY(map.metadata().sourceType == TherionSourceDocumentType::TherionMap);
+    QCOMPARE(map.commands().constFirst().normalizedDirective, QStringLiteral("scrap"));
+}
+
+void TherionSourceSnapshotCacheTest::invalidatesCatalogLogicalDocumentsWhenCatalogRevisionChanges()
+{
+    TherionSourceSnapshotCache cache;
+    TherionSourceDocumentMetadata metadata = metadataForRevision(1);
+    metadata.sourceType = TherionSourceDocumentType::TherionConfig;
+    const TherionSourceValidationCatalog catalog = catalogWithSourceCommand();
+
+    const TherionSourceLogicalDocument &first = cache.logicalDocument(
+        QStringLiteral("source index.th\n"),
+        catalog,
+        metadata,
+        TherionSourceSnapshotCatalogKey::fromRevision(1));
+    const TherionSourceLogicalDocument &second = cache.logicalDocument(
+        QStringLiteral("source ignored.th\n"),
+        catalog,
+        metadata,
+        TherionSourceSnapshotCatalogKey::fromRevision(1));
+
+    QCOMPARE(&second, &first);
+    QCOMPARE(second.commands().constFirst().parsed.tokens.at(1), QStringLiteral("index.th"));
+    QVERIFY(second.commands().constFirst().metadata.catalogCommandKnown);
+
+    const TherionSourceLogicalDocument &third = cache.logicalDocument(
+        QStringLiteral("source index.th\n"),
+        catalog,
+        metadata,
+        TherionSourceSnapshotCatalogKey::fromRevision(2));
+
+    QVERIFY(third.commands().constFirst().metadata.catalogCommandKnown);
+    QCOMPARE(third.commands().constFirst().parsed.tokens.at(1), QStringLiteral("index.th"));
+}
+
+void TherionSourceSnapshotCacheTest::clearInvalidatesCachedSnapshots()
+{
+    TherionSourceSnapshotCache cache;
+    const TherionSourceDocumentMetadata metadata = metadataForRevision(1);
+    const TherionSourceDocument &first = cache.sourceDocument(QStringLiteral("survey a\n"), metadata);
+    QCOMPARE(first.toText(), QStringLiteral("survey a\n"));
+
+    cache.clear();
+
+    const TherionSourceDocument &second = cache.sourceDocument(QStringLiteral("survey b\n"), metadata);
+    QCOMPARE(second.toText(), QStringLiteral("survey b\n"));
+}
+}
+
+int runTherionSourceSnapshotCacheTest(int argc, char **argv)
+{
+    TherionSourceSnapshotCacheTest test;
+    return QTest::qExec(&test, argc, argv);
+}
+
+#include "TherionSourceSnapshotCacheTest.moc"

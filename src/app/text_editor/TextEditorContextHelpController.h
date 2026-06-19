@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../core/CommandCatalogStore.h"
+#include "../../core/TherionSourceSnapshotCache.h"
 #include "../../core/TherionSourceValidator.h"
 
 #include <functional>
@@ -78,6 +79,7 @@ private:
     const TherionSourceValidationResult &cachedValidationResult() const;
     QString validationDiagnosticHtml(const TherionSourceDiagnostic &diagnostic) const;
     QString validationDiagnosticTooltip(const TherionSourceDiagnostic &diagnostic) const;
+    const TherionSourceLogicalDocument &logicalDocumentForEditor() const;
     void setHelpPanel(QWidget *helpPanel);
     void setHelpBrowser(QTextBrowser *helpBrowser);
     void setHelpTitle(const QString &title);
@@ -87,5 +89,6 @@ private:
     ContextHelpInspector *helpInspector_ = nullptr;
     mutable int cachedValidationRevision_ = -1;
     mutable TherionSourceValidationResult cachedValidationResult_;
+    mutable TherionSourceSnapshotCache sourceSnapshotCache_;
 };
 }

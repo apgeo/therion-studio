@@ -104,6 +104,8 @@ set(THERION_CORE_SOURCES
     src/core/TherionSourceLogicalDocument.h
     src/core/TherionSourceReferenceResolver.cpp
     src/core/TherionSourceReferenceResolver.h
+    src/core/TherionSourceSnapshotCache.cpp
+    src/core/TherionSourceSnapshotCache.h
     src/core/TherionSourceValidationCatalog.h
     src/core/TherionSourceValidator.cpp
     src/core/TherionSourceValidator.h
@@ -984,6 +986,7 @@ therion_add_core_qtest_runner(TherionCoreQTests
     tests/core/ThreeDViewerSceneStatisticsTest.cpp
     tests/core/TherionSourceDocumentTest.cpp
     tests/core/TherionSourceLogicalDocumentTest.cpp
+    tests/core/TherionSourceSnapshotCacheTest.cpp
     tests/core/TherionSourceTextTest.cpp
     tests/core/TherionTokenRulesTest.cpp)
 

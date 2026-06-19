@@ -8,8 +8,6 @@
 #include "TextEditorCommandMetadata.h"
 #include "block_editor/BlockEditorDirectiveRules.h"
 
-#include "../../core/TherionSourceLogicalDocument.h"
-
 #include <utility>
 #include <QJsonObject>
 #include <QPoint>
@@ -287,8 +285,7 @@ QStringList TextEditorContextHelpController::helpCandidateTokens() const
         return candidates;
     }
 
-    const TherionSourceLogicalDocument logicalDocument =
-        TherionSourceLogicalDocument::fromText(editor()->toPlainText());
+    const TherionSourceLogicalDocument &logicalDocument = logicalDocumentForEditor();
     const TherionSourceLogicalCommand *command = logicalDocument.commandAtPhysicalLine(block.blockNumber() + 1);
     if (command != nullptr && !command->parsed.directive.isEmpty() && command->parsed.directive != directToken.toLower()) {
         appendUniqueCaseInsensitive(candidates, command->parsed.directive);
@@ -323,8 +320,7 @@ QString TextEditorContextHelpController::currentHelpTokenForCursor() const
     }
 
     const QTextBlock block = cursor.block();
-    const TherionSourceLogicalDocument logicalDocument =
-        TherionSourceLogicalDocument::fromText(editor()->toPlainText());
+    const TherionSourceLogicalDocument &logicalDocument = logicalDocumentForEditor();
     const TherionSourceLogicalTokenRange *tokenRange =
         logicalDocument.tokenAtPhysicalPosition(block.blockNumber() + 1, cursor.positionInBlock() + 1);
     if (tokenRange != nullptr) {
@@ -450,5 +446,18 @@ QString TextEditorContextHelpController::validationDiagnosticTooltip(const Theri
         tooltip += QStringLiteral("\n") + diagnostic.message;
     }
     return tooltip;
+}
+
+const TherionSourceLogicalDocument &TextEditorContextHelpController::logicalDocumentForEditor() const
+{
+    static const QString emptyDocument;
+
+    if (editor() == nullptr || editor()->document() == nullptr) {
+        return sourceSnapshotCache_.logicalDocument(emptyDocument);
+    }
+
+    TherionSourceDocumentMetadata metadata;
+    metadata.revisionId = editor()->document()->revision();
+    return sourceSnapshotCache_.logicalDocument(editor()->toPlainText(), metadata);
 }
 }

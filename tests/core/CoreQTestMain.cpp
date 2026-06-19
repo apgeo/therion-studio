@@ -3,6 +3,7 @@
 int runTherionSourceTextTest(int argc, char **argv);
 int runTherionSourceDocumentTest(int argc, char **argv);
 int runTherionSourceLogicalDocumentTest(int argc, char **argv);
+int runTherionSourceSnapshotCacheTest(int argc, char **argv);
 int runTherionTokenRulesTest(int argc, char **argv);
 int runThreeDViewerLoxLoaderTest(int argc, char **argv);
 int runThreeDViewerCameraTest(int argc, char **argv);
@@ -21,6 +22,7 @@ int main(int argc, char **argv)
     status |= runTherionSourceTextTest(argc, argv);
     status |= runTherionSourceDocumentTest(argc, argv);
     status |= runTherionSourceLogicalDocumentTest(argc, argv);
+    status |= runTherionSourceSnapshotCacheTest(argc, argv);
     status |= runTherionTokenRulesTest(argc, argv);
     return status;
 }

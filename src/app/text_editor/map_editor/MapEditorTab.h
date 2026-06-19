@@ -314,6 +314,8 @@ private:
     {
         int selectedObjectLineNumber_ = 0;
         int selectedObjectVertexIndex_ = -1;
+        int selectedLineSegmentStartVertexIndex_ = -1;
+        int selectedLineSegmentEndVertexIndex_ = -1;
         QString selectedObjectKind_;
         std::optional<QPointF> selectedObjectCoordinate_;
     };

@@ -320,10 +320,61 @@ int lineVertexOwnerIndexForSourceVertex(const MapGeometryFeature &lineFeature, i
     return -1;
 }
 
+int lineAnchorSourceVertexIndex(const MapGeometryFeature::TH2LineVertex &vertex, int vertexOrder)
+{
+    return vertex.anchorSourceVertexIndex >= 0 ? vertex.anchorSourceVertexIndex : vertexOrder;
+}
+
+struct LineSegmentSelection
+{
+    int startSourceVertexIndex = -1;
+    int endSourceVertexIndex = -1;
+};
+
+std::optional<LineSegmentSelection> nearestLineSegmentSelection(const MapGeometryFeature &lineFeature,
+                                                               const QPointF &sourcePoint)
+{
+    if (lineFeature.lineVertices.size() < 2) {
+        return std::nullopt;
+    }
+
+    qreal bestDistance = std::numeric_limits<qreal>::max();
+    LineSegmentSelection bestSelection;
+    const auto considerSegment = [&](int startOrder, int endOrder) {
+        if (startOrder < 0 || startOrder >= lineFeature.lineVertices.size()
+            || endOrder < 0 || endOrder >= lineFeature.lineVertices.size()) {
+            return;
+        }
+
+        const MapGeometryFeature::TH2LineVertex &startVertex = lineFeature.lineVertices.at(startOrder);
+        const MapGeometryFeature::TH2LineVertex &endVertex = lineFeature.lineVertices.at(endOrder);
+        const qreal distance = distanceToSegment(sourcePoint, startVertex.anchor, endVertex.anchor);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestSelection.startSourceVertexIndex = lineAnchorSourceVertexIndex(startVertex, startOrder);
+            bestSelection.endSourceVertexIndex = lineAnchorSourceVertexIndex(endVertex, endOrder);
+        }
+    };
+
+    for (int vertexOrder = 1; vertexOrder < lineFeature.lineVertices.size(); ++vertexOrder) {
+        considerSegment(vertexOrder - 1, vertexOrder);
+    }
+    if (lineFeature.closed) {
+        considerSegment(lineFeature.lineVertices.size() - 1, 0);
+    }
+
+    if (bestSelection.startSourceVertexIndex < 0 || bestSelection.endSourceVertexIndex < 0) {
+        return std::nullopt;
+    }
+    return bestSelection;
+}
+
 void clearSelectedObjectState(const MapEditorSelectionContext &context)
 {
     (*context.selectedObjectLineNumber) = 0;
     (*context.selectedObjectVertexIndex) = -1;
+    (*context.selectedLineSegmentStartVertexIndex) = -1;
+    (*context.selectedLineSegmentEndVertexIndex) = -1;
     context.selectedObjectKind->clear();
     context.selectedObjectCoordinate->reset();
 }
@@ -466,6 +517,8 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
     if (selectedItems.isEmpty()) {
         (*context_.selectedObjectLineNumber) = 0;
         (*context_.selectedObjectVertexIndex) = -1;
+        (*context_.selectedLineSegmentStartVertexIndex) = -1;
+        (*context_.selectedLineSegmentEndVertexIndex) = -1;
         (*context_.selectedObjectKind).clear();
         (*context_.selectedObjectCoordinate).reset();
         context_.clearInspectorObjectSelection();
@@ -477,6 +530,8 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
 
     int selectedLineNumber = 0;
     int selectedSourceVertexIndex = -1;
+    int selectedLineSegmentStartVertexIndex = -1;
+    int selectedLineSegmentEndVertexIndex = -1;
     QString selectedGeometryKind;
     std::optional<QPointF> selectedPointSource;
     MapCardItem *selectedCard = nullptr;
@@ -638,6 +693,35 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
             }
         }
     }
+    if (primarySelectedItem != nullptr
+        && selectedLineNumber > 0
+        && selectedSourceVertexIndex < 0
+        && usePendingClickSelection
+        && context_.scene != nullptr) {
+        const QString sourceLineKind = objectKindForSourceLine(context_.parsedLinesForCurrentDocument(),
+                                                               selectedLineNumber);
+        const int subtype = primarySelectedItem->data(kMapSceneSelectionSubtypeRole).toInt();
+        const bool pathLikeLineSelection = sourceLineKind == QStringLiteral("line")
+            && dynamic_cast<MapEditableGeometryVertexItem *>(primarySelectedItem) == nullptr
+            && dynamic_cast<MapEditablePointItem *>(primarySelectedItem) == nullptr
+            && subtype != kMapSceneSelectionSubtypeLineControlConnector;
+        if (pathLikeLineSelection) {
+            const QVector<TherionParsedLine> parsedLines = context_.parsedLinesForCurrentDocument();
+            const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(parsedLines,
+                                                                                           selectedLineNumber);
+            if (lineFeature.has_value()) {
+                const QPointF clickedSourcePoint =
+                    context_.sourcePointFromScenePosition((*context_.pendingClickScenePosition));
+                if (const std::optional<LineSegmentSelection> segmentSelection =
+                        nearestLineSegmentSelection(lineFeature.value(), clickedSourcePoint)) {
+                    selectedSourceVertexIndex = segmentSelection->endSourceVertexIndex;
+                    selectedGeometryKind = QStringLiteral("line");
+                    selectedLineSegmentStartVertexIndex = segmentSelection->startSourceVertexIndex;
+                    selectedLineSegmentEndVertexIndex = segmentSelection->endSourceVertexIndex;
+                }
+            }
+        }
+    }
 
     int selectedSourceLineNumber = selectedLineNumber;
     if (selectedLineNumber > 0 && context_.textEditor != nullptr) {
@@ -674,6 +758,8 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
 
     (*context_.selectedObjectLineNumber) = selectedSourceLineNumber;
     (*context_.selectedObjectVertexIndex) = selectedSourceVertexIndex;
+    (*context_.selectedLineSegmentStartVertexIndex) = selectedLineSegmentStartVertexIndex;
+    (*context_.selectedLineSegmentEndVertexIndex) = selectedLineSegmentEndVertexIndex;
     (*context_.selectedObjectCoordinate).reset();
     if (selectedPointSource.has_value()) {
         (*context_.selectedObjectKind) = QStringLiteral("point");
@@ -793,6 +879,8 @@ void MapEditorSelectionController::syncMapSelectionFromTextCursor(int lineNumber
 
     (*context_.selectedObjectLineNumber) = cursorSelection.featureLineNumber;
     (*context_.selectedObjectVertexIndex) = sourceVertexIndex;
+    (*context_.selectedLineSegmentStartVertexIndex) = -1;
+    (*context_.selectedLineSegmentEndVertexIndex) = -1;
     (*context_.selectedObjectKind) = geometryKind;
     (*context_.selectedObjectCoordinate).reset();
 
@@ -875,6 +963,15 @@ void MapEditorSelectionController::updateGeometrySelectionPresentation()
             }
         }
     }
+    if ((*context_.selectedObjectLineNumber) > 0
+        && (*context_.selectedObjectKind) == QStringLiteral("line")
+        && (*context_.selectedLineSegmentStartVertexIndex) >= 0
+        && (*context_.selectedLineSegmentEndVertexIndex) >= 0) {
+        selectedLineControlOwnersByLine[(*context_.selectedObjectLineNumber)].insert(
+            (*context_.selectedLineSegmentStartVertexIndex));
+        selectedLineControlOwnersByLine[(*context_.selectedObjectLineNumber)].insert(
+            (*context_.selectedLineSegmentEndVertexIndex));
+    }
     if (context_.textEditor != nullptr) {
         selectedLines.unite(selectedAreaBorderLineNumbers(context_.textEditor->text(), selectedLines));
     }
@@ -885,6 +982,19 @@ void MapEditorSelectionController::updateGeometrySelectionPresentation()
             continue;
         }
         const int lineNumber = item->data(kMapSceneLineNumberRole).toInt();
+        const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
+        const int ownerVertexIndex = item->data(kMapSceneOwnerVertexRole).toInt();
+        const bool focusedLineAnchor = subtype == kMapSceneSelectionSubtypeLineAnchor
+            && lineNumber > 0
+            && ownerVertexIndex >= 0
+            && lineNumber == (*context_.selectedObjectLineNumber)
+            && ownerVertexIndex == (*context_.selectedObjectVertexIndex)
+            && (*context_.selectedObjectKind) == QStringLiteral("line");
+        if (item->data(kMapSceneFocusedVertexRole).toBool() != focusedLineAnchor) {
+            item->setData(kMapSceneFocusedVertexRole, focusedLineAnchor);
+            item->update();
+        }
+
         const bool visuallySelected = lineNumber > 0
             && selectedLines.contains(lineNumber)
             && isInteractiveMapSelectionItem(item);
@@ -901,14 +1011,13 @@ void MapEditorSelectionController::updateGeometrySelectionPresentation()
             && !(*context_.hiddenObjectLines).contains(lineNumber)
             && selectedLines.contains(lineNumber);
         if (visible) {
-            const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
-            if (subtype == kMapSceneSelectionSubtypeLineControl
-                || subtype == kMapSceneSelectionSubtypeLineControlConnector) {
-                const int ownerVertexIndex = item->data(kMapSceneOwnerVertexRole).toInt();
+            const bool lineControlSelectionSubtype = subtype == kMapSceneSelectionSubtypeLineControl
+                || subtype == kMapSceneSelectionSubtypeLineControlConnector;
+            if (lineControlSelectionSubtype) {
                 const QSet<int> selectedOwnerVertices = selectedLineControlOwnersByLine.value(lineNumber);
                 visible = ownerVertexIndex >= 0
-                    && (selectedOwnerVertices.isEmpty()
-                        || selectedOwnerVertices.contains(ownerVertexIndex));
+                    && !selectedOwnerVertices.isEmpty()
+                    && selectedOwnerVertices.contains(ownerVertexIndex);
             }
         }
 
@@ -933,6 +1042,8 @@ void MapEditorSelectionController::selectMapLine(int lineNumber, bool centerOnSe
     (*context_.pendingClickLineNumber) = 0;
     (*context_.pendingClickSourceVertexIndex) = -1;
     (*context_.pendingClickGeometryKind).clear();
+    (*context_.selectedLineSegmentStartVertexIndex) = -1;
+    (*context_.selectedLineSegmentEndVertexIndex) = -1;
     (*context_.updatingSelection) = true;
     context_.scene->clearSelection();
 
@@ -963,6 +1074,8 @@ void MapEditorSelectionController::selectMapLines(const QSet<int> &lineNumbers, 
     (*context_.pendingClickLineNumber) = 0;
     (*context_.pendingClickSourceVertexIndex) = -1;
     (*context_.pendingClickGeometryKind).clear();
+    (*context_.selectedLineSegmentStartVertexIndex) = -1;
+    (*context_.selectedLineSegmentEndVertexIndex) = -1;
     (*context_.updatingSelection) = true;
     context_.scene->clearSelection();
 

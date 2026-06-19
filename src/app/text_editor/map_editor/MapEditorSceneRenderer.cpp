@@ -1852,7 +1852,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
     const QHash<int, QPainterPath> scrapClipPaths =
         scrapClipPathsForFeatures(geometryFeatures, sourceBounds, previewBounds);
     const MapEditorObjectStyleCatalog styleCatalog = mapEditorObjectStyleCatalog();
-    const qreal vertexRadius = 4.4;
+    const qreal vertexRadius = 2.4;
     auto markGeometryItem = [](QGraphicsItem *item) {
         if (item != nullptr) {
             item->setData(kMapItemRole, kMapItemGeometryValue);
@@ -2168,7 +2168,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     }
                 }
 
-                const qreal controlRadius = 3.0;
+                const qreal controlRadius = 2.4;
                 for (int segmentIndex = 1; segmentIndex < feature.lineVertices.size(); ++segmentIndex) {
                     const MapGeometryFeature::TH2LineVertex &previousVertex = feature.lineVertices.at(segmentIndex - 1);
                     const MapGeometryFeature::TH2LineVertex &currentVertex = feature.lineVertices.at(segmentIndex);

@@ -557,11 +557,15 @@ protected:
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
     {
-        const bool selected = (option != nullptr && (option->state & QStyle::State_Selected))
-            || data(kMapSceneInteractionSelectionRole).toBool();
+        const int selectionSubtype = data(kMapSceneSelectionSubtypeRole).toInt();
+        const bool lineAnchor = selectionSubtype == kMapSceneSelectionSubtypeLineAnchor;
+        const bool itemSelected = option != nullptr && (option->state & QStyle::State_Selected);
+        const bool interactionSelected = data(kMapSceneInteractionSelectionRole).toBool();
+        const bool selected = itemSelected || (interactionSelected && !lineAnchor);
+        const bool focused = data(kMapSceneFocusedVertexRole).toBool();
         const bool hovered = data(kMapSceneInteractionHoverRole).toBool();
-        const bool emphasize = selected || hovered || dragActive_;
-        const qreal interactionScale = dragActive_ ? 1.45 : (selected ? 1.35 : (hovered ? 1.2 : 1.0));
+        const bool emphasize = selected || focused || hovered || dragActive_;
+        const qreal interactionScale = dragActive_ ? 1.45 : (focused ? 1.45 : (selected ? 1.3 : (hovered ? 1.2 : 1.0)));
         const qreal zoomOutScale = mapZoomOutMarkerScale(this, painter, widget);
         const qreal scale = interactionScale * zoomOutScale;
         const QRectF baseRect = rect();
@@ -572,8 +576,14 @@ protected:
         drawRect.moveCenter(center);
 
         QColor fill = brush().color().isValid() ? brush().color() : QColor(40, 40, 40, 160);
+        if (lineAnchor && !emphasize) {
+            fill = QColor(QStringLiteral("#2563eb"));
+        }
         fill.setAlpha(emphasize ? 240 : 175);
         QColor outline = selected ? mapEditorInteractionSelectionColor() : (hovered ? mapEditorInteractionHoverColor() : pen().color());
+        if (lineAnchor && !emphasize) {
+            outline = QColor(QStringLiteral("#1d4ed8"));
+        }
         if (!outline.isValid()) {
             outline = QColor(24, 24, 24, 210);
         }
@@ -581,6 +591,9 @@ protected:
         painter->setRenderHint(QPainter::Antialiasing, true);
         if (emphasize) {
             QColor halo = selected ? mapEditorInteractionSelectionColor() : mapEditorInteractionHoverColor();
+            if (focused) {
+                halo = QColor(QStringLiteral("#facc15"));
+            }
             halo.setAlpha(selected ? 115 : 105);
             painter->setPen(Qt::NoPen);
             painter->setBrush(halo);
@@ -588,10 +601,19 @@ protected:
             painter->drawEllipse(drawRect.adjusted(-haloRadius, -haloRadius, haloRadius, haloRadius));
         }
 
-        const qreal outlineWidth = (selected ? 1.7 : 1.0) * zoomOutScale;
+        const qreal outlineWidth = (selected ? 1.7 : 0.9) * zoomOutScale;
         painter->setPen(QPen(outline, qMax<qreal>(0.5, outlineWidth)));
         painter->setBrush(fill);
         painter->drawEllipse(drawRect);
+
+        if (focused) {
+            QPen focusPen(QColor(QStringLiteral("#facc15")), qMax<qreal>(1.4, 1.9 * zoomOutScale));
+            focusPen.setCosmetic(true);
+            painter->setPen(focusPen);
+            painter->setBrush(Qt::NoBrush);
+            const qreal focusPadding = qMax<qreal>(2.2, 2.8 * zoomOutScale);
+            painter->drawEllipse(drawRect.adjusted(-focusPadding, -focusPadding, focusPadding, focusPadding));
+        }
 
         if (highlightLinePointMetadata_) {
             QColor metadataRing = selected ? QColor(QStringLiteral("#ffd166")) : QColor(QStringLiteral("#f59e0b"));

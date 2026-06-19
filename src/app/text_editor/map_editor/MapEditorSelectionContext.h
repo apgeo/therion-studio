@@ -40,6 +40,8 @@ struct MapEditorSelectionContext
     QString *pendingClickGeometryKind = nullptr;
     int *selectedObjectLineNumber = nullptr;
     int *selectedObjectVertexIndex = nullptr;
+    int *selectedLineSegmentStartVertexIndex = nullptr;
+    int *selectedLineSegmentEndVertexIndex = nullptr;
     QString *selectedObjectKind = nullptr;
     std::optional<QPointF> *selectedObjectCoordinate = nullptr;
 

@@ -27,6 +27,8 @@ MapEditorSelectionContext MapEditorTab::selectionContext()
         .pendingClickGeometryKind = &selectionSyncState_.pendingClickGeometryKind_,
         .selectedObjectLineNumber = &objectSelectionState_.selectedObjectLineNumber_,
         .selectedObjectVertexIndex = &objectSelectionState_.selectedObjectVertexIndex_,
+        .selectedLineSegmentStartVertexIndex = &objectSelectionState_.selectedLineSegmentStartVertexIndex_,
+        .selectedLineSegmentEndVertexIndex = &objectSelectionState_.selectedLineSegmentEndVertexIndex_,
         .selectedObjectKind = &objectSelectionState_.selectedObjectKind_,
         .selectedObjectCoordinate = &objectSelectionState_.selectedObjectCoordinate_,
         .currentLineNumber = [this]() {

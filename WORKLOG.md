@@ -21,6 +21,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Keep map inspector numeric spin boxes from committing partially typed values before editing is finished.
 - Keep map path hit-testing from letting hidden line control handles steal clicks from visible nearby paths.
 - Keep hidden gated map vertices reachable for context-menu selection paths without making ordinary hidden handles steal primary clicks.
+- Keep map line selection readable by focusing clicked segments: primary path clicks should expose only the segment
+  endpoint anchors and their control handles, with smaller visible vertex markers.
 - Keep empty scrap object cleanup explicit through validator warnings and `Apply Fix`, not silent source mutation.
 - Keep deletion-style validation fixes visibly labeled as removals and preview the full source block being removed.
 - Keep inline `type:subtype` map object rendering aligned with inspector preview and `-subtype` rendering.

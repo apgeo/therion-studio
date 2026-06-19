@@ -80,7 +80,7 @@ MapEditableGeometryVertexItem *findLineVertexItem(QGraphicsScene *scene, int lin
     const QList<QGraphicsItem *> items = scene->items();
     for (QGraphicsItem *item : items) {
         auto *vertex = dynamic_cast<MapEditableGeometryVertexItem *>(item);
-        if (vertex == nullptr || !vertex->isVisible()) {
+        if (vertex == nullptr) {
             continue;
         }
         if (vertex->lineNumber() == lineNumber
@@ -198,42 +198,6 @@ int runSplitReferencedOpenLineFromSelectionPanelSmoke()
     pumpEvents();
     MapEditableGeometryVertexItem *vertexItem = findLineVertexItem(mapView->scene(), 4, 1);
     if (!expect(vertexItem != nullptr, "Failed to find interior line vertex for split smoke test.")) {
-        return 1;
-    }
-    mapView->centerOn(vertexItem);
-    pumpEvents();
-    const QPoint vertexViewportPoint = mapView->mapFromScene(vertexItem->scenePos());
-    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, vertexViewportPoint, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, vertexViewportPoint, Qt::LeftButton, Qt::NoButton);
-    pumpEvents();
-    MapEditableGeometryVertexItem *selectedVertex = nullptr;
-    const QList<QGraphicsItem *> selectedItems = mapView->scene()->selectedItems();
-    for (QGraphicsItem *selectedItem : selectedItems) {
-        auto *candidate = dynamic_cast<MapEditableGeometryVertexItem *>(selectedItem);
-        if (candidate != nullptr && candidate->geometryKind().startsWith(QStringLiteral("line"))) {
-            selectedVertex = candidate;
-            break;
-        }
-    }
-    if (selectedVertex == nullptr) {
-        const QList<QGraphicsItem *> sceneItems = mapView->scene()->items();
-        for (QGraphicsItem *item : sceneItems) {
-            if (item != nullptr) {
-                item->setSelected(false);
-            }
-        }
-        vertexItem->setSelected(true);
-        pumpEvents();
-        const QList<QGraphicsItem *> selectedAfterManualSelection = mapView->scene()->selectedItems();
-        for (QGraphicsItem *selectedItem : selectedAfterManualSelection) {
-            auto *candidate = dynamic_cast<MapEditableGeometryVertexItem *>(selectedItem);
-            if (candidate != nullptr && candidate->geometryKind().startsWith(QStringLiteral("line"))) {
-                selectedVertex = candidate;
-                break;
-            }
-        }
-    }
-    if (!expect(selectedVertex != nullptr, "Split smoke test requires a selected line vertex item.")) {
         return 1;
     }
 

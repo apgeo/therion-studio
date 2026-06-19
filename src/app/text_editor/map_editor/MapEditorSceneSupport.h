@@ -31,6 +31,7 @@ constexpr int kMapSceneOwnerVertexRole = Qt::UserRole + 124;
 constexpr int kMapSceneInteractionHoverRole = Qt::UserRole + 125;
 constexpr int kMapScenePendingPrimarySelectionRole = Qt::UserRole + 126;
 constexpr int kMapSceneInteractionSelectionRole = Qt::UserRole + 127;
+constexpr int kMapSceneFocusedVertexRole = Qt::UserRole + 128;
 
 enum MapSceneSelectionSubtype
 {

@@ -206,10 +206,28 @@ copy_runtime_library_pattern() {
         while IFS= read -r match; do
             copy_library_family "$match" "$qt_bundle_lib_dir" || true
             found=0
-        done < <(find "$root" -maxdepth 5 -type f -name "$pattern" -print 2>/dev/null | sort)
+        done < <(find "$root" -maxdepth 7 \( -type f -o -type l \) -name "$pattern" -print 2>/dev/null | sort)
     done
 
     return "$found"
+}
+
+print_runtime_library_candidates() {
+    local pattern="$1"
+    local root
+    local -a roots=()
+
+    if [[ -n "$app_multiarch" ]]; then
+        roots+=("/usr/lib/$app_multiarch" "/lib/$app_multiarch")
+    fi
+    roots+=("/usr/lib" "/lib" "/usr/local/lib")
+
+    echo "Searched AppImage runtime library roots for $pattern:" >&2
+    for root in "${roots[@]}"; do
+        echo "  $root" >&2
+        [[ -d "$root" ]] || continue
+        find "$root" -maxdepth 7 \( -type f -o -type l \) -name "$pattern" -print 2>/dev/null | sort >&2 || true
+    done
 }
 
 copy_required_runtime_libraries() {
@@ -221,6 +239,7 @@ copy_required_runtime_libraries() {
     for pattern in "${patterns[@]}"; do
         if ! copy_runtime_library_pattern "$pattern"; then
             echo "Unable to locate required AppImage runtime library: $pattern" >&2
+            print_runtime_library_candidates "$pattern"
             exit 1
         fi
     done

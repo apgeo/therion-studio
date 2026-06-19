@@ -40,6 +40,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
   because they are not guaranteed to appear in direct `ldd` dependency scans.
 - Keep AppImage runtime backend discovery recursive within system library roots so distro-specific subdirectories
   such as libproxy module directories are bundled before smoke testing.
+- Keep AppImage runtime backend diagnostics explicit enough to show searched roots and matched candidates when
+  distro runtime modules are missing from the AppDir.
 
 ### Unified Source DOM / Transactions
 

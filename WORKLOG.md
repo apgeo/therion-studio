@@ -38,6 +38,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
   during AppDir staging or final AppImage packaging.
 - Keep dynamically loaded AppImage runtime backends, such as libproxy's `libpxbackend-*.so*`, staged explicitly
   because they are not guaranteed to appear in direct `ldd` dependency scans.
+- Keep AppImage runtime backend discovery recursive within system library roots so distro-specific subdirectories
+  such as libproxy module directories are bundled before smoke testing.
 
 ### Unified Source DOM / Transactions
 

@@ -203,11 +203,10 @@ copy_runtime_library_pattern() {
 
     for root in "${roots[@]}"; do
         [[ -d "$root" ]] || continue
-        for match in "$root"/$pattern; do
-            [[ -e "$match" ]] || continue
+        while IFS= read -r match; do
             copy_library_family "$match" "$qt_bundle_lib_dir" || true
             found=0
-        done
+        done < <(find "$root" -maxdepth 5 -type f -name "$pattern" -print 2>/dev/null | sort)
     done
 
     return "$found"

@@ -86,6 +86,7 @@ void MapEditorTab::buildInspectorBackgroundTab(DocumentInspectorPanel *inspector
     mapBackgroundPosXSpin_ = new QDoubleSpinBox(positionFrame);
     mapBackgroundPosXSpin_->setRange(-50000.0, 50000.0);
     mapBackgroundPosXSpin_->setDecimals(1);
+    mapBackgroundPosXSpin_->setKeyboardTracking(false);
     xRow->addWidget(mapBackgroundPosXSpin_, 1);
     positionLayout->addLayout(xRow);
 
@@ -94,6 +95,7 @@ void MapEditorTab::buildInspectorBackgroundTab(DocumentInspectorPanel *inspector
     mapBackgroundPosYSpin_ = new QDoubleSpinBox(positionFrame);
     mapBackgroundPosYSpin_->setRange(-50000.0, 50000.0);
     mapBackgroundPosYSpin_->setDecimals(1);
+    mapBackgroundPosYSpin_->setKeyboardTracking(false);
     yRow->addWidget(mapBackgroundPosYSpin_, 1);
     positionLayout->addLayout(yRow);
     backgroundLayout->addWidget(positionFrame);
@@ -106,6 +108,7 @@ void MapEditorTab::buildInspectorBackgroundTab(DocumentInspectorPanel *inspector
     mapBackgroundScaleXSpin_->setRange(0.01, 100.0);
     mapBackgroundScaleXSpin_->setDecimals(3);
     mapBackgroundScaleXSpin_->setSingleStep(0.1);
+    mapBackgroundScaleXSpin_->setKeyboardTracking(false);
     scaleXRow->addWidget(mapBackgroundScaleXSpin_, 1);
     transformLayout->addLayout(scaleXRow);
 
@@ -115,6 +118,7 @@ void MapEditorTab::buildInspectorBackgroundTab(DocumentInspectorPanel *inspector
     mapBackgroundScaleYSpin_->setRange(0.01, 100.0);
     mapBackgroundScaleYSpin_->setDecimals(3);
     mapBackgroundScaleYSpin_->setSingleStep(0.1);
+    mapBackgroundScaleYSpin_->setKeyboardTracking(false);
     scaleYRow->addWidget(mapBackgroundScaleYSpin_, 1);
     transformLayout->addLayout(scaleYRow);
 
@@ -129,6 +133,7 @@ void MapEditorTab::buildInspectorBackgroundTab(DocumentInspectorPanel *inspector
     mapBackgroundRotationSpin_->setDecimals(1);
     mapBackgroundRotationSpin_->setSingleStep(1.0);
     mapBackgroundRotationSpin_->setSuffix(QStringLiteral("°"));
+    mapBackgroundRotationSpin_->setKeyboardTracking(false);
     rotationRow->addWidget(mapBackgroundRotationSpin_, 1);
     transformLayout->addLayout(rotationRow);
 

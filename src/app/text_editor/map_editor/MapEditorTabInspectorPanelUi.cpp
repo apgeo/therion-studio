@@ -284,6 +284,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.objectOrientationSpin_->setRange(0.0, 359.999);
     objectDetailsUiState_.objectOrientationSpin_->setSingleStep(1.0);
     objectDetailsUiState_.objectOrientationSpin_->setSuffix(tr(" deg"));
+    objectDetailsUiState_.objectOrientationSpin_->setKeyboardTracking(false);
     auto *linePointControlEditor = new QWidget(objectDetailsUiState_.objectOrientationEditor_);
     auto *linePointControlLayout = new QHBoxLayout(linePointControlEditor);
     linePointControlLayout->setContentsMargins(0, 0, 0, 0);
@@ -296,6 +297,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.linePointLeftSizeSpin_->setDecimals(1);
     objectDetailsUiState_.linePointLeftSizeSpin_->setRange(0.1, 100000.0);
     objectDetailsUiState_.linePointLeftSizeSpin_->setSingleStep(1.0);
+    objectDetailsUiState_.linePointLeftSizeSpin_->setKeyboardTracking(false);
     auto *linePointSubtypeEditor = new QWidget(objectDetailsUiState_.objectOrientationEditor_);
     auto *linePointSubtypeLayout = new QHBoxLayout(linePointSubtypeEditor);
     linePointSubtypeLayout->setContentsMargins(0, 0, 0, 0);
@@ -404,6 +406,7 @@ void MapEditorTab::buildInspectorPanelUi()
         spin->setRange(-10000000.0, 10000000.0);
         spin->setSingleStep(decimals == 0 ? 1.0 : 0.1);
         spin->setButtonSymbols(QAbstractSpinBox::NoButtons);
+        spin->setKeyboardTracking(false);
         spin->setMinimumWidth(72);
         return spin;
     };

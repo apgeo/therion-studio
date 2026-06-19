@@ -8,6 +8,7 @@
 #include <QComboBox>
 #include <QCompleter>
 #include <QCoreApplication>
+#include <QDoubleSpinBox>
 #include <QEventLoop>
 #include <QFormLayout>
 #include <QGraphicsScene>
@@ -329,6 +330,17 @@ int runSelectionPanelTypeValuesTest()
     auto *stylePreview = mapTab->findChild<QWidget *>(QStringLiteral("mapObjectStylePreview"));
     if (!expect(stylePreview != nullptr, "Selection panel style preview widget was not found.")) {
         return 1;
+    }
+    const QList<QDoubleSpinBox *> inspectorDoubleSpinBoxes = mapTab->findChildren<QDoubleSpinBox *>();
+    if (!expect(!inspectorDoubleSpinBoxes.isEmpty(),
+                "Map inspector should expose double spin boxes for numeric fields.")) {
+        return 1;
+    }
+    for (QDoubleSpinBox *spinBox : inspectorDoubleSpinBoxes) {
+        if (!expect(spinBox != nullptr && !spinBox->keyboardTracking(),
+                    "Map inspector double spin boxes should defer typed values until editing is committed.")) {
+            return 1;
+        }
     }
 
     auto *mapView = mapTab->findChild<QGraphicsView *>();

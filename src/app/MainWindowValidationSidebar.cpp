@@ -178,6 +178,13 @@ void configureValidationSourcePreview(QPlainTextEdit *edit)
     edit->setMaximumHeight(72);
 }
 
+bool validationFixRemovesSource(const TherionStudio::TherionSourceDiagnostic &diagnostic)
+{
+    return diagnostic.hasFix
+        && diagnostic.fix.length > 0
+        && diagnostic.fix.replacementText.isEmpty();
+}
+
 QModelIndex validationFindingIndex(QStandardItemModel *model, const QModelIndex &index)
 {
     if (model == nullptr || !index.isValid()) {
@@ -291,14 +298,14 @@ void MainWindow::buildValidationSidebar()
     validationDetailMessageLabel_->setWordWrap(true);
     validationLayout->addWidget(validationDetailMessageLabel_);
 
-    auto *currentLabel = new QLabel(tr("Current source line"), validationPage);
-    validationLayout->addWidget(currentLabel);
+    validationCurrentSourceLabel_ = new QLabel(tr("Current source line"), validationPage);
+    validationLayout->addWidget(validationCurrentSourceLabel_);
     validationCurrentSourceEdit_ = new QPlainTextEdit(validationPage);
     configureValidationSourcePreview(validationCurrentSourceEdit_);
     validationLayout->addWidget(validationCurrentSourceEdit_);
 
-    auto *suggestedLabel = new QLabel(tr("Suggested source line"), validationPage);
-    validationLayout->addWidget(suggestedLabel);
+    validationSuggestedSourceLabel_ = new QLabel(tr("Suggested source line"), validationPage);
+    validationLayout->addWidget(validationSuggestedSourceLabel_);
     validationSuggestedSourceEdit_ = new QPlainTextEdit(validationPage);
     configureValidationSourcePreview(validationSuggestedSourceEdit_);
     validationLayout->addWidget(validationSuggestedSourceEdit_);
@@ -754,6 +761,12 @@ void MainWindow::handleValidationSelectionChanged(const QModelIndex &current, co
         if (validationDetailMessageLabel_ != nullptr) {
             validationDetailMessageLabel_->clear();
         }
+        if (validationCurrentSourceLabel_ != nullptr) {
+            validationCurrentSourceLabel_->setText(tr("Current source line"));
+        }
+        if (validationSuggestedSourceLabel_ != nullptr) {
+            validationSuggestedSourceLabel_->setText(tr("Suggested source line"));
+        }
         if (validationCurrentSourceEdit_ != nullptr) {
             validationCurrentSourceEdit_->clear();
         }
@@ -762,27 +775,46 @@ void MainWindow::handleValidationSelectionChanged(const QModelIndex &current, co
         }
         if (validationApplyFixButton_ != nullptr) {
             validationApplyFixButton_->setEnabled(false);
+            validationApplyFixButton_->setText(tr("Apply Fix"));
         }
         return;
     }
 
     const TherionStudio::TherionSourceDiagnostic &diagnostic = validationDiagnostics_.at(diagnosticIndex);
+    const bool removesSource = validationFixRemovesSource(diagnostic);
     if (validationDetailTitleLabel_ != nullptr) {
         validationDetailTitleLabel_->setText(tr("Line %1: %2").arg(diagnostic.lineNumber).arg(diagnostic.title));
     }
     if (validationDetailMessageLabel_ != nullptr) {
         validationDetailMessageLabel_->setText(diagnostic.message);
     }
+    if (validationCurrentSourceLabel_ != nullptr) {
+        validationCurrentSourceLabel_->setText(removesSource
+                                                   ? tr("Source block to remove")
+                                                   : tr("Current source line"));
+    }
     if (validationCurrentSourceEdit_ != nullptr) {
         validationCurrentSourceEdit_->setPlainText(diagnostic.currentText);
     }
+    if (validationSuggestedSourceLabel_ != nullptr) {
+        validationSuggestedSourceLabel_->setText(removesSource
+                                                     ? tr("Automatic fix")
+                                                     : tr("Suggested source line"));
+    }
     if (validationSuggestedSourceEdit_ != nullptr) {
-        validationSuggestedSourceEdit_->setPlainText(diagnostic.hasFix
-                                                         ? diagnostic.suggestedText
-                                                         : tr("No automatic fix is available for this finding."));
+        if (!diagnostic.hasFix) {
+            validationSuggestedSourceEdit_->setPlainText(tr("No automatic fix is available for this finding."));
+        } else if (removesSource) {
+            validationSuggestedSourceEdit_->setPlainText(tr("This fix will remove the source block shown above."));
+        } else {
+            validationSuggestedSourceEdit_->setPlainText(diagnostic.suggestedText);
+        }
     }
     if (validationApplyFixButton_ != nullptr) {
         validationApplyFixButton_->setEnabled(diagnostic.hasFix);
+        validationApplyFixButton_->setText(diagnostic.hasFix && !diagnostic.fix.description.isEmpty()
+                                               ? diagnostic.fix.description
+                                               : tr("Apply Fix"));
     }
 }
 

@@ -20,6 +20,17 @@ QStringList diagnosticCodes(const TherionSourceValidationResult &result)
     return codes;
 }
 
+TherionSourceDiagnostic diagnosticByCode(const TherionSourceValidationResult &result,
+                                         const QString &code)
+{
+    for (const TherionSourceDiagnostic &diagnostic : result.diagnostics) {
+        if (diagnostic.code == code) {
+            return diagnostic;
+        }
+    }
+    return {};
+}
+
 TherionSourceValidationCatalog basicCatalog()
 {
     TherionSourceValidationCatalog catalog;
@@ -81,6 +92,71 @@ private slots:
 
         QCOMPARE(diagnosticCodes(projectionResult), diagnosticCodes(textResult));
         QVERIFY(diagnosticCodes(projectionResult).contains(QStringLiteral("unclosed-block")));
+    }
+
+    void warnsAndFixesEmptyScrapLineObjects()
+    {
+        const QString contents = QStringLiteral("scrap s\n"
+                                                "line wall\n"
+                                                "endline\n"
+                                                "point 0 0 station -name a\n"
+                                                "endscrap\n");
+
+        const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, basicCatalog());
+
+        const TherionSourceDiagnostic diagnostic = diagnosticByCode(result, QStringLiteral("empty-scrap-object"));
+        QCOMPARE(diagnostic.code, QStringLiteral("empty-scrap-object"));
+        QCOMPARE(diagnostic.severity, TherionSourceDiagnosticSeverity::Warning);
+        QCOMPARE(diagnostic.lineNumber, 2);
+        QCOMPARE(diagnostic.currentText,
+                 QStringLiteral("line wall\n"
+                                "endline\n"));
+        QVERIFY(diagnostic.hasFix);
+        QCOMPARE(TherionSourceValidator::applyFixes(contents, {diagnostic.fix}),
+                 QStringLiteral("scrap s\n"
+                                "point 0 0 station -name a\n"
+                                "endscrap\n"));
+    }
+
+    void warnsAndFixesEmptyScrapAreaObjectsWithCrLf()
+    {
+        const QString contents = QStringLiteral("scrap s\r\n"
+                                                "area water\r\n"
+                                                "\r\n"
+                                                "endarea\r\n"
+                                                "endscrap\r\n");
+
+        const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, basicCatalog());
+
+        QCOMPARE(result.diagnostics.size(), 1);
+        const TherionSourceDiagnostic diagnostic = result.diagnostics.constFirst();
+        QCOMPARE(diagnostic.code, QStringLiteral("empty-scrap-object"));
+        QCOMPARE(diagnostic.lineNumber, 2);
+        QCOMPARE(diagnostic.currentText,
+                 QStringLiteral("area water\r\n"
+                                "\r\n"
+                                "endarea\r\n"));
+        QVERIFY(diagnostic.hasFix);
+        QCOMPARE(TherionSourceValidator::applyFixes(contents, {diagnostic.fix}),
+                 QStringLiteral("scrap s\r\n"
+                                "endscrap\r\n"));
+    }
+
+    void keepsEmptyCenterlineBlocksAndCommentedScrapObjects()
+    {
+        const QString contents = QStringLiteral("centerline\n"
+                                                "line wall\n"
+                                                "endline\n"
+                                                "endcenterline\n"
+                                                "scrap s\n"
+                                                "line wall\n"
+                                                "  # keep note\n"
+                                                "endline\n"
+                                                "endscrap\n");
+
+        const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, basicCatalog());
+
+        QVERIFY(!diagnosticCodes(result).contains(QStringLiteral("empty-scrap-object")));
     }
 };
 

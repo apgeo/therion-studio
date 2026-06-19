@@ -396,6 +396,8 @@ private:
     QLabel *validationStatusLabel_ = nullptr;
     QLabel *validationDetailTitleLabel_ = nullptr;
     QLabel *validationDetailMessageLabel_ = nullptr;
+    QLabel *validationCurrentSourceLabel_ = nullptr;
+    QLabel *validationSuggestedSourceLabel_ = nullptr;
     QPlainTextEdit *validationCurrentSourceEdit_ = nullptr;
     QPlainTextEdit *validationSuggestedSourceEdit_ = nullptr;
     QPushButton *validationScanProjectButton_ = nullptr;

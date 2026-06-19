@@ -265,6 +265,67 @@ bool commandUsesParentNamespaceName(const QString &commandName)
         || commandName == QStringLiteral("scrap");
 }
 
+bool isScrapObjectBlockDirective(const QString &directive)
+{
+    return directive == QStringLiteral("line")
+        || directive == QStringLiteral("area");
+}
+
+bool blockIsInsideScrap(const TherionSourceBlockRange &blockRange)
+{
+    for (const TherionSourceBlockFrame &frame : blockRange.parentStack) {
+        if (frame.directive == QStringLiteral("scrap")) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool blockHasOnlyBlankBody(const TherionSourceBlockRange &blockRange,
+                           const TherionSourceDocument &sourceDocument)
+{
+    if (!blockRange.isClosed()) {
+        return false;
+    }
+
+    for (const TherionSourceDocumentLine &line : sourceDocument.lines()) {
+        const int lineNumber = line.sourceLine.lineNumber;
+        if (lineNumber <= blockRange.openLineNumber) {
+            continue;
+        }
+        if (lineNumber >= blockRange.closeLineNumber) {
+            break;
+        }
+        if (!line.sourceLine.isBlank()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+TherionSourceDiagnostic diagnosticForEmptyScrapObject(const TherionSourceBlockRange &blockRange,
+                                                     const TherionSourceDocument &sourceDocument)
+{
+    TherionSourceDiagnostic diagnostic;
+    diagnostic.code = QStringLiteral("empty-scrap-object");
+    diagnostic.severity = TherionSourceDiagnosticSeverity::Warning;
+    diagnostic.lineNumber = blockRange.openLineNumber;
+    diagnostic.columnNumber = 1;
+    diagnostic.columnLength = blockRange.directive.size();
+    diagnostic.title = QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Empty scrap object");
+    diagnostic.message = QCoreApplication::translate("TherionStudio::TherionSourceValidator", "This `%1` object in a scrap has no geometry rows.")
+                             .arg(blockRange.directive);
+    diagnostic.currentText = sourceDocument.toText().mid(blockRange.startOffset,
+                                                         blockRange.endOffset - blockRange.startOffset);
+    diagnostic.suggestedText = QString();
+    diagnostic.hasFix = true;
+    diagnostic.fix.startOffset = blockRange.startOffset;
+    diagnostic.fix.length = blockRange.endOffset - blockRange.startOffset;
+    diagnostic.fix.replacementText = QString();
+    diagnostic.fix.description = QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Remove empty %1 block").arg(blockRange.directive);
+    return diagnostic;
+}
+
 QString commandNameForDuplicateValidation(const TherionSourceLogicalCommand &command)
 {
     return command.metadata.commandName.isEmpty()
@@ -806,11 +867,31 @@ void appendBlockDiagnostics(TherionSourceValidationResult *result,
     }
 }
 
+void appendEmptyScrapObjectDiagnostics(TherionSourceValidationResult *result,
+                                       const TherionSourceDocument &sourceDocument)
+{
+    if (result == nullptr) {
+        return;
+    }
+
+    for (const TherionSourceBlockRange &blockRange : sourceDocument.blockRanges()) {
+        if (!isScrapObjectBlockDirective(blockRange.directive)
+            || !blockRange.isClosed()
+            || !blockIsInsideScrap(blockRange)
+            || !blockHasOnlyBlankBody(blockRange, sourceDocument)) {
+            continue;
+        }
+        result->diagnostics.append(diagnosticForEmptyScrapObject(blockRange, sourceDocument));
+    }
+}
+
 TherionSourceValidationResult validateSourceDocuments(const TherionSourceDocument &sourceDocument,
                                                       const TherionSourceLogicalDocument &logicalDocument,
                                                       bool validateCatalog)
 {
     TherionSourceValidationResult result;
+    appendEmptyScrapObjectDiagnostics(&result, sourceDocument);
+
     QHash<QString, QSet<QString>> lineIdsByScrapScope;
     for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
         const std::optional<TherionSourceLogicalArgumentRange> idRange = lineObjectIdRange(command);

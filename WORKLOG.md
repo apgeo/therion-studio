@@ -4,7 +4,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 
 ## Current Focus
 
-1. Release readiness for `v2026.6.5`.
+1. Release readiness for `v2026.6.6`.
 2. Unified Source DOM and source transaction ownership.
 3. Test infrastructure hygiene and structure guardrails.
 4. 3D viewer GPU-backed viewport rollout and shell migration.
@@ -14,17 +14,19 @@ Active planning only. Completed history belongs in archive files. Stable archite
 ### Release Readiness
 
 - Run local validation before tagging or packaging handoff, including focused map inspector regressions touched during release stabilization.
-- Keep Selection inspector point-geometry ordering, `-clip off`, and narrow-width layout regressions covered while stabilizing `v2026.6.5`.
+- Keep Selection inspector point-geometry ordering, `-clip off`, and narrow-width layout regressions covered while stabilizing `v2026.6.6`.
 - Keep Selection inspector terminology consistent: use `Options` for object-level settings and reserve `Line Point` for vertex workflows.
 - Keep Selection inspector object-level actions grouped under `Options`, including `Name`/`Text`/`Value`, scrap projection, and the full object-settings entrypoint.
 - Keep Selection inspector `Options` ordering deterministic across refreshes; visible rows must not jump when selection state or option visibility changes.
 - Keep map inspector numeric spin boxes from committing partially typed values before editing is finished.
 - Keep map path hit-testing from letting hidden line control handles steal clicks from visible nearby paths.
+- Keep empty scrap object cleanup explicit through validator warnings and `Apply Fix`, not silent source mutation.
+- Keep deletion-style validation fixes visibly labeled as removals and preview the full source block being removed.
 - Keep inline `type:subtype` map object rendering aligned with inspector preview and `-subtype` rendering.
 - Keep Selection quick-field label/input visibility synchronized with wrapper visibility across clear/refresh cycles.
 - Keep point `-align` rendering anchored like Therion so map canvas placement matches saved point options.
 - Clear pending Selection inspector insert state when Smart Area confirmation returns to Select mode.
-- Keep release notes, package metadata, and CI artifact workflow aligned with `v2026.6.5`.
+- Keep release notes, package metadata, and CI artifact workflow aligned with `v2026.6.6`.
 - Keep Linux CI and package-builder Qt dependency lists aligned with the Qt Quick/QML-backed 3D viewer surface.
 - Keep Windows CI and installer Qt archive lists aligned with the Qt Quick/QML-backed 3D viewer surface.
 

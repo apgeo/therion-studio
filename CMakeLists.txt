@@ -972,12 +972,6 @@ therion_add_core_unit_test(TherionDocumentEditorTest
 therion_add_core_unit_test(TherionSourceValidatorTest
     tests/TherionSourceValidatorTest.cpp)
 
-therion_add_core_unit_test(TherionSourceDocumentTest
-    tests/TherionSourceDocumentTest.cpp)
-
-therion_add_core_unit_test(TherionSourceLogicalDocumentTest
-    tests/TherionSourceLogicalDocumentTest.cpp)
-
 therion_add_core_unit_test(TherionDocumentParserTest
     tests/TherionDocumentParserTest.cpp)
 
@@ -988,6 +982,8 @@ therion_add_core_qtest_runner(TherionCoreQTests
     tests/core/ThreeDViewerLoxLoaderTest.cpp
     tests/core/ThreeDViewerSceneModelTest.cpp
     tests/core/ThreeDViewerSceneStatisticsTest.cpp
+    tests/core/TherionSourceDocumentTest.cpp
+    tests/core/TherionSourceLogicalDocumentTest.cpp
     tests/core/TherionSourceTextTest.cpp
     tests/core/TherionTokenRulesTest.cpp)
 
@@ -1478,8 +1474,6 @@ set(THERION_UNIT_TEST_TARGETS
     CommandOptionParserTest
     TherionDocumentEditorTest
     TherionSourceValidatorTest
-    TherionSourceDocumentTest
-    TherionSourceLogicalDocumentTest
     TherionDocumentParserTest
     TherionCoreQTests
     ApplicationIdentityTest

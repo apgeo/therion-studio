@@ -29,9 +29,13 @@ Active planning only. Completed history belongs in archive files. Stable archite
 ### Unified Source DOM / Transactions
 
 - Tighten source-file reference resolution while preserving Therion namespace semantics from `docs/THERION_COMPATIBILITY.md`.
-- Continue moving map/text undo ownership toward durable transaction metadata; keep ownership transitions centralized while source mutations still carry local callback labels.
-- Expand map/text undo regression coverage for save/dirty-state transitions, detached map panes, and inspector-applied source transactions.
-- Continue the phase plan in `plans/UNIFIED_SOURCE_DOM_PLAN.md`.
+- Slice 2 - Introduce a narrow revision-keyed cache for `TherionSourceDocument` and `TherionSourceLogicalDocument` so Raw, Structure, Validation, and inspector workflows do not reparse on cursor/UI-only changes.
+- Slice 3 - Migrate Raw editor highlighting, context help, completion token context, tooltips, and validation underlines to the cached logical document one consumer at a time.
+- Slice 4 - Migrate Blocks cards/details/move planning toward shared logical command and option ranges while preserving one source transaction per user-visible change.
+- Slice 5 - Migrate Map/TH2 object discovery, generic option parsing, reference resolution, and Smart Area insert planning to shared logical commands while keeping map geometry parsing map-specific.
+- Slice 6 - Close source transaction ownership by routing remaining user-visible source mutations through `TextEditorSourceTransactionController` or a narrow successor with undo label, expected revision, invalidation, dirty-state, and selection/cursor policy.
+- Slice 7 - Reuse cached logical documents for Structure, project index, namespace/reference resolution, search, and live Validation diagnostics.
+- Slice 8 - Remove duplicate editor-local tokenizers, option parsers, line splitters, numeric classifiers, and source-range heuristics only after migrated consumers have regression coverage.
 
 ### Validation And Catalog Metadata
 

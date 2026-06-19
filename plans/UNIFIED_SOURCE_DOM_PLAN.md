@@ -15,6 +15,75 @@ This plan tracks the long-running migration toward one shared, lossless Therion 
 - Phase 9 - Transaction and cache model: centralize source mutations, undo labels, revision checks, dirty state, projection invalidation, and selection restore.
 - Phase 10 - Legacy removal gates: remove editor-local parsers and serializers only after consumers migrate and regression coverage exists.
 
+## Current Implementation Baseline
+
+- `TherionSourceText` preserves physical source lines and line endings for targeted source edits.
+- `TherionSourceDocument` owns parsed physical lines, source metadata, block stack state, block ranges, source line roles, and round-trip text reconstruction.
+- `TherionSourceLogicalDocument` owns continuation grouping, logical command ranges, physical token/argument/option ranges, block context, and catalog-aware command metadata.
+- `TherionCommandLineModel`, `TherionTokenRules`, and `TherionStringUtils` are the current shared command/token/string rule seams.
+- `TherionSourceValidator`, `ProjectStructureIndex`, Raw completion/help/highlighting paths, and several Blocks/Map helpers already consume shared command/source parsing in focused areas.
+- `TextEditorSourceTransactionController` is the current central source-transaction seam for source snapshots, undo labels, revision checks, projection invalidation, and selection restoration hooks.
+- Map editor source writes are partially routed through `applySourceTextChangeWithSnapshot`, but several projection/rewrite helpers still own local source-shape knowledge.
+- `TherionSourceDocumentTest` and `TherionSourceLogicalDocumentTest` now run inside `TherionCoreQTests`, with QTest coverage for physical/logical source snapshot roles, ranges, metadata, continuation handling, and catalog metadata.
+
+## Remaining Slices
+
+### Slice 2 - Shared Projection Cache
+
+Goal: stop reparsing full documents for cursor movement, context help, completion, structure refresh, and unrelated inspector/UI updates.
+
+- Introduce a narrow revision-keyed source snapshot/projection cache for `TherionSourceDocument` and `TherionSourceLogicalDocument`.
+- Keep cache ownership outside widgets; UI shells should request snapshots by document revision or explicit text input.
+- Add invalidation tests for text edits, undo/redo, document reload, source type changes, and catalog refresh.
+
+### Slice 3 - Raw Editor Consumer Migration
+
+Goal: make Raw mode a projection over the shared source snapshot instead of a set of local parsing passes.
+
+- Route syntax highlighting, context help, completion token context, tooltips, and validation underlines through the cached logical document where practical.
+- Preserve current source ranges and false-positive behavior while migrating one consumer at a time.
+- Add focused regressions for continuation lines, block-content rows, quoted strings, options with embedded values, and thconfig-specific command applicability.
+
+### Slice 4 - Blocks Consumer Migration
+
+Goal: make Blocks cards and details read command/source structure from the logical document.
+
+- Replace local command/option scans in Blocks details, option args, and move planning with logical command ranges where source fidelity matters.
+- Keep block move/rewrite behavior source-preserving and one undo transaction per user-visible action.
+- Add regressions for nested blocks, fixed root commands, data bodies, comments, continuation rows, and move undo/redo.
+
+### Slice 5 - Map/TH2 Projection Migration
+
+Goal: reduce TH2 map parser drift by making Map scene objects consume shared command and option ranges.
+
+- Migrate Map object discovery, option parsing, area/line reference resolution, and Smart Area insert planning to shared logical commands in small vertical slices.
+- Keep geometry-specific parsing in map-focused types, but remove duplicated generic command/option token rules.
+- Add round-trip and undo/redo coverage for line/area/point edits, background metadata, object delete/move, and inspector quick-field writes.
+
+### Slice 6 - Transaction Ownership Closure
+
+Goal: make source mutation semantics uniform across Raw, Blocks, Map, inspector, validation fixes, and background workflows.
+
+- Route remaining user-visible source mutations through `TextEditorSourceTransactionController` or an equivalent narrow successor.
+- Require each source transaction to carry an undo label, expected revision when available, dirty-state behavior, projection invalidation policy, and selection/cursor restoration policy.
+- Keep structure guardrails preventing direct map-editor source mutation bypasses.
+
+### Slice 7 - Structure, Project Index, And Diagnostics
+
+Goal: feed orientation and validation surfaces from cached DOM snapshots instead of independent reparsing.
+
+- Reuse cached logical documents for Structure, project indexing, namespace/reference resolution, search, and validation.
+- Keep Therion namespace semantics exactly as documented in `docs/THERION_COMPATIBILITY.md`.
+- Make live diagnostics debounced, cancellable, revision-keyed, and centralized in the Validation panel.
+
+### Slice 8 - Legacy Removal Gates
+
+Goal: delete duplicate parsing/rewrite code only after coverage and consumers have moved.
+
+- Track remaining editor-local tokenizers, option parsers, line splitters, numeric classifiers, and source-range heuristics.
+- Remove one legacy path at a time after a migrated consumer has regression coverage.
+- Keep unknown valid directives, comments, formatting, encodings, and line endings round-trip safe.
+
 ## Verification Gates
 
 - Parser/projection coverage for each migrated consumer.

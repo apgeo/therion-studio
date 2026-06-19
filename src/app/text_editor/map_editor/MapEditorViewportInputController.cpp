@@ -211,7 +211,7 @@ QGraphicsItem *preferredMapHitItemForViewportPosition(MapEditorViewportInputCont
         if (!vertexLikeItem) {
             continue;
         }
-        if (!candidate->isVisible()) {
+        if (!isInteractiveMapSelectionItem(candidate)) {
             continue;
         }
         if (requireSelected && !candidate->isSelected()) {

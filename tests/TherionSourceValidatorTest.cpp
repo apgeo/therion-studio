@@ -120,14 +120,20 @@ void reportsDuplicateObjectIdsInSameSourceScope()
 {
     const QString contents = QStringLiteral("scrap test\n"
                                             "line wall -id line-1\n"
+                                            "  0 0\n"
+                                            "  1 1\n"
                                             "endline\n"
                                             "line border -id line-1\n"
+                                            "  2 2\n"
+                                            "  3 3\n"
                                             "endline\n"
                                             "point 0 0 label -id line-1\n"
                                             "endscrap\n"
                                             "\n"
                                             "scrap other\n"
                                             "line wall -id line-1\n"
+                                            "  4 4\n"
+                                            "  5 5\n"
                                             "endline\n"
                                             "endscrap\n");
     const TherionSourceValidationResult result = TherionSourceValidator::validate(contents);
@@ -137,13 +143,13 @@ void reportsDuplicateObjectIdsInSameSourceScope()
     const TherionSourceDiagnostic &diagnostic = result.diagnostics.at(0);
     require(diagnostic.code == QStringLiteral("duplicate-object-id"),
             "Duplicate explicit object ids should use the duplicate-object-id diagnostic code.");
-    require(diagnostic.lineNumber == 4,
+    require(diagnostic.lineNumber == 6,
             "Duplicate explicit object id diagnostic should point at the second object declaration.");
     require(diagnostic.severity == TherionSourceDiagnosticSeverity::Error,
             "Duplicate explicit object ids in the same source scope should be reported as errors.");
     require(diagnosticSourceRange(diagnostic) == QStringLiteral("line-1"),
             "Duplicate explicit object id diagnostic should point at the repeated id value.");
-    require(result.diagnostics.at(1).lineNumber == 6
+    require(result.diagnostics.at(1).lineNumber == 10
                 && diagnosticSourceRange(result.diagnostics.at(1)) == QStringLiteral("line-1"),
             "Duplicate explicit IDs should share one namespace for point, line, and area objects in a scrap.");
 }

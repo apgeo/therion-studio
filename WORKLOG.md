@@ -20,6 +20,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Keep Selection inspector `Options` ordering deterministic across refreshes; visible rows must not jump when selection state or option visibility changes.
 - Keep map inspector numeric spin boxes from committing partially typed values before editing is finished.
 - Keep map path hit-testing from letting hidden line control handles steal clicks from visible nearby paths.
+- Keep hidden gated map vertices reachable for context-menu selection paths without making ordinary hidden handles steal primary clicks.
 - Keep empty scrap object cleanup explicit through validator warnings and `Apply Fix`, not silent source mutation.
 - Keep deletion-style validation fixes visibly labeled as removals and preview the full source block being removed.
 - Keep inline `type:subtype` map object rendering aligned with inspector preview and `-subtype` rendering.

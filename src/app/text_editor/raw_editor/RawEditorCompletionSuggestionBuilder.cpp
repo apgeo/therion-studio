@@ -15,6 +15,7 @@
 #include "../../../core/TherionCommandSyntax.h"
 #include "../../../core/TherionFileTypes.h"
 #include "../../../core/TherionSourceLogicalDocument.h"
+#include "../../../core/TherionSourceSnapshotCache.h"
 
 #include <algorithm>
 #include <utility>
@@ -65,7 +66,34 @@ QString catalogDocumentTypeTokenForFilePath(const QString &filePath)
         TherionStudio::therionSourceDocumentTypeForFilePath(filePath));
 }
 
-TherionStudio::RawEditorCompletionTokenContext cursorTokenContextForEditor(const QPlainTextEdit *editor)
+TherionStudio::TherionSourceDocumentMetadata sourceDocumentMetadataForEditor(const QPlainTextEdit *editor)
+{
+    TherionStudio::TherionSourceDocumentMetadata metadata;
+    metadata.revisionId = editor != nullptr && editor->document() != nullptr
+        ? editor->document()->revision()
+        : 0;
+    return metadata;
+}
+
+template <typename Handler>
+auto withLogicalDocumentForEditor(const QPlainTextEdit *editor,
+                                  TherionStudio::TherionSourceSnapshotCache *sourceSnapshotCache,
+                                  Handler handler)
+{
+    const QString sourceText = editor == nullptr ? QString() : editor->toPlainText();
+    const TherionStudio::TherionSourceDocumentMetadata metadata = sourceDocumentMetadataForEditor(editor);
+    if (sourceSnapshotCache != nullptr) {
+        return handler(sourceSnapshotCache->logicalDocument(sourceText, metadata));
+    }
+
+    const TherionStudio::TherionSourceLogicalDocument logicalDocument =
+        TherionStudio::TherionSourceLogicalDocument::fromText(sourceText, metadata);
+    return handler(logicalDocument);
+}
+
+TherionStudio::RawEditorCompletionTokenContext cursorTokenContextForEditor(
+    const QPlainTextEdit *editor,
+    TherionStudio::TherionSourceSnapshotCache *sourceSnapshotCache)
 {
     TherionStudio::RawEditorCompletionTokenContext context;
     if (editor == nullptr) {
@@ -80,9 +108,13 @@ TherionStudio::RawEditorCompletionTokenContext cursorTokenContextForEditor(const
 
     const int lineNumber = block.blockNumber() + 1;
     const int columnNumber = cursor.positionInBlock() + 1;
-    const TherionStudio::TherionSourceLogicalDocument logicalDocument =
-        TherionStudio::TherionSourceLogicalDocument::fromText(editor->toPlainText());
-    return TherionStudio::rawEditorCompletionTokenContextAtPosition(logicalDocument, lineNumber, columnNumber);
+    return withLogicalDocumentForEditor(editor,
+                                        sourceSnapshotCache,
+                                        [lineNumber, columnNumber](const TherionStudio::TherionSourceLogicalDocument &logicalDocument) {
+                                            return TherionStudio::rawEditorCompletionTokenContextAtPosition(logicalDocument,
+                                                                                                           lineNumber,
+                                                                                                           columnNumber);
+                                        });
 }
 
 bool commandAllowedForDocumentType(const TherionStudio::TextEditorCommandMetadata &metadata,
@@ -135,6 +167,7 @@ RawEditorCompletionContext RawEditorCompletionSuggestionBuilder::completionConte
     RawEditorCompletionContext context;
     context.editor = context_.editor;
     context.metadata = context_.metadata;
+    context.sourceSnapshotCache = context_.sourceSnapshotCache;
     context.normalizedDirectiveToken = context_.normalizedDirectiveToken;
     context.openingDirectiveForClosingToken = context_.openingDirectiveForClosingToken;
     context.isContainerDirectiveInstance = context_.isContainerDirectiveInstance;
@@ -239,7 +272,8 @@ QStringList RawEditorCompletionSuggestionBuilder::buildCompletionSuggestionsForC
         return QStringList();
     }
 
-    const RawEditorCompletionTokenContext cursorTokenContext = cursorTokenContextForEditor(context_.editor);
+    const RawEditorCompletionTokenContext cursorTokenContext =
+        cursorTokenContextForEditor(context_.editor, context_.sourceSnapshotCache);
     const TherionParsedLine parsedLine = cursorTokenContext.parsedLine;
     const int column = cursor.positionInBlock();
     const int tokenIndexAtCursor = cursorTokenContext.tokenIndexAtCursor;

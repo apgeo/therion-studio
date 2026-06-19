@@ -20,6 +20,7 @@
 #include "../../../core/TherionSourceLogicalDocument.h"
 #include "../../../core/TherionSourceSnapshotCache.h"
 
+#include <optional>
 #include <utility>
 
 namespace TherionStudio
@@ -34,6 +35,7 @@ RawEditorCompletionContext RawEditorCompletionPopupController::completionContext
     RawEditorCompletionContext context;
     context.editor = context_.editor;
     context.metadata = context_.metadata;
+    context.sourceSnapshotCache = context_.sourceSnapshotCache;
     context.normalizedDirectiveToken = context_.normalizedDirectiveToken;
     context.openingDirectiveForClosingToken = context_.openingDirectiveForClosingToken;
     context.isContainerDirectiveInstance = context_.isContainerDirectiveInstance;
@@ -45,6 +47,7 @@ RawEditorCompletionSuggestionContext RawEditorCompletionPopupController::suggest
     RawEditorCompletionSuggestionContext context;
     context.editor = context_.editor;
     context.metadata = context_.metadata;
+    context.sourceSnapshotCache = context_.sourceSnapshotCache;
     context.projectRootPath = context_.projectRootPath;
     context.filePath = context_.filePath;
     context.normalizedDirectiveToken = context_.normalizedDirectiveToken;
@@ -114,15 +117,20 @@ void RawEditorCompletionPopupController::triggerCompletionPopup()
                 metadata.revisionId = context_.editor->document() != nullptr
                     ? context_.editor->document()->revision()
                     : 0;
-                const TherionSourceLogicalDocument &logicalDocument = context_.sourceSnapshotCache != nullptr
-                    ? context_.sourceSnapshotCache->logicalDocument(context_.editor->toPlainText(), metadata)
-                    : TherionSourceLogicalDocument::fromText(context_.editor->toPlainText(), metadata);
-                const TherionSourceLogicalCommand *logicalCommand = logicalDocument.commandAtPhysicalLine(lineNumber);
+                std::optional<TherionSourceLogicalDocument> fallbackLogicalDocument;
+                const TherionSourceLogicalDocument *logicalDocument = nullptr;
+                if (context_.sourceSnapshotCache != nullptr) {
+                    logicalDocument = &context_.sourceSnapshotCache->logicalDocument(context_.editor->toPlainText(), metadata);
+                } else {
+                    fallbackLogicalDocument = TherionSourceLogicalDocument::fromText(context_.editor->toPlainText(), metadata);
+                    logicalDocument = &*fallbackLogicalDocument;
+                }
+                const TherionSourceLogicalCommand *logicalCommand = logicalDocument->commandAtPhysicalLine(lineNumber);
                 if (logicalCommand == nullptr) {
                     return;
                 }
                 const RawEditorCompletionTokenContext tokenContext =
-                    rawEditorCompletionTokenContextAtPosition(logicalDocument, lineNumber, columnNumber);
+                    rawEditorCompletionTokenContextAtPosition(*logicalDocument, lineNumber, columnNumber);
                 const int positionalCountBeforeCursor = positionalTokenCountBeforeCursor(logicalCommand->parsed,
                                                                                          tokenContext.tokenIndexAtCursor);
                 if (positionalCountBeforeCursor < requiredPositionalCount) {

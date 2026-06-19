@@ -10,12 +10,14 @@ class QPlainTextEdit;
 namespace TherionStudio
 {
 struct TextEditorCommandMetadata;
+class TherionSourceSnapshotCache;
 struct TherionParsedLine;
 
 struct RawEditorCompletionContext
 {
     QPlainTextEdit *editor = nullptr;
     const TextEditorCommandMetadata *metadata = nullptr;
+    TherionSourceSnapshotCache *sourceSnapshotCache = nullptr;
     std::function<QString(const QString &)> normalizedDirectiveToken;
     std::function<QString(const QString &)> openingDirectiveForClosingToken;
     std::function<bool(const QString &, const TherionParsedLine &)> isContainerDirectiveInstance;

@@ -9,6 +9,7 @@
 #include <QTextCursor>
 
 #include "../../../core/TherionSourceLogicalDocument.h"
+#include "../../../core/TherionSourceSnapshotCache.h"
 
 #include <utility>
 
@@ -55,11 +56,29 @@ QString normalizedCompletionContextToken(const QString &token)
     return QString();
 }
 
-TherionStudio::TherionSourceLogicalDocument logicalDocumentForEditor(const QPlainTextEdit *editor)
+TherionStudio::TherionSourceDocumentMetadata sourceDocumentMetadataForEditor(const QPlainTextEdit *editor)
 {
-    return editor == nullptr
-        ? TherionStudio::TherionSourceLogicalDocument::fromText(QString())
-        : TherionStudio::TherionSourceLogicalDocument::fromText(editor->toPlainText());
+    TherionStudio::TherionSourceDocumentMetadata metadata;
+    metadata.revisionId = editor != nullptr && editor->document() != nullptr
+        ? editor->document()->revision()
+        : 0;
+    return metadata;
+}
+
+template <typename Handler>
+auto withLogicalDocumentForEditor(const QPlainTextEdit *editor,
+                                  TherionStudio::TherionSourceSnapshotCache *sourceSnapshotCache,
+                                  Handler handler)
+{
+    const QString sourceText = editor == nullptr ? QString() : editor->toPlainText();
+    const TherionStudio::TherionSourceDocumentMetadata metadata = sourceDocumentMetadataForEditor(editor);
+    if (sourceSnapshotCache != nullptr) {
+        return handler(sourceSnapshotCache->logicalDocument(sourceText, metadata));
+    }
+
+    const TherionStudio::TherionSourceLogicalDocument logicalDocument =
+        TherionStudio::TherionSourceLogicalDocument::fromText(sourceText, metadata);
+    return handler(logicalDocument);
 }
 
 void removeMatchingOpenDirective(QStringList *scopeStack, const QString &openingDirective)
@@ -167,12 +186,15 @@ QStringList RawEditorCompletionContextAnalyzer::activeCompletionScopeStack() con
         return scopeStack;
     }
 
-    const TherionSourceLogicalDocument logicalDocument = logicalDocumentForEditor(context_.editor);
-    return scopeStackBeforeLine(logicalDocument.commands(),
-                                currentBlockNumber + 1,
-                                context_.normalizedDirectiveToken,
-                                context_.openingDirectiveForClosingToken,
-                                context_.isContainerDirectiveInstance);
+    return withLogicalDocumentForEditor(context_.editor,
+                                        context_.sourceSnapshotCache,
+                                        [this, currentBlockNumber](const TherionSourceLogicalDocument &logicalDocument) {
+                                            return scopeStackBeforeLine(logicalDocument.commands(),
+                                                                        currentBlockNumber + 1,
+                                                                        context_.normalizedDirectiveToken,
+                                                                        context_.openingDirectiveForClosingToken,
+                                                                        context_.isContainerDirectiveInstance);
+                                        });
 }
 
 QString RawEditorCompletionContextAnalyzer::currentCompletionCommand() const
@@ -187,27 +209,31 @@ QString RawEditorCompletionContextAnalyzer::currentCompletionCommand() const
         return QString();
     }
 
-    const TherionSourceLogicalDocument logicalDocument = logicalDocumentForEditor(context_.editor);
-    const TherionSourceLogicalCommand *command = logicalDocument.commandAtPhysicalLine(block.blockNumber() + 1);
-    if (command == nullptr || command->parsed.tokens.isEmpty()) {
-        return QString();
-    }
+    return withLogicalDocumentForEditor(context_.editor,
+                                        context_.sourceSnapshotCache,
+                                        [this, &block](const TherionSourceLogicalDocument &logicalDocument) {
+                                            const TherionSourceLogicalCommand *command =
+                                                logicalDocument.commandAtPhysicalLine(block.blockNumber() + 1);
+                                            if (command == nullptr || command->parsed.tokens.isEmpty()) {
+                                                return QString();
+                                            }
 
-    const QString directive = context_.normalizedDirectiveToken(command->parsed.directive.toLower());
-    if (metadata().commandCompletionTokens.contains(directive, Qt::CaseInsensitive)
-        || metadata().commandOptionTokens.contains(directive)
-        || metadata().commandValueTokens.contains(directive)) {
-        return directive;
-    }
+                                            const QString directive = context_.normalizedDirectiveToken(command->parsed.directive.toLower());
+                                            if (metadata().commandCompletionTokens.contains(directive, Qt::CaseInsensitive)
+                                                || metadata().commandOptionTokens.contains(directive)
+                                                || metadata().commandValueTokens.contains(directive)) {
+                                                return directive;
+                                            }
 
-    const QStringList scopeStack = activeCompletionScopeStack();
-    for (int index = scopeStack.size() - 1; index >= 0; --index) {
-        const QString scopeDirective = scopeStack.at(index);
-        if (metadata().commandCompletionTokens.contains(scopeDirective, Qt::CaseInsensitive)) {
-            return scopeDirective;
-        }
-    }
-    return QString();
+                                            const QStringList scopeStack = activeCompletionScopeStack();
+                                            for (int index = scopeStack.size() - 1; index >= 0; --index) {
+                                                const QString scopeDirective = scopeStack.at(index);
+                                                if (metadata().commandCompletionTokens.contains(scopeDirective, Qt::CaseInsensitive)) {
+                                                    return scopeDirective;
+                                                }
+                                            }
+                                            return QString();
+                                        });
 }
 
 QString RawEditorCompletionContextAnalyzer::currentCompletionScopeLabel() const

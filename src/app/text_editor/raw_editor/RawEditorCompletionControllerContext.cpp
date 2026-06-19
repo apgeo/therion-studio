@@ -33,6 +33,7 @@ RawEditorCompletionContextAnalyzer RawEditorCompletionController::contextAnalyze
     RawEditorCompletionContext context;
     context.editor = context_.editor;
     context.metadata = &commandMetadata();
+    context.sourceSnapshotCache = &sourceSnapshotCache_;
     context.normalizedDirectiveToken = context_.normalizedDirectiveToken;
     context.openingDirectiveForClosingToken = context_.openingDirectiveForClosingToken;
     context.isContainerDirectiveInstance = context_.isContainerDirectiveInstance;
@@ -108,6 +109,7 @@ QStringList RawEditorCompletionController::buildCompletionSuggestionsForCursor(c
     RawEditorCompletionSuggestionContext context;
     context.editor = context_.editor;
     context.metadata = &commandMetadata();
+    context.sourceSnapshotCache = &sourceSnapshotCache_;
     context.projectRootPath = context_.projectRootPath ? context_.projectRootPath() : QString();
     context.filePath = context_.filePath ? context_.filePath() : QString();
     context.normalizedDirectiveToken = context_.normalizedDirectiveToken;

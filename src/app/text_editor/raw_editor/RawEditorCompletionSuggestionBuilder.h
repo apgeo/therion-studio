@@ -10,6 +10,7 @@ class QPlainTextEdit;
 namespace TherionStudio
 {
 struct TextEditorCommandMetadata;
+class TherionSourceSnapshotCache;
 struct TherionParsedLine;
 struct RawEditorCompletionContext;
 
@@ -17,6 +18,7 @@ struct RawEditorCompletionSuggestionContext
 {
     QPlainTextEdit *editor = nullptr;
     const TextEditorCommandMetadata *metadata = nullptr;
+    TherionSourceSnapshotCache *sourceSnapshotCache = nullptr;
     QString projectRootPath;
     QString filePath;
     std::function<QString(const QString &)> normalizedDirectiveToken;

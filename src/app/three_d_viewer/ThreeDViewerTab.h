@@ -22,6 +22,7 @@ public:
     explicit ThreeDViewerTab(QWidget *parent = nullptr);
 
     bool loadFile(const QString &filePath, QString *errorMessage = nullptr);
+    bool reloadFile(QString *errorMessage = nullptr);
     void setProjectRootPath(const QString &projectRootPath);
     QString filePath() const;
     QString displayName() const;
@@ -52,9 +53,9 @@ signals:
 
 private:
     void buildUi();
-    void rebuildScene();
+    void rebuildScene(bool fitToScene = true);
     void updateSceneSummary();
-    void loadSceneIntoView();
+    void loadSceneIntoView(bool fitToScene = true);
 
     ThreeDViewerLoxLoader loader_;
     ThreeDViewerSceneModel sceneModel_;

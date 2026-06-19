@@ -213,6 +213,7 @@ set(THERION_APP_SOURCES
     src/app/MainWindowSessionWindowRestoreService.h
     src/app/MainWindowDocumentController.cpp
     src/app/MainWindowDocumentController.h
+    src/app/MainWindowDocumentFileWatcher.cpp
     src/app/MainWindowDocumentOpenController.cpp
     src/app/MainWindowDocumentOpenController.h
     src/app/MainWindowDocumentTabOpenController.cpp

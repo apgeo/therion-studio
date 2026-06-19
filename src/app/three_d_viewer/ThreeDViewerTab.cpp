@@ -48,6 +48,33 @@ bool ThreeDViewerTab::loadFile(const QString &filePath, QString *errorMessage)
     return true;
 }
 
+bool ThreeDViewerTab::reloadFile(QString *errorMessage)
+{
+    if (filePath_.isEmpty()) {
+        if (errorMessage != nullptr) {
+            errorMessage->clear();
+        }
+        return false;
+    }
+
+    const ThreeDViewerLoxLoader::Result result = loader_.loadFile(filePath_);
+    if (!result.ok()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = result.error;
+        }
+        return false;
+    }
+
+    sceneModel_ = result.scene;
+    if (layerModel_ != nullptr) {
+        layerModel_->setSceneModel(sceneModel_);
+    }
+    updateSceneSummary();
+    rebuildScene(false);
+    emit titleChanged();
+    return true;
+}
+
 void ThreeDViewerTab::setProjectRootPath(const QString &projectRootPath)
 {
     projectRootPath_ = projectRootPath;
@@ -314,9 +341,9 @@ void ThreeDViewerTab::buildUi()
     splitter_->setSizes({900, 320});
 }
 
-void ThreeDViewerTab::rebuildScene()
+void ThreeDViewerTab::rebuildScene(bool fitToScene)
 {
-    loadSceneIntoView();
+    loadSceneIntoView(fitToScene);
 }
 
 void ThreeDViewerTab::updateSceneSummary()
@@ -327,13 +354,13 @@ void ThreeDViewerTab::updateSceneSummary()
     }
 }
 
-void ThreeDViewerTab::loadSceneIntoView()
+void ThreeDViewerTab::loadSceneIntoView(bool fitToScene)
 {
     if (viewport_ == nullptr) {
         return;
     }
 
-    viewport_->setSceneModel(sceneModel_);
+    viewport_->setSceneModel(sceneModel_, fitToScene);
     if (layerModel_ != nullptr) {
         layerModel_->setSceneModel(sceneModel_);
         viewport_->setLayerVisibility(layerModel_->layerVisibility());
@@ -354,7 +381,9 @@ void ThreeDViewerTab::loadSceneIntoView()
                                              inspectorState_->showHud(),
                                              inspectorState_->showInfo());
     }
-    viewport_->fitToScene();
+    if (fitToScene) {
+        viewport_->fitToScene();
+    }
 }
 
 } // namespace TherionStudio

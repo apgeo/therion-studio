@@ -21,6 +21,9 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Keep Selection inspector `Options` ordering deterministic across refreshes; visible rows must not jump when selection state or option visibility changes.
 - Keep map inspector numeric spin boxes from committing partially typed values before editing is finished.
 - Keep map path hit-testing from letting hidden line control handles steal clicks from visible nearby paths.
+- Keep low-zoom map path hit-testing deterministic: the highlighted object under the cursor must be the object selected
+  by click, selected/hovered stale items must not steal clicks, and path candidates outside the current screen-space hit
+  radius must not become inspector primary selections.
 - Keep hidden gated map vertices reachable for context-menu selection paths without making ordinary hidden handles steal primary clicks.
 - Keep map line selection readable by focusing clicked segments: primary path clicks should expose only the segment
   endpoint anchors and their control handles, with smaller visible vertex markers.
@@ -130,6 +133,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - The 3D viewer inspector now uses consistent Title Case for English field and layer labels.
 - The 3D viewer now supports arrow-key yaw/tilt navigation, higher-contrast per-vertex mesh lighting, and a palette-aware QML inspector surface styled closer to the existing QWidget inspectors.
 - The project File sidebar now uses the same Therion badged document icon for `.lox` files as for `.th`, `.th2`, and `thconfig` files.
+- Open `.lox` viewer tabs now auto-reload regenerated files through file and parent-directory watches while preserving the current camera and inspector state instead of refitting the view.
 - Continue the renderer refinement and the broader Qt Quick/QML shell migration once the GPU-backed viewport proves out the document-open workflow.
 
 ## Blocked / Needs Input

@@ -404,6 +404,8 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
             this, &MainWindow::handleStructureSidebarScanFinished);
     connect(documentFileWatcher_, &QFileSystemWatcher::fileChanged,
             this, &MainWindow::handleWatchedDocumentFileChanged);
+    connect(documentFileWatcher_, &QFileSystemWatcher::directoryChanged,
+            this, &MainWindow::handleWatchedDocumentDirectoryChanged);
     connect(projectFileWatcher_, &QFileSystemWatcher::directoryChanged,
             this, &MainWindow::handleProjectDirectoryChanged);
     connect(projectFileWatcher_, &QFileSystemWatcher::fileChanged,
@@ -1784,88 +1786,6 @@ QByteArray MainWindow::documentFileFingerprint(const QString &filePath) const
     }
 
     return QCryptographicHash::hash(file.readAll(), QCryptographicHash::Sha256);
-}
-
-void MainWindow::registerDocumentFileWatcher(const QString &filePath)
-{
-    if (documentFileWatcher_ == nullptr) {
-        return;
-    }
-
-    const QString canonicalPath = canonicalDocumentPath(filePath);
-    if (canonicalPath.isEmpty() || !QFileInfo::exists(canonicalPath)) {
-        return;
-    }
-
-    watchedDocumentFingerprints_.insert(canonicalPath, documentFileFingerprint(canonicalPath));
-    if (!documentFileWatcher_->files().contains(canonicalPath)) {
-        documentFileWatcher_->addPath(canonicalPath);
-    }
-}
-
-void MainWindow::unregisterDocumentFileWatcherIfUnused(const QString &filePath)
-{
-    if (documentFileWatcher_ == nullptr) {
-        return;
-    }
-
-    const QString canonicalPath = canonicalDocumentPath(filePath);
-    if (canonicalPath.isEmpty() || documentWidgetForFilePath(canonicalPath) != nullptr) {
-        return;
-    }
-
-    watchedDocumentFingerprints_.remove(canonicalPath);
-    pendingWatchedDocumentChanges_.remove(canonicalPath);
-    if (documentFileWatcher_->files().contains(canonicalPath)) {
-        documentFileWatcher_->removePath(canonicalPath);
-    }
-}
-
-bool MainWindow::reloadDocumentWidgetFromDisk(QWidget *documentWidget, QString *errorMessage)
-{
-    if (documentWidget == nullptr) {
-        return false;
-    }
-
-    const QString documentPath = documentPathForWidget(documentWidget);
-    if (documentPath.isEmpty()) {
-        return false;
-    }
-
-    bool loaded = false;
-    if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(documentWidget)) {
-        loaded = textTab->loadFile(documentPath, errorMessage);
-    } else if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(documentWidget)) {
-        loaded = mapTab->loadFile(documentPath, errorMessage);
-    } else if (auto *viewerTab = qobject_cast<TherionStudio::ThreeDViewerTab *>(documentWidget)) {
-        loaded = viewerTab->loadFile(documentPath, errorMessage);
-    }
-
-    if (loaded) {
-        updateTabTitle(documentWidget);
-        if (currentDocumentWidget() == documentWidget) {
-            refreshDocumentStatusWidgets();
-            refreshWorkspaceModeSwitcher();
-            rebuildMapObjectsTree();
-        }
-        registerDocumentFileWatcher(documentPath);
-    }
-
-    return loaded;
-}
-
-void MainWindow::handleWatchedDocumentFileChanged(const QString &filePath)
-{
-    const QString canonicalPath = canonicalDocumentPath(filePath);
-    if (canonicalPath.isEmpty() || pendingWatchedDocumentChanges_.contains(canonicalPath)) {
-        return;
-    }
-
-    pendingWatchedDocumentChanges_.insert(canonicalPath);
-    QTimer::singleShot(150, this, [this, canonicalPath]() {
-        pendingWatchedDocumentChanges_.remove(canonicalPath);
-        processWatchedDocumentFileChange(canonicalPath);
-    });
 }
 
 void MainWindow::processWatchedDocumentFileChange(const QString &filePath)

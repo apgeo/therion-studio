@@ -36,9 +36,10 @@ ThreeDViewerViewportWidget::ThreeDViewerViewportWidget(QWidget *parent)
     syncRootItem();
 }
 
-void ThreeDViewerViewportWidget::setSceneModel(const ThreeDViewerSceneModel &sceneModel)
+void ThreeDViewerViewportWidget::setSceneModel(const ThreeDViewerSceneModel &sceneModel, bool fitToScene)
 {
     sceneModel_ = sceneModel;
+    pendingSceneFitToScene_ = fitToScene;
     rootSceneModelSynced_ = false;
     syncRootItem();
 }
@@ -192,8 +193,9 @@ void ThreeDViewerViewportWidget::syncRootItem()
                 &ThreeDViewerViewportWidget::handleCameraSettingsChanged,
                 Qt::UniqueConnection);
         if (!rootSceneModelSynced_) {
-            item->setSceneModel(sceneModel_);
+            item->setSceneModel(sceneModel_, pendingSceneFitToScene_);
             rootSceneModelSynced_ = true;
+            pendingSceneFitToScene_ = true;
         }
         item->setLayerVisibility(layerVisibility_);
         item->setFeatureVisibility(featureVisibility_);

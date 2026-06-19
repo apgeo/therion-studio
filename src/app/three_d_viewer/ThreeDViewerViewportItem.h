@@ -30,7 +30,7 @@ class ThreeDViewerViewportItem : public QQuickItem
 public:
     explicit ThreeDViewerViewportItem(QQuickItem *parent = nullptr);
 
-    void setSceneModel(const ThreeDViewerSceneModel &sceneModel);
+    void setSceneModel(const ThreeDViewerSceneModel &sceneModel, bool fitToScene = true);
     void setLayerVisibility(const std::array<bool, 5> &layerVisibility);
     void setFeatureVisibility(const ThreeDViewerLayerListModel::FeatureVisibility &featureVisibility);
     void setMeshColorMode(ThreeDViewerMeshColorMode meshColorMode);

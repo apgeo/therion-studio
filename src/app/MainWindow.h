@@ -199,6 +199,7 @@ private:
     void registerDocumentFileWatcher(const QString &filePath);
     void unregisterDocumentFileWatcherIfUnused(const QString &filePath);
     void handleWatchedDocumentFileChanged(const QString &filePath);
+    void handleWatchedDocumentDirectoryChanged(const QString &directoryPath);
     void processWatchedDocumentFileChange(const QString &filePath);
     bool reloadDocumentWidgetFromDisk(QWidget *documentWidget, QString *errorMessage = nullptr);
     QByteArray documentFileFingerprint(const QString &filePath) const;
@@ -419,6 +420,7 @@ private:
     QFileSystemWatcher *projectFileWatcher_ = nullptr;
     QHash<QString, QByteArray> watchedDocumentFingerprints_;
     QSet<QString> pendingWatchedDocumentChanges_;
+    QSet<QString> pendingWatchedDocumentDirectoryChanges_;
     TherionStudio::TherionRunnerService *therionRunnerService_ = nullptr;
     TherionStudio::MainWindowTherionConsoleController therionConsoleController_;
     QLabel *statusHintLabel_ = nullptr;

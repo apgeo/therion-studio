@@ -1170,7 +1170,7 @@ ThreeDViewerViewportItem::ThreeDViewerViewportItem(QQuickItem *parent)
     connect(&autoRotationTimer_, &QTimer::timeout, this, &ThreeDViewerViewportItem::handleAutoRotationTick);
 }
 
-void ThreeDViewerViewportItem::setSceneModel(const ThreeDViewerSceneModel &sceneModel)
+void ThreeDViewerViewportItem::setSceneModel(const ThreeDViewerSceneModel &sceneModel, bool fitToScene)
 {
     {
         QMutexLocker locker(&mutex_);
@@ -1186,9 +1186,13 @@ void ThreeDViewerViewportItem::setSceneModel(const ThreeDViewerSceneModel &scene
         autoRotationStationIds_.clear();
         autoRotationLabelIds_.clear();
     }
-    controller_.fitToScene(sceneModel,
-                           std::max(1, int(std::lround(width()))),
-                           std::max(1, int(std::lround(height()))));
+    if (fitToScene) {
+        controller_.fitToScene(sceneModel,
+                               std::max(1, int(std::lround(width()))),
+                               std::max(1, int(std::lround(height()))));
+    } else {
+        scheduleUpdate();
+    }
     rebuildAutoRotationDeclutterLocks();
 }
 

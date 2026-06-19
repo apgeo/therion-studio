@@ -7,6 +7,7 @@
 #include <QContextMenuEvent>
 #include <QDateTime>
 #include <QElapsedTimer>
+#include <QGraphicsPathItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsScene>
 #include <QGraphicsView>
@@ -565,6 +566,356 @@ int runSecondaryClickOpensContextMenuTest()
 
     return 0;
 }
+
+int runNearestPathWinsPrimaryClickTest()
+{
+    QGraphicsScene scene;
+    QGraphicsView view(&scene);
+    view.resize(240, 180);
+    view.show();
+
+    QString toolbarStatus;
+    bool primaryPointerInteractionActive = false;
+    bool pendingClickSelection = false;
+    QPointF pendingClickScenePosition;
+    QElapsedTimer pendingClickElapsed;
+    int pendingClickLineNumber = 0;
+    int pendingClickSourceVertexIndex = -1;
+    QString pendingClickGeometryKind;
+    int selectionSyncCalls = 0;
+
+    MapEditorViewportInputContext context;
+    context.scene = &scene;
+    context.view = &view;
+    context.toolbarStatusNote = &toolbarStatus;
+    context.primaryPointerInteractionActive = &primaryPointerInteractionActive;
+    context.pendingClickSelection = &pendingClickSelection;
+    context.pendingClickScenePosition = &pendingClickScenePosition;
+    context.pendingClickElapsed = &pendingClickElapsed;
+    context.pendingClickLineNumber = &pendingClickLineNumber;
+    context.pendingClickSourceVertexIndex = &pendingClickSourceVertexIndex;
+    context.pendingClickGeometryKind = &pendingClickGeometryKind;
+    context.drawMode = []() { return MapEditorInteractiveDrawMode::None; };
+    context.handleInteractiveDrawClick = [](const QPointF &) {
+        return false;
+    };
+    context.refreshToolbarSummary = []() {};
+    context.updateCommandSurfaceState = []() {};
+    context.syncMapSelectionFromScene = [&selectionSyncCalls, &pendingClickLineNumber]() {
+        ++selectionSyncCalls;
+        expect(pendingClickLineNumber == 91,
+               "Selection sync after a path click should still see the pending clicked source line.");
+    };
+
+    MapEditorViewportInputController controller(context);
+
+    QPainterPath wallPath;
+    wallPath.moveTo(10.0, 56.0);
+    wallPath.lineTo(90.0, 56.0);
+    auto *wallItem = scene.addPath(wallPath, QPen(Qt::black, 8.0));
+    wallItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
+    wallItem->setAcceptedMouseButtons(Qt::LeftButton);
+    wallItem->setData(kMapSceneLineNumberRole, 601);
+    wallItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeGeneric);
+    wallItem->setSelected(true);
+
+    QPainterPath contourPath;
+    contourPath.moveTo(10.0, 40.0);
+    contourPath.lineTo(90.0, 40.0);
+    auto *contourItem = scene.addPath(contourPath, QPen(Qt::cyan, 2.0));
+    contourItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
+    contourItem->setAcceptedMouseButtons(Qt::LeftButton);
+    contourItem->setData(kMapSceneLineNumberRole, 91);
+    contourItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineDetail);
+
+    int emptySelectionUpdates = 0;
+    QObject::connect(&scene, &QGraphicsScene::selectionChanged, [&scene, &emptySelectionUpdates]() {
+        if (scene.selectedItems().isEmpty()) {
+            ++emptySelectionUpdates;
+        }
+    });
+
+    const QPoint clickPosition = view.mapFromScene(QPointF(50.0, 40.0));
+    QMouseEvent press(QEvent::MouseButtonPress,
+                      QPointF(clickPosition),
+                      QPointF(view.viewport()->mapToGlobal(clickPosition)),
+                      Qt::LeftButton,
+                      Qt::LeftButton,
+                      Qt::NoModifier);
+    if (!expect(controller.handleEvent(view.viewport(), &press).value_or(false),
+                "Primary click on a distance-ranked path should be handled by the viewport input controller.")) {
+        return 1;
+    }
+    if (!expect(contourItem->isSelected() && !wallItem->isSelected(),
+                "Primary click should select the nearest path instead of an overlapping selected wall.")) {
+        return 1;
+    }
+    if (!expect(pendingClickLineNumber == 91,
+                "Primary click on the nearest contour should store the contour source line as pending selection.")) {
+        return 1;
+    }
+    if (!expect(emptySelectionUpdates == 0,
+                "Switching from one path to another should not emit an intermediate empty selection.")) {
+        return 1;
+    }
+    if (!expect(selectionSyncCalls == 1,
+                "Primary path click should explicitly sync map selection once after the atomic selection update.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runHoveredPathWinsPrimaryClickTest()
+{
+    QGraphicsScene scene;
+    QGraphicsView view(&scene);
+    view.resize(240, 180);
+    view.show();
+
+    QString toolbarStatus;
+    bool primaryPointerInteractionActive = false;
+    bool pendingClickSelection = false;
+    QPointF pendingClickScenePosition;
+    QElapsedTimer pendingClickElapsed;
+    int pendingClickLineNumber = 0;
+    int pendingClickSourceVertexIndex = -1;
+    QString pendingClickGeometryKind;
+    int selectionSyncCalls = 0;
+
+    MapEditorViewportInputContext context;
+    context.scene = &scene;
+    context.view = &view;
+    context.toolbarStatusNote = &toolbarStatus;
+    context.primaryPointerInteractionActive = &primaryPointerInteractionActive;
+    context.pendingClickSelection = &pendingClickSelection;
+    context.pendingClickScenePosition = &pendingClickScenePosition;
+    context.pendingClickElapsed = &pendingClickElapsed;
+    context.pendingClickLineNumber = &pendingClickLineNumber;
+    context.pendingClickSourceVertexIndex = &pendingClickSourceVertexIndex;
+    context.pendingClickGeometryKind = &pendingClickGeometryKind;
+    context.drawMode = []() { return MapEditorInteractiveDrawMode::None; };
+    context.handleInteractiveDrawClick = [](const QPointF &) {
+        return false;
+    };
+    context.refreshToolbarSummary = []() {};
+    context.updateCommandSurfaceState = []() {};
+    context.syncMapSelectionFromScene = [&selectionSyncCalls, &pendingClickLineNumber]() {
+        ++selectionSyncCalls;
+        expect(pendingClickLineNumber == 91,
+               "Selection sync after a highlighted path click should still see the pending highlighted source line.");
+    };
+
+    MapEditorViewportInputController controller(context);
+
+    QPainterPath wallPath;
+    wallPath.moveTo(10.0, 42.0);
+    wallPath.lineTo(90.0, 42.0);
+    auto *wallItem = scene.addPath(wallPath, QPen(Qt::black, 8.0));
+    wallItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
+    wallItem->setAcceptedMouseButtons(Qt::LeftButton);
+    wallItem->setData(kMapSceneLineNumberRole, 601);
+    wallItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeGeneric);
+    wallItem->setSelected(true);
+
+    QPainterPath contourPath;
+    contourPath.moveTo(10.0, 40.0);
+    contourPath.lineTo(90.0, 40.0);
+    auto *contourItem = scene.addPath(contourPath, QPen(Qt::cyan, 2.0));
+    contourItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
+    contourItem->setAcceptedMouseButtons(Qt::LeftButton);
+    contourItem->setData(kMapSceneLineNumberRole, 91);
+    contourItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineDetail);
+    contourItem->setData(kMapSceneInteractionHoverRole, true);
+
+    const QPoint clickPosition = view.mapFromScene(QPointF(50.0, 41.0));
+    QMouseEvent press(QEvent::MouseButtonPress,
+                      QPointF(clickPosition),
+                      QPointF(view.viewport()->mapToGlobal(clickPosition)),
+                      Qt::LeftButton,
+                      Qt::LeftButton,
+                      Qt::NoModifier);
+    if (!expect(controller.handleEvent(view.viewport(), &press).value_or(false),
+                "Primary click on a highlighted path should be handled by the viewport input controller.")) {
+        return 1;
+    }
+    if (!expect(contourItem->isSelected() && !wallItem->isSelected(),
+                "Primary click should select the highlighted path instead of recomputing a different target.")) {
+        return 1;
+    }
+    if (!expect(pendingClickLineNumber == 91,
+                "Primary click on a highlighted contour should store the contour source line as pending selection.")) {
+        return 1;
+    }
+    if (!expect(selectionSyncCalls == 1,
+                "Primary highlighted path click should explicitly sync map selection once after the atomic selection update.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runVisibleVertexPressFallsThroughForDragTest()
+{
+    QGraphicsScene scene;
+    QGraphicsView view(&scene);
+    view.resize(240, 180);
+    view.show();
+
+    QString toolbarStatus;
+    bool primaryPointerInteractionActive = false;
+    bool pendingClickSelection = false;
+    QPointF pendingClickScenePosition;
+    QElapsedTimer pendingClickElapsed;
+    int pendingClickLineNumber = 0;
+    int pendingClickSourceVertexIndex = -1;
+    QString pendingClickGeometryKind;
+
+    MapEditorViewportInputContext context;
+    context.scene = &scene;
+    context.view = &view;
+    context.toolbarStatusNote = &toolbarStatus;
+    context.primaryPointerInteractionActive = &primaryPointerInteractionActive;
+    context.pendingClickSelection = &pendingClickSelection;
+    context.pendingClickScenePosition = &pendingClickScenePosition;
+    context.pendingClickElapsed = &pendingClickElapsed;
+    context.pendingClickLineNumber = &pendingClickLineNumber;
+    context.pendingClickSourceVertexIndex = &pendingClickSourceVertexIndex;
+    context.pendingClickGeometryKind = &pendingClickGeometryKind;
+    context.drawMode = []() { return MapEditorInteractiveDrawMode::None; };
+    context.handleInteractiveDrawClick = [](const QPointF &) {
+        return false;
+    };
+    context.refreshToolbarSummary = []() {};
+    context.updateCommandSurfaceState = []() {};
+
+    MapEditorViewportInputController controller(context);
+
+    QPainterPath wallPath;
+    wallPath.moveTo(10.0, 40.0);
+    wallPath.lineTo(90.0, 40.0);
+    auto *wallItem = scene.addPath(wallPath, QPen(Qt::black, 8.0));
+    wallItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
+    wallItem->setAcceptedMouseButtons(Qt::LeftButton);
+    wallItem->setData(kMapSceneLineNumberRole, 601);
+    wallItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeGeneric);
+    wallItem->setSelected(true);
+
+    const QPointF vertexScenePosition(50.0, 40.0);
+    const QRectF stableBounds(vertexScenePosition.x() - 100.0,
+                              vertexScenePosition.y() - 100.0,
+                              200.0,
+                              200.0);
+    auto *vertexItem = new MapEditableGeometryVertexItem(601,
+                                                         QStringLiteral("line"),
+                                                         7,
+                                                         vertexScenePosition,
+                                                         stableBounds,
+                                                         stableBounds);
+    vertexItem->setRect(QRectF(-3.4, -3.4, 6.8, 6.8));
+    vertexItem->setData(kMapSceneLineNumberRole, 601);
+    vertexItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineAnchor);
+    vertexItem->setData(kMapSceneOwnerVertexRole, 7);
+    vertexItem->setVisible(true);
+    scene.addItem(vertexItem);
+
+    const QPoint clickPosition = view.mapFromScene(vertexScenePosition);
+    QMouseEvent press(QEvent::MouseButtonPress,
+                      QPointF(clickPosition),
+                      QPointF(view.viewport()->mapToGlobal(clickPosition)),
+                      Qt::LeftButton,
+                      Qt::LeftButton,
+                      Qt::NoModifier);
+    const std::optional<bool> handled = controller.handleEvent(view.viewport(), &press);
+    if (!expect(!handled.has_value(),
+                "Primary press on a visible vertex should fall through so the scene can start dragging it.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runHoveredPathDoesNotStealVisibleVertexPressTest()
+{
+    QGraphicsScene scene;
+    QGraphicsView view(&scene);
+    view.resize(240, 180);
+    view.show();
+
+    QString toolbarStatus;
+    bool primaryPointerInteractionActive = false;
+    bool pendingClickSelection = false;
+    QPointF pendingClickScenePosition;
+    QElapsedTimer pendingClickElapsed;
+    int pendingClickLineNumber = 0;
+    int pendingClickSourceVertexIndex = -1;
+    QString pendingClickGeometryKind;
+
+    MapEditorViewportInputContext context;
+    context.scene = &scene;
+    context.view = &view;
+    context.toolbarStatusNote = &toolbarStatus;
+    context.primaryPointerInteractionActive = &primaryPointerInteractionActive;
+    context.pendingClickSelection = &pendingClickSelection;
+    context.pendingClickScenePosition = &pendingClickScenePosition;
+    context.pendingClickElapsed = &pendingClickElapsed;
+    context.pendingClickLineNumber = &pendingClickLineNumber;
+    context.pendingClickSourceVertexIndex = &pendingClickSourceVertexIndex;
+    context.pendingClickGeometryKind = &pendingClickGeometryKind;
+    context.drawMode = []() { return MapEditorInteractiveDrawMode::None; };
+    context.handleInteractiveDrawClick = [](const QPointF &) {
+        return false;
+    };
+    context.refreshToolbarSummary = []() {};
+    context.updateCommandSurfaceState = []() {};
+
+    MapEditorViewportInputController controller(context);
+
+    QPainterPath wallPath;
+    wallPath.moveTo(10.0, 40.0);
+    wallPath.lineTo(90.0, 40.0);
+    auto *wallItem = scene.addPath(wallPath, QPen(Qt::black, 8.0));
+    wallItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
+    wallItem->setAcceptedMouseButtons(Qt::LeftButton);
+    wallItem->setData(kMapSceneLineNumberRole, 601);
+    wallItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeGeneric);
+    wallItem->setData(kMapSceneInteractionHoverRole, true);
+    wallItem->setSelected(true);
+
+    const QPointF vertexScenePosition(50.0, 40.0);
+    const QRectF stableBounds(vertexScenePosition.x() - 100.0,
+                              vertexScenePosition.y() - 100.0,
+                              200.0,
+                              200.0);
+    auto *vertexItem = new MapEditableGeometryVertexItem(601,
+                                                         QStringLiteral("line"),
+                                                         7,
+                                                         vertexScenePosition,
+                                                         stableBounds,
+                                                         stableBounds);
+    vertexItem->setRect(QRectF(-3.4, -3.4, 6.8, 6.8));
+    vertexItem->setData(kMapSceneLineNumberRole, 601);
+    vertexItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineAnchor);
+    vertexItem->setData(kMapSceneOwnerVertexRole, 7);
+    vertexItem->setVisible(true);
+    scene.addItem(vertexItem);
+
+    const QPoint clickPosition = view.mapFromScene(vertexScenePosition);
+    QMouseEvent press(QEvent::MouseButtonPress,
+                      QPointF(clickPosition),
+                      QPointF(view.viewport()->mapToGlobal(clickPosition)),
+                      Qt::LeftButton,
+                      Qt::LeftButton,
+                      Qt::NoModifier);
+    const std::optional<bool> handled = controller.handleEvent(view.viewport(), &press);
+    if (!expect(!handled.has_value(),
+                "A highlighted path must not steal primary press events from its visible vertex handles.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 }
 
 int main(int argc, char **argv)
@@ -574,6 +925,18 @@ int main(int argc, char **argv)
         return rc;
     }
     if (const int rc = runSecondaryClickOpensContextMenuTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runNearestPathWinsPrimaryClickTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runHoveredPathWinsPrimaryClickTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runVisibleVertexPressFallsThroughForDragTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runHoveredPathDoesNotStealVisibleVertexPressTest(); rc != 0) {
         return rc;
     }
     return runResizeAutoFitSuppressesCommandSurfaceUpdateTest();

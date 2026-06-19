@@ -30,6 +30,7 @@ namespace TherionStudio
 namespace
 {
 constexpr qreal kFilledPathInteriorHitDistancePixels = 6.0;
+constexpr qreal kMaximumPathPrimaryHitDistancePixels = 10.0;
 
 bool isInteractiveMapSelectionItem(const QGraphicsItem *item)
 {
@@ -212,7 +213,9 @@ QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems,
         if (scenePosition.has_value()) {
             if (usesDistanceRanking) {
                 distancePixels = genericPathItemHitDistancePixels(item, scenePosition.value(), viewTransform);
-                if (!std::isfinite(distancePixels) || distancePixels == std::numeric_limits<qreal>::max()) {
+                if (!std::isfinite(distancePixels)
+                    || distancePixels == std::numeric_limits<qreal>::max()
+                    || distancePixels > kMaximumPathPrimaryHitDistancePixels) {
                     continue;
                 }
             } else if (dynamic_cast<const MapEditableGeometryVertexItem *>(item) != nullptr
@@ -224,11 +227,13 @@ QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems,
         }
 
         const int priority = mapSelectionHitPriority(item);
-        const bool betterDistanceRankedPath = usesDistanceRanking && bestUsesDistanceRanking
-            && (distancePixels < bestDistancePixels
-                || (qFuzzyCompare(distancePixels, bestDistancePixels) && priority < bestPriority));
+        const bool betterDistanceRankedPath = usesDistanceRanking
+            && ((bestUsesDistanceRanking
+                 && (distancePixels < bestDistancePixels
+                     || (qFuzzyCompare(distancePixels, bestDistancePixels) && priority < bestPriority)))
+                || (!bestUsesDistanceRanking && bestPriority > 0));
         const bool betterPriorityRankedItem = !betterDistanceRankedPath
-            && (!usesDistanceRanking || !bestUsesDistanceRanking)
+            && (!bestUsesDistanceRanking || priority == 0)
             && (priority < bestPriority
                 || (priority == bestPriority && distancePixels < bestDistancePixels));
         if (betterDistanceRankedPath || betterPriorityRankedItem) {
@@ -276,7 +281,9 @@ QList<QGraphicsItem *> expandedMapHitItemsAtScenePosition(QGraphicsScene *scene,
         }
 
         const qreal distancePixels = genericPathItemHitDistancePixels(candidate, scenePosition, viewTransform);
-        if (std::isfinite(distancePixels) && distancePixels != std::numeric_limits<qreal>::max()) {
+        if (std::isfinite(distancePixels)
+            && distancePixels != std::numeric_limits<qreal>::max()
+            && distancePixels <= kMaximumPathPrimaryHitDistancePixels) {
             hitItems.append(candidate);
         }
     }

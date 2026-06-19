@@ -92,6 +92,9 @@ MapEditorViewportInputContext MapEditorTab::viewportInputContext()
         .updateCommandSurfaceState = [this]() {
             updateCommandSurfaceState();
         },
+        .syncMapSelectionFromScene = [this]() {
+            handleMapSceneSelectionChanged();
+        },
         .interactiveLineControlAt = [this](const QPointF &scenePosition, qreal sceneRadius) {
             return interactiveLineControlAt(scenePosition, sceneRadius);
         },

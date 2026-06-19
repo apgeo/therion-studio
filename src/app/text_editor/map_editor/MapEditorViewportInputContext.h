@@ -71,6 +71,7 @@ struct MapEditorViewportInputContext
     std::function<void()> updateInteractiveDrawPreview;
     std::function<void()> refreshToolbarSummary;
     std::function<void()> updateCommandSurfaceState;
+    std::function<void()> syncMapSelectionFromScene;
     std::function<std::optional<MapEditorInteractiveLineControlHandleRef>(const QPointF &, qreal)> interactiveLineControlAt;
     std::function<bool(const MapEditorInteractiveLineControlHandleRef &, const QPointF &)> setInteractiveLineControlScenePoint;
     std::function<bool(const QPointF &)> handleInteractiveDrawClick;

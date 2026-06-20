@@ -71,6 +71,13 @@ void MapEditorTab::beginPendingInsertObject(const QString &commandKind)
     fields.commandKind = normalizedCommand;
     fields.typeEditable = normalizedCommand != QStringLiteral("scrap");
     fields.type = defaultPendingTypeForCommand(normalizedCommand);
+    const auto rememberedIt = interactiveDrawState_.lastPendingInsertFieldsByCommand_.constFind(normalizedCommand);
+    if (rememberedIt != interactiveDrawState_.lastPendingInsertFieldsByCommand_.constEnd()) {
+        if (!rememberedIt->type.trimmed().isEmpty()) {
+            fields.type = rememberedIt->type;
+        }
+        fields.subtype = rememberedIt->subtype;
+    }
     if (normalizedCommand == QStringLiteral("scrap")) {
         fields.identifier = QStringLiteral("new-scrap");
     } else if (normalizedCommand == QStringLiteral("point")) {
@@ -171,6 +178,15 @@ void MapEditorTab::setPendingInsertQuickFields(const InspectorObjectQuickFields 
                             normalizedCommand,
                             interactiveDrawState_.pendingInsertFields_.type,
                             interactiveDrawState_.pendingInsertFields_.value);
+    if (normalizedCommand == QStringLiteral("point")
+        || normalizedCommand == QStringLiteral("line")
+        || normalizedCommand == QStringLiteral("area")) {
+        InspectorObjectQuickFields rememberedFields;
+        rememberedFields.commandKind = normalizedCommand;
+        rememberedFields.type = interactiveDrawState_.pendingInsertFields_.type;
+        rememberedFields.subtype = interactiveDrawState_.pendingInsertFields_.subtype;
+        interactiveDrawState_.lastPendingInsertFieldsByCommand_.insert(normalizedCommand, rememberedFields);
+    }
 }
 
 TherionDraftObjectOptions MapEditorTab::pendingDraftObjectOptions(const QString &commandKind) const

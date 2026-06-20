@@ -18,6 +18,7 @@
 #include <QItemSelectionModel>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMainWindow>
 #include <QMouseEvent>
 #include <QPlainTextEdit>
@@ -93,6 +94,18 @@ void sendMouseClick(QWidget *widget, const QPoint &position)
                              Qt::NoButton,
                              Qt::NoModifier);
     QCoreApplication::sendEvent(widget, &releaseEvent);
+}
+
+void commitComboEdit(QComboBox *combo, const QString &text)
+{
+    if (combo == nullptr) {
+        return;
+    }
+
+    combo->setCurrentText(text);
+    if (QLineEdit *lineEdit = combo->lineEdit(); lineEdit != nullptr) {
+        QMetaObject::invokeMethod(lineEdit, "editingFinished", Qt::DirectConnection);
+    }
 }
 
 bool visibleNoSelectionLabel(QWidget *root)
@@ -676,6 +689,10 @@ int runSelectionPanelTypeValuesTest()
                 "Selection panel type and subtype fields should expand in the available inspector width.")) {
         return 1;
     }
+    commitComboEdit(typeCombo, QStringLiteral("border"));
+    pumpEvents();
+    commitComboEdit(subtypeCombo, QStringLiteral("invisible"));
+    pumpEvents();
     subtypeCombo->setFocus(Qt::OtherFocusReason);
     pumpEvents();
     sendKey(subtypeCombo, QEvent::KeyPress, Qt::Key_Escape);
@@ -691,6 +708,23 @@ int runSelectionPanelTypeValuesTest()
     }
     if (!expect(!stylePreview->isVisible(),
                 "Esc from a focused pending insert field should hide the pending style preview.")) {
+        return 1;
+    }
+    mapTab->triggerAddLine();
+    pumpEvents();
+    if (!expect(typeCombo->isVisible()
+                    && typeCombo->currentText() == QStringLiteral("border")
+                    && subtypeCombo->currentText() == QStringLiteral("invisible"),
+                "Line insert should remember the last pending type and subtype as the next default.")) {
+        return 1;
+    }
+    subtypeCombo->setFocus(Qt::OtherFocusReason);
+    pumpEvents();
+    sendKey(subtypeCombo, QEvent::KeyPress, Qt::Key_Escape);
+    sendKey(subtypeCombo, QEvent::KeyRelease, Qt::Key_Escape);
+    pumpEvents();
+    if (!expect(!mapTab->isInsertModeActive(),
+                "Esc should leave the remembered line insert mode before point insert testing.")) {
         return 1;
     }
 

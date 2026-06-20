@@ -283,6 +283,7 @@ private:
     {
         InteractiveDrawMode mode_ = InteractiveDrawMode::None;
         InspectorObjectQuickFields pendingInsertFields_;
+        QHash<QString, InspectorObjectQuickFields> lastPendingInsertFieldsByCommand_;
         QString pendingTargetScrapIdentifier_;
         bool lineExtensionActive_ = false;
         int lineExtensionLineNumber_ = 0;

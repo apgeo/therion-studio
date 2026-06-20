@@ -7,7 +7,10 @@
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSourceReferenceResolver.h"
 #include "MapEditorStylePreviewWidget.h"
+#include "../../../core/TherionCommandLineModel.h"
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceLogicalDocument.h"
+#include "../../../core/TherionSourceSnapshotCache.h"
 #include "../../../core/TherionSourceText.h"
 
 #include <QBoxLayout>
@@ -54,6 +57,36 @@ QStringList linePointStandaloneOptionRowsForSelection(const MapGeometryFeature &
         return {};
     }
     return lineFeature.lineVertices.at(lineVertexIndex).standaloneOptionRows;
+}
+
+std::optional<TherionSourceLogicalCommand> logicalCommandForEditorLine(TextEditorTab *textEditor,
+                                                                       int lineNumber)
+{
+    if (textEditor == nullptr || lineNumber <= 0) {
+        return std::nullopt;
+    }
+
+    TherionSourceSnapshotCache sourceSnapshotCache;
+    TherionSourceDocumentMetadata metadata;
+    metadata.sourceType = TherionSourceDocumentType::TherionMap;
+    metadata.revisionId = textEditor->documentRevision();
+    const TherionSourceLogicalDocument &logicalDocument =
+        sourceSnapshotCache.logicalDocument(textEditor->text(), metadata);
+    const TherionSourceLogicalCommand *command = logicalDocument.commandAtPhysicalLine(lineNumber);
+    if (command == nullptr) {
+        return std::nullopt;
+    }
+    return *command;
+}
+
+std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsForEditorLine(TextEditorTab *textEditor,
+                                                                                  int lineNumber)
+{
+    const std::optional<TherionSourceLogicalCommand> command = logicalCommandForEditorLine(textEditor, lineNumber);
+    if (!command.has_value()) {
+        return std::nullopt;
+    }
+    return inspectorObjectQuickFieldsFromLogicalCommand(*command);
 }
 
 QString scrapContextMetadataSuffix(const std::optional<InspectorScrapContext> &scrapContext)
@@ -215,28 +248,15 @@ void setTargetScrapComboValues(QComboBox *combo,
     combo->setCurrentIndex(currentIndex);
 }
 
-bool tokenCanBeOptionValue(const QString &token)
+QString singleValueOptionValue(const TherionSourceLogicalCommand &command, const QString &optionName)
 {
-    const QString trimmed = token.trimmed();
-    if (!trimmed.startsWith(QLatin1Char('-'))) {
-        return true;
-    }
-
-    bool numeric = false;
-    trimmed.toDouble(&numeric);
-    return numeric;
-}
-
-QString singleValueOptionValue(const TherionParsedLine &parsedLine, const QString &optionName)
-{
-    const QString normalizedOption = optionName.trimmed().toLower();
-    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
-        if (parsedLine.tokens.at(index).trimmed().toLower() != normalizedOption) {
+    const QString normalizedOption = normalizedCommandOptionName(optionName);
+    for (const TherionSourceLogicalOptionEntryRange &entry : command.optionEntryRanges) {
+        if (normalizedCommandOptionName(entry.key) != normalizedOption) {
             continue;
         }
-        if (index + 1 < parsedLine.tokens.size()
-            && tokenCanBeOptionValue(parsedLine.tokens.at(index + 1))) {
-            return parsedLine.tokens.at(index + 1).trimmed();
+        if (!entry.valueRanges.isEmpty()) {
+            return entry.valueRanges.constFirst().text.trimmed();
         }
         return QString();
     }
@@ -780,58 +800,54 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     context_.quickTargetScrapCombo->setVisible(false);
     context_.metadataLabel->setVisible(true);
     if (context_.textEditor != nullptr && effectiveLineNumber > 0) {
-        const QStringList lines = TherionSourceText::splitTextLines(context_.textEditor->text());
-        if (effectiveLineNumber <= lines.size()) {
-            const TherionParsedLine parsedLine =
-                TherionDocumentParser::parseLine(lines.at(effectiveLineNumber - 1), effectiveLineNumber);
-            if (const std::optional<InspectorObjectQuickFields> fields = inspectorObjectQuickFieldsFromParsedLine(parsedLine)) {
-                const bool typeFieldsVisible = fields->commandKind != QStringLiteral("scrap");
-                const bool projectionFieldVisible = fields->commandKind == QStringLiteral("scrap");
-                const bool textFieldVisible = fields->textVisible;
-                const bool valueFieldVisible =
-                    inspectorValueOptionSupportedForCommandType(inspectorSymbolCatalog(), fields->commandKind, fields->type)
-                    || fields->valueVisible;
-                moveProjectionComboForSelection(fields->commandKind);
-                moveQuickOptionEditorsForSelection(fields->commandKind,
-                                                   fields->nameVisible,
-                                                   textFieldVisible,
-                                                   valueFieldVisible);
-                objectQuickOptionsVisible = fields->nameVisible || textFieldVisible || valueFieldVisible;
-                context_.quickFieldsEditor->setVisible(true);
-                context_.quickProjectionLabel->setVisible(false);
-                context_.scrapProjectionLabel->setVisible(projectionFieldVisible);
-                context_.quickTypeLabel->setVisible(typeFieldsVisible);
-                context_.quickSubtypeLabel->setVisible(typeFieldsVisible);
-                context_.quickTargetScrapLabel->setVisible(false);
-                context_.quickProjectionEditor->setVisible(false);
-                context_.scrapOptionsEditor->setVisible(projectionFieldVisible);
-                scrapOptionsVisible = projectionFieldVisible;
-                context_.quickProjectionCombo->setVisible(projectionFieldVisible);
-                context_.quickTypeCombo->setVisible(typeFieldsVisible);
-                context_.quickSubtypeCombo->setVisible(typeFieldsVisible);
-                context_.quickTargetScrapCombo->setVisible(false);
-                context_.quickProjectionCombo->setEnabled(projectionFieldVisible);
-                context_.quickTypeCombo->setEnabled(typeFieldsVisible && fields->typeEditable);
-                context_.quickSubtypeCombo->setEnabled(typeFieldsVisible && fields->typeEditable);
-                const InspectorSymbolCatalog &catalog = inspectorSymbolCatalog();
-                setEditableComboValues(context_.quickTypeCombo,
-                                       inspectorTypeValuesForCommand(catalog, fields->commandKind),
-                                       fields->type);
-                setEditableComboValues(context_.quickProjectionCombo,
-                                       inspectorProjectionValues(catalog),
-                                       fields->projection);
-                context_.quickIdentifierEdit->setText(fields->identifier);
-                context_.quickIdentifierLabel->setText(tr("ID"));
-                context_.quickNameEdit->setText(fields->name);
-                context_.quickTextEdit->setText(fields->text);
-                context_.quickValueEdit->setText(fields->value);
-                *context_.objectQuickCommandKind = fields->commandKind;
-                setEditableComboValues(context_.quickSubtypeCombo,
-                                       inspectorSubtypeValuesForCommandTypeWithEmptyChoice(catalog, fields->commandKind, fields->type),
-                                       fields->subtype);
-                updateRecentPendingSymbolButtons(context_, fields->commandKind, false);
-                showStylePreview(fields->commandKind, fields->type, fields->subtype);
-            }
+        if (const std::optional<InspectorObjectQuickFields> fields =
+                inspectorObjectQuickFieldsForEditorLine(context_.textEditor, effectiveLineNumber)) {
+            const bool typeFieldsVisible = fields->commandKind != QStringLiteral("scrap");
+            const bool projectionFieldVisible = fields->commandKind == QStringLiteral("scrap");
+            const bool textFieldVisible = fields->textVisible;
+            const bool valueFieldVisible =
+                inspectorValueOptionSupportedForCommandType(inspectorSymbolCatalog(), fields->commandKind, fields->type)
+                || fields->valueVisible;
+            moveProjectionComboForSelection(fields->commandKind);
+            moveQuickOptionEditorsForSelection(fields->commandKind,
+                                               fields->nameVisible,
+                                               textFieldVisible,
+                                               valueFieldVisible);
+            objectQuickOptionsVisible = fields->nameVisible || textFieldVisible || valueFieldVisible;
+            context_.quickFieldsEditor->setVisible(true);
+            context_.quickProjectionLabel->setVisible(false);
+            context_.scrapProjectionLabel->setVisible(projectionFieldVisible);
+            context_.quickTypeLabel->setVisible(typeFieldsVisible);
+            context_.quickSubtypeLabel->setVisible(typeFieldsVisible);
+            context_.quickTargetScrapLabel->setVisible(false);
+            context_.quickProjectionEditor->setVisible(false);
+            context_.scrapOptionsEditor->setVisible(projectionFieldVisible);
+            scrapOptionsVisible = projectionFieldVisible;
+            context_.quickProjectionCombo->setVisible(projectionFieldVisible);
+            context_.quickTypeCombo->setVisible(typeFieldsVisible);
+            context_.quickSubtypeCombo->setVisible(typeFieldsVisible);
+            context_.quickTargetScrapCombo->setVisible(false);
+            context_.quickProjectionCombo->setEnabled(projectionFieldVisible);
+            context_.quickTypeCombo->setEnabled(typeFieldsVisible && fields->typeEditable);
+            context_.quickSubtypeCombo->setEnabled(typeFieldsVisible && fields->typeEditable);
+            const InspectorSymbolCatalog &catalog = inspectorSymbolCatalog();
+            setEditableComboValues(context_.quickTypeCombo,
+                                   inspectorTypeValuesForCommand(catalog, fields->commandKind),
+                                   fields->type);
+            setEditableComboValues(context_.quickProjectionCombo,
+                                   inspectorProjectionValues(catalog),
+                                   fields->projection);
+            context_.quickIdentifierEdit->setText(fields->identifier);
+            context_.quickIdentifierLabel->setText(tr("ID"));
+            context_.quickNameEdit->setText(fields->name);
+            context_.quickTextEdit->setText(fields->text);
+            context_.quickValueEdit->setText(fields->value);
+            *context_.objectQuickCommandKind = fields->commandKind;
+            setEditableComboValues(context_.quickSubtypeCombo,
+                                   inspectorSubtypeValuesForCommandTypeWithEmptyChoice(catalog, fields->commandKind, fields->type),
+                                   fields->subtype);
+            updateRecentPendingSymbolButtons(context_, fields->commandKind, false);
+            showStylePreview(fields->commandKind, fields->type, fields->subtype);
         }
     }
     if (!context_.quickFieldsEditor->isVisible()) {
@@ -905,20 +921,18 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         && context_.textEditor != nullptr;
     context_.lineOptionsEditor->setVisible(lineOptionsVisible);
     if (objectOptionSourceVisible) {
-        const QStringList lines = TherionSourceText::splitTextLines(context_.textEditor->text());
-        TherionParsedLine parsedLine;
-        if (*context_.selectedObjectLineNumber <= lines.size()) {
-            parsedLine = TherionDocumentParser::parseLine(lines.at(*context_.selectedObjectLineNumber - 1),
-                                                          *context_.selectedObjectLineNumber);
-            if (parsedLine.directive == QStringLiteral("line")
-                || parsedLine.directive == QStringLiteral("area")
-                || parsedLine.directive == QStringLiteral("point")) {
-                clipDisabled = singleValueOptionValue(parsedLine, QStringLiteral("-clip")).compare(QStringLiteral("off"), Qt::CaseInsensitive) == 0;
-                clipDisabledVisible = parsedLine.directive != QStringLiteral("point")
-                    || pointTypeSupportsClip(parsedLine.tokens.value(3))
-                    || clipDisabled;
-                pointAlign = singleValueOptionValue(parsedLine, QStringLiteral("-align"));
-            }
+        const std::optional<TherionSourceLogicalCommand> command =
+            logicalCommandForEditorLine(context_.textEditor, *context_.selectedObjectLineNumber);
+        if (command.has_value()
+            && (command->parsed.directive == QStringLiteral("line")
+                || command->parsed.directive == QStringLiteral("area")
+                || command->parsed.directive == QStringLiteral("point"))) {
+            clipDisabled =
+                singleValueOptionValue(*command, QStringLiteral("-clip")).compare(QStringLiteral("off"), Qt::CaseInsensitive) == 0;
+            clipDisabledVisible = command->parsed.directive != QStringLiteral("point")
+                || pointTypeSupportsClip(command->parsed.tokens.value(3))
+                || clipDisabled;
+            pointAlign = singleValueOptionValue(*command, QStringLiteral("-align"));
         }
     }
     if (lineOptionsVisible) {
@@ -976,12 +990,12 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         configureScaleSpin(context_.scrapScaleRealY2Spin, 4);
 
         InspectorScrapScale scale = defaultInspectorScrapScale(context_.mapSourceBoundsForCurrentDocument());
-        const QStringList lines = TherionSourceText::splitTextLines(context_.textEditor->text());
-        if (effectiveLineNumber <= lines.size()) {
-            const TherionParsedLine parsedLine =
-                TherionDocumentParser::parseLine(lines.at(effectiveLineNumber - 1), effectiveLineNumber);
-            if (const std::optional<InspectorScrapScale> parsedScale = inspectorScrapScaleFromTokens(parsedLine.tokens)) {
-                scale = parsedScale.value();
+        const std::optional<TherionSourceLogicalCommand> command =
+            logicalCommandForEditorLine(context_.textEditor, effectiveLineNumber);
+        if (command.has_value()) {
+            if (const std::optional<InspectorScrapScale> parsedScale =
+                    inspectorScrapScaleFromTokens(command->parsed.tokens)) {
+                scale = *parsedScale;
             }
         }
 
@@ -1014,18 +1028,17 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     QString linePointType;
     if (context_.textEditor != nullptr && *context_.selectedObjectLineNumber > 0) {
         if (*context_.selectedObjectKind == QStringLiteral("point")) {
-            const QStringList lines = TherionSourceText::splitTextLines(context_.textEditor->text());
-            if (*context_.selectedObjectLineNumber <= lines.size()) {
-                const TherionParsedLine parsedLine =
-                    TherionDocumentParser::parseLine(lines.at(*context_.selectedObjectLineNumber - 1), *context_.selectedObjectLineNumber);
-                if (parsedLine.directive == QStringLiteral("point")
-                    && isOrientationSupportedForParsedLine(parsedLine, orientationApplicabilityByCommand())) {
+            const std::optional<TherionSourceLogicalCommand> command =
+                logicalCommandForEditorLine(context_.textEditor, *context_.selectedObjectLineNumber);
+            if (command.has_value()) {
+                if (command->parsed.directive == QStringLiteral("point")
+                    && isOrientationSupportedForParsedLine(command->parsed, orientationApplicabilityByCommand())) {
                     orientationApplicable = true;
-                    orientationDegrees = pointOrientationFromParsedLine(parsedLine);
+                    orientationDegrees = pointOrientationFromParsedLine(command->parsed);
                 }
-                if (parsedLine.directive == QStringLiteral("point")) {
+                if (command->parsed.directive == QStringLiteral("point")) {
                     pointAlignApplicable = true;
-                    pointAlign = singleValueOptionValue(parsedLine, QStringLiteral("-align"));
+                    pointAlign = singleValueOptionValue(*command, QStringLiteral("-align"));
                 }
             }
         } else if (*context_.selectedObjectKind == QStringLiteral("line") && *context_.selectedObjectVertexIndex >= 0) {
@@ -1038,20 +1051,19 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                     linePointPreviousControl = lineVertex.incomingControl.has_value();
                     linePointNextControl = lineVertex.outgoingControl.has_value();
                     linePointSmooth = lineVertex.isSmooth && linePointPreviousControl && linePointNextControl;
-                    const QStringList lines = TherionSourceText::splitTextLines(context_.textEditor->text());
-                    if (*context_.selectedObjectLineNumber > lines.size()) {
+                    const std::optional<TherionSourceLogicalCommand> command =
+                        logicalCommandForEditorLine(context_.textEditor, *context_.selectedObjectLineNumber);
+                    if (!command.has_value()) {
                         orientationApplicable = false;
                     } else {
-                        const TherionParsedLine parsedLine =
-                            TherionDocumentParser::parseLine(lines.at(*context_.selectedObjectLineNumber - 1), *context_.selectedObjectLineNumber);
-                        linePointType = parsedLine.tokens.value(1).section(QLatin1Char(':'), 0, 0).trimmed();
-                        if (isOrientationSupportedForParsedLine(parsedLine, orientationApplicabilityByCommand())) {
+                        linePointType = command->parsed.tokens.value(1).section(QLatin1Char(':'), 0, 0).trimmed();
+                        if (isOrientationSupportedForParsedLine(command->parsed, orientationApplicabilityByCommand())) {
                             orientationApplicable = true;
                             orientationDegrees = linePointOrientationForSourceVertex(context_.textEditor->text(),
                                                                                     *context_.selectedObjectLineNumber,
                                                                                     *context_.selectedObjectVertexIndex);
                         }
-                        if (isLinePointLeftSizeSupportedForParsedLine(parsedLine)) {
+                        if (isLinePointLeftSizeSupportedForParsedLine(command->parsed)) {
                             linePointLeftSizeApplicable = true;
                             linePointLeftSize = linePointLeftSizeForSourceVertex(context_.textEditor->text(),
                                                                                  *context_.selectedObjectLineNumber,

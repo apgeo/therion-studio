@@ -1,6 +1,7 @@
 #include "MapEditorTab.h"
 
 #include "MapEditorSceneSupport.h"
+#include "../TextEditorSourceTransactionController.h"
 #include "../TextEditorTab.h"
 
 #include "../../../core/TherionBackgroundMetadata.h"
@@ -158,19 +159,25 @@ void MapEditorTab::handleInsertScrapTriggered()
 
     const QString createdScrapIdentifier = insertedScrapIdentifier(afterText, insertedLineNumber, scrapIdentifier);
     clearPendingInsertObject();
-    applySourceTextChangeWithSnapshot(
-        tr("Insert Scrap"),
-        beforeText,
-        afterText,
-        insertedLineNumber,
-        insertedLineNumber > 0
-            ? std::function<void()>([this, insertedLineNumber]() {
-                  rebuildInspectorObjectsTree();
-                  goToLine(insertedLineNumber);
-                  syncInspectorObjectSelectionToLine(insertedLineNumber, true);
-                  activateSelectionInspector();
-              })
-            : std::function<void()>());
+    const TextEditorSourceTransactionResult transactionResult =
+        applySourceTextChangeWithSnapshot(
+            tr("Insert Scrap"),
+            beforeText,
+            afterText,
+            insertedLineNumber,
+            insertedLineNumber > 0
+                ? std::function<void()>([this, insertedLineNumber]() {
+                      rebuildInspectorObjectsTree();
+                      goToLine(insertedLineNumber);
+                      syncInspectorObjectSelectionToLine(insertedLineNumber, true);
+                      activateSelectionInspector();
+                  })
+                : std::function<void()>());
+    if (transactionResult != TextEditorSourceTransactionResult::Applied) {
+        refreshObjectDetailsPanel();
+        refreshToolbarSummary();
+        return;
+    }
 
     toolbarStatusNote_ = insertedLineNumber > 0
         ? tr("Created scrap \"%1\" at source line %2.").arg(createdScrapIdentifier, QString::number(insertedLineNumber))

@@ -2,6 +2,7 @@
 
 #include "MapEditorObjectDetailsLogic.h"
 #include "MapEditorSceneSupport.h"
+#include "../TextEditorSourceTransactionController.h"
 #include "../TextEditorTab.h"
 
 #include "../../../core/TherionBackgroundMetadata.h"
@@ -242,19 +243,18 @@ bool MapEditorTab::commitInteractiveDrawVertices(const QString &geometryKind,
         return false;
     }
 
-    bool applied = false;
-    applySourceTextChangeWithSnapshot(
-        tr("Complete Draft"),
-        beforeText,
-        afterText,
-        insertedLineNumber,
-        [this, successLabel, insertedLineNumber, &applied]() {
-            applied = true;
-            toolbarStatusNote_ = insertedLineNumber > 0
-                ? tr("Complete Draft wrote %1 geometry at source line %2.").arg(successLabel, QString::number(insertedLineNumber))
-                : tr("Complete Draft wrote %1 geometry to source.").arg(successLabel);
-        });
-    return applied;
+    const TextEditorSourceTransactionResult transactionResult =
+        applySourceTextChangeWithSnapshot(
+            tr("Complete Draft"),
+            beforeText,
+            afterText,
+            insertedLineNumber,
+            [this, successLabel, insertedLineNumber]() {
+                toolbarStatusNote_ = insertedLineNumber > 0
+                    ? tr("Complete Draft wrote %1 geometry at source line %2.").arg(successLabel, QString::number(insertedLineNumber))
+                    : tr("Complete Draft wrote %1 geometry to source.").arg(successLabel);
+            });
+    return transactionResult == TextEditorSourceTransactionResult::Applied;
 }
 
 bool MapEditorTab::previewSmartAreaAt(const QPointF &scenePosition)
@@ -388,19 +388,18 @@ bool MapEditorTab::commitSmartAreaPreview()
         return false;
     }
 
-    bool applied = false;
-    applySourceTextChangeWithSnapshot(
-        tr("Insert Smart Area"),
-        beforeText,
-        afterText,
-        insertedLineNumber,
-        [this, insertedLineNumber, &applied]() {
-            applied = true;
-            toolbarStatusNote_ = insertedLineNumber > 0
-                ? tr("Smart Area inserted at source line %1.").arg(insertedLineNumber)
-                : tr("Smart Area inserted.");
-        });
-    return applied;
+    const TextEditorSourceTransactionResult transactionResult =
+        applySourceTextChangeWithSnapshot(
+            tr("Insert Smart Area"),
+            beforeText,
+            afterText,
+            insertedLineNumber,
+            [this, insertedLineNumber]() {
+                toolbarStatusNote_ = insertedLineNumber > 0
+                    ? tr("Smart Area inserted at source line %1.").arg(insertedLineNumber)
+                    : tr("Smart Area inserted.");
+            });
+    return transactionResult == TextEditorSourceTransactionResult::Applied;
 }
 
 QPointF MapEditorTab::scenePointFromSourcePosition(const QPointF &sourcePosition) const

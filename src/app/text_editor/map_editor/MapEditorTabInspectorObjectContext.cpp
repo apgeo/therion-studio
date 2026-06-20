@@ -16,6 +16,7 @@ MapEditorInspectorObjectContext MapEditorTab::inspectorObjectContext()
         .pressedNameIndex = &inspectorObjectPressedNameIndex_,
         .pressedWasSelected = &inspectorObjectPressedWasSelected_,
         .updatingSelection = &updatingMapInspectorObjectSelection_,
+        .autoCollapseExpandScraps = &objectsInspectorAutoCollapseExpandScrapsEnabled_,
         .lastClickedLineNumber = &lastInspectorClickedObjectLineNumber_,
         .suppressedAutoReselectLineNumbers = &suppressedInspectorAutoReselectLineNumbers_,
         .selectedObjectLineNumber = &objectSelectionState_.selectedObjectLineNumber_,

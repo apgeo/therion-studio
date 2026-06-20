@@ -31,6 +31,11 @@ Active planning only. Completed history belongs in archive files. Stable archite
   deleting a whole selected line unless an actual vertex/control handle is selected.
 - Keep map background layer refreshes isolated from viewport-only command-surface updates so loaded raster/XVI metadata
   does not cause inspector blinking or interrupt line vertex/control-handle interaction.
+- Keep Objects inspector scrap expansion user-driven by default: source refreshes and text cursor navigation preserve manually
+  collapsed scraps, while selecting a map object inside a collapsed scrap reveals that object. The persisted
+  `Auto-collapse/expand Scraps` toggle switches the inspector to a focused mode that keeps only the selected
+  object's scrap expanded without briefly expanding or repainting other scraps during source-driven object-tree
+  refreshes, including raw-editor navigation while the map pane is detached.
 - Keep selected map line/area vertex markers close to XTherion styling: larger red anchor circles with blue
   outlines, smaller blue control-point squares, and a red focused-vertex halo.
 - Keep empty scrap object cleanup explicit through validator warnings and `Apply Fix`, not silent source mutation.

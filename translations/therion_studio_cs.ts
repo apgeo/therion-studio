@@ -5578,6 +5578,16 @@ subtype blocks</translation>
         <translation>Objekty</translation>
     </message>
     <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="494"/>
+        <source>Auto-collapse/expand Scraps</source>
+        <translation>Automaticky sbalit/rozbalit scrapy</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="497"/>
+        <source>Keep only the selected object's scrap expanded in the Objects inspector.</source>
+        <translation>V inspektoru Objekty nechá rozbalený jen scrap vybraného objektu.</translation>
+    </message>
+    <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundUi.cpp" line="44"/>
         <source>Layers</source>
         <translation>Vrstvy</translation>

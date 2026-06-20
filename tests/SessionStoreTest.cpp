@@ -49,6 +49,7 @@ int runInstanceBackedRoundTripTest()
         store.setTherionTargetConfigPath(QStringLiteral("/tmp/project/thconfig"));
         store.setTherionMapTouchFriendlyControlsEnabled(true);
         store.setTherionMapMagnifierEnabled(false);
+        store.setTherionMapObjectsAutoCollapseExpandScrapsEnabled(true);
         store.setTherionMapBackgroundLayers(QStringLiteral("[]"));
     }
 
@@ -123,6 +124,10 @@ int runInstanceBackedRoundTripTest()
     }
     if (!expect(!store.therionMapMagnifierEnabled(),
                 "Map magnifier flag should round-trip through the injected settings file.")) {
+        return 1;
+    }
+    if (!expect(store.therionMapObjectsAutoCollapseExpandScrapsEnabled(),
+                "Map objects auto-collapse/expand scraps flag should round-trip through the injected settings file.")) {
         return 1;
     }
     if (!expect(store.therionMapBackgroundLayers() == QStringLiteral("[]"),
@@ -229,6 +234,10 @@ int runDefaultsTest()
                 "Default map magnifier flag should be true.")) {
         return 1;
     }
+    if (!expect(!store.therionMapObjectsAutoCollapseExpandScrapsEnabled(),
+                "Default map objects auto-collapse/expand scraps flag should be false.")) {
+        return 1;
+    }
 
     return 0;
 }
@@ -261,6 +270,10 @@ int runInMemoryStoreTest()
     if (!expect(store.therionMapMagnifierEnabled(), "In-memory store should default map magnifier to true.")) {
         return 1;
     }
+    if (!expect(!store.therionMapObjectsAutoCollapseExpandScrapsEnabled(),
+                "In-memory store should default map objects auto-collapse/expand scraps to false.")) {
+        return 1;
+    }
 
     store.setLastProjectPath(QStringLiteral("/tmp/project"));
     store.setLastProjectParentDirectory(QStringLiteral("/tmp"));
@@ -272,6 +285,7 @@ int runInMemoryStoreTest()
     store.setDefaultTextEditorMode(QStringLiteral("blocks"));
     store.setTherionExecutablePath(QStringLiteral("/usr/bin/therion"));
     store.setTherionMapMagnifierEnabled(false);
+    store.setTherionMapObjectsAutoCollapseExpandScrapsEnabled(true);
 
     if (!expect(store.lastProjectPath() == QStringLiteral("/tmp/project"),
                 "In-memory store should retain project path in the current process.")) {
@@ -309,6 +323,10 @@ int runInMemoryStoreTest()
     }
     if (!expect(!store.therionMapMagnifierEnabled(),
                 "In-memory store should retain map magnifier preference in the current process.")) {
+        return 1;
+    }
+    if (!expect(store.therionMapObjectsAutoCollapseExpandScrapsEnabled(),
+                "In-memory store should retain map objects auto-collapse/expand scraps preference.")) {
         return 1;
     }
 

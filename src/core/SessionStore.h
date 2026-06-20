@@ -76,6 +76,9 @@ public:
     bool therionMapMagnifierEnabled() const override;
     void setTherionMapMagnifierEnabled(bool enabled) override;
 
+    bool therionMapObjectsAutoCollapseExpandScrapsEnabled() const override;
+    void setTherionMapObjectsAutoCollapseExpandScrapsEnabled(bool enabled) override;
+
     QString therionMapBackgroundLayers() const override;
     void setTherionMapBackgroundLayers(const QString &json) override;
 
@@ -137,6 +140,9 @@ public:
     bool therionMapMagnifierEnabled() const override;
     void setTherionMapMagnifierEnabled(bool enabled) override;
 
+    bool therionMapObjectsAutoCollapseExpandScrapsEnabled() const override;
+    void setTherionMapObjectsAutoCollapseExpandScrapsEnabled(bool enabled) override;
+
     QString therionMapBackgroundLayers() const override;
     void setTherionMapBackgroundLayers(const QString &json) override;
 
@@ -158,6 +164,7 @@ private:
     QString therionTargetConfigPath_;
     bool therionMapTouchFriendlyControlsEnabled_ = false;
     bool therionMapMagnifierEnabled_ = true;
+    bool therionMapObjectsAutoCollapseExpandScrapsEnabled_ = false;
     QString therionMapBackgroundLayers_;
 };
 }

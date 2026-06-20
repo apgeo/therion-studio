@@ -583,11 +583,14 @@ private:
     QModelIndex findInspectorObjectIndexForLine(int lineNumber) const;
     void syncInspectorObjectSelectionToLine(int lineNumber);
     void syncInspectorObjectSelectionToLine(int lineNumber, bool scrollToSelection);
+    void syncInspectorObjectSelectionToLineExpanding(int lineNumber, bool scrollToSelection);
+    void syncInspectorObjectSelectionToLineForNavigation(int lineNumber, bool scrollToSelection = true);
     void setInspectorObjectCurrentIndex(const QModelIndex &index);
     void configureInspectorObjectTreeColumns();
     void clearInspectorObjectSelection(const QSet<int> &suppressAutoReselectLineNumbers = {});
     void handleInspectorObjectSelectionChanged(const QModelIndex &current);
     void handleInspectorObjectClicked(const QModelIndex &index);
+    void setObjectsInspectorAutoCollapseExpandScrapsEnabled(bool enabled);
     std::optional<bool> handleInspectorObjectViewportEvent(QEvent *event);
     void applyInspectorObjectVisibility();
     void configureInspectorBackgroundLayerTreeColumns();
@@ -659,6 +662,7 @@ private:
     QTabWidget *mapInspectorTabs_ = nullptr;
     int mapInspectorBackgroundTabIndex_ = -1;
     QFrame *mapInspectorLeftEdge_ = nullptr;
+    QCheckBox *mapObjectsAutoCollapseExpandScrapsCheck_ = nullptr;
     QTreeView *mapObjectsTree_ = nullptr;
     QStandardItemModel *mapObjectsModel_ = nullptr;
     QTreeView *mapBackgroundLayersTree_ = nullptr;
@@ -688,6 +692,7 @@ private:
     QPointer<QWidget> inspectorObjectDropIndicator_;
     int lastInspectorClickedObjectLineNumber_ = 0;
     QSet<int> suppressedInspectorAutoReselectLineNumbers_;
+    bool objectsInspectorAutoCollapseExpandScrapsEnabled_ = false;
     ObjectDetailsUiState objectDetailsUiState_;
     ObjectSelectionState objectSelectionState_;
     QSplitter *splitter_ = nullptr;

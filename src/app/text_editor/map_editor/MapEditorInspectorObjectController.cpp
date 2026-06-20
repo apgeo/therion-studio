@@ -62,6 +62,41 @@ bool requireSourceTransaction(const MapEditorInspectorObjectContext &context, co
     }
     return false;
 }
+
+class InspectorObjectTreeVisualGuard final
+{
+public:
+    explicit InspectorObjectTreeVisualGuard(QTreeView *tree)
+        : tree_(tree)
+        , updatesEnabled_(tree != nullptr && tree->updatesEnabled())
+        , animated_(tree != nullptr && tree->isAnimated())
+    {
+        if (tree_ == nullptr) {
+            return;
+        }
+
+        tree_->setUpdatesEnabled(false);
+        tree_->setAnimated(false);
+    }
+
+    ~InspectorObjectTreeVisualGuard()
+    {
+        if (tree_ == nullptr) {
+            return;
+        }
+
+        tree_->setAnimated(animated_);
+        tree_->setUpdatesEnabled(updatesEnabled_);
+        if (updatesEnabled_ && tree_->viewport() != nullptr) {
+            tree_->viewport()->update();
+        }
+    }
+
+private:
+    QTreeView *tree_ = nullptr;
+    bool updatesEnabled_ = true;
+    bool animated_ = true;
+};
 }
 
 MapEditorInspectorObjectController::MapEditorInspectorObjectController(MapEditorInspectorObjectContext context)
@@ -80,6 +115,10 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
         return;
     }
 
+    const bool autoCollapseExpandScraps =
+        context_.autoCollapseExpandScraps != nullptr && *context_.autoCollapseExpandScraps;
+    const QSet<int> collapsedScrapLines = collapsedScrapLineNumbers();
+    const InspectorObjectTreeVisualGuard visualGuard(autoCollapseExpandScraps ? context_.objectsTree : nullptr);
     *context_.pressedNameIndex = QPersistentModelIndex();
     *context_.pressedWasSelected = false;
     context_.objectsModel->clear();
@@ -189,11 +228,21 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
         }
     }
 
-    if (context_.objectsTree != nullptr) {
-        context_.objectsTree->expandAll();
-    }
     applyInspectorObjectVisibility();
-    syncInspectorObjectSelectionToLine(context_.currentLineNumber());
+    if (autoCollapseExpandScraps) {
+        const int selectedLineNumber = context_.selectedObjectLineNumber != nullptr
+            ? *context_.selectedObjectLineNumber
+            : 0;
+        if (selectedLineNumber > 0) {
+            syncInspectorObjectSelectionToLine(selectedLineNumber, true, true);
+        } else {
+            collapseAllInspectorObjectScraps();
+            syncInspectorObjectSelectionToLine(context_.currentLineNumber(), true, false);
+        }
+    } else {
+        restoreInspectorObjectExpansion(collapsedScrapLines);
+        syncInspectorObjectSelectionToLine(context_.currentLineNumber(), true, false);
+    }
 }
 
 void MapEditorInspectorObjectController::configureInspectorObjectTreeColumns()
@@ -255,10 +304,22 @@ QModelIndex MapEditorInspectorObjectController::findInspectorObjectIndexForLine(
 
 void MapEditorInspectorObjectController::syncInspectorObjectSelectionToLine(int lineNumber)
 {
-    syncInspectorObjectSelectionToLine(lineNumber, true);
+    syncInspectorObjectSelectionToLine(lineNumber, true, false);
 }
 
 void MapEditorInspectorObjectController::syncInspectorObjectSelectionToLine(int lineNumber, bool scrollToSelection)
+{
+    syncInspectorObjectSelectionToLine(lineNumber, scrollToSelection, false);
+}
+
+void MapEditorInspectorObjectController::syncInspectorObjectSelectionToLineExpanding(int lineNumber, bool scrollToSelection)
+{
+    syncInspectorObjectSelectionToLine(lineNumber, scrollToSelection, true);
+}
+
+void MapEditorInspectorObjectController::syncInspectorObjectSelectionToLine(int lineNumber,
+                                                                            bool scrollToSelection,
+                                                                            bool expandAncestors)
 {
     if (context_.objectsTree == nullptr || context_.objectsTree->selectionModel() == nullptr || lineNumber <= 0) {
         return;
@@ -278,6 +339,13 @@ void MapEditorInspectorObjectController::syncInspectorObjectSelectionToLine(int 
     *context_.lastClickedLineNumber = 0;
     const QScopedValueRollback<bool> guard(*context_.updatingSelection, true);
     QSignalBlocker blocker(context_.objectsTree->selectionModel());
+    if (expandAncestors) {
+        if (context_.autoCollapseExpandScraps != nullptr && *context_.autoCollapseExpandScraps) {
+            focusInspectorObjectScrap(targetIndex);
+        } else {
+            expandInspectorObjectAncestors(targetIndex);
+        }
+    }
     setInspectorObjectCurrentIndex(targetIndex);
     if (scrollToSelection) {
         context_.objectsTree->scrollTo(targetIndex, QAbstractItemView::EnsureVisible);
@@ -335,6 +403,9 @@ void MapEditorInspectorObjectController::handleInspectorObjectSelectionChanged(c
     const QModelIndex objectIndex = current.sibling(current.row(), kInspectorObjectNameColumn);
     const int lineNumber = objectIndex.data(kInspectorSourceLineRole).toInt();
     if (lineNumber > 0) {
+        if (context_.autoCollapseExpandScraps != nullptr && *context_.autoCollapseExpandScraps) {
+            focusInspectorObjectScrap(objectIndex);
+        }
         context_.textEditor->goToLine(lineNumber);
         context_.syncMapSelectionFromTextCursor(lineNumber, context_.textEditor->currentColumnNumber());
         *context_.lastClickedLineNumber = lineNumber;
@@ -588,5 +659,146 @@ void MapEditorInspectorObjectController::applyInspectorObjectVisibility()
     }
 
     context_.updateGeometrySelectionPresentation();
+}
+
+QSet<int> MapEditorInspectorObjectController::collapsedScrapLineNumbers() const
+{
+    QSet<int> collapsedScrapLines;
+    if (context_.objectsTree == nullptr || context_.objectsModel == nullptr || context_.objectsModel->rowCount() <= 0) {
+        return collapsedScrapLines;
+    }
+
+    std::function<void(const QModelIndex &)> visitNode = [&](const QModelIndex &parentIndex) {
+        const int rowCount = context_.objectsModel->rowCount(parentIndex);
+        for (int row = 0; row < rowCount; ++row) {
+            const QModelIndex childIndex = context_.objectsModel->index(row, kInspectorObjectNameColumn, parentIndex);
+            if (!childIndex.isValid()) {
+                continue;
+            }
+
+            const int lineNumber = childIndex.data(kInspectorSourceLineRole).toInt();
+            const QString category = childIndex.data(kInspectorObjectCategoryRole).toString();
+            if (lineNumber > 0 && isScrapCategory(category) && !context_.objectsTree->isExpanded(childIndex)) {
+                collapsedScrapLines.insert(lineNumber);
+            }
+
+            visitNode(childIndex);
+        }
+    };
+    visitNode(QModelIndex());
+    return collapsedScrapLines;
+}
+
+void MapEditorInspectorObjectController::restoreInspectorObjectExpansion(const QSet<int> &collapsedScrapLines)
+{
+    if (context_.objectsTree == nullptr || context_.objectsModel == nullptr) {
+        return;
+    }
+
+    context_.objectsTree->expandAll();
+    if (collapsedScrapLines.isEmpty()) {
+        return;
+    }
+
+    std::function<void(const QModelIndex &)> visitNode = [&](const QModelIndex &parentIndex) {
+        const int rowCount = context_.objectsModel->rowCount(parentIndex);
+        for (int row = 0; row < rowCount; ++row) {
+            const QModelIndex childIndex = context_.objectsModel->index(row, kInspectorObjectNameColumn, parentIndex);
+            if (!childIndex.isValid()) {
+                continue;
+            }
+
+            const int lineNumber = childIndex.data(kInspectorSourceLineRole).toInt();
+            const QString category = childIndex.data(kInspectorObjectCategoryRole).toString();
+            if (lineNumber > 0 && isScrapCategory(category) && collapsedScrapLines.contains(lineNumber)) {
+                context_.objectsTree->collapse(childIndex);
+            }
+
+            visitNode(childIndex);
+        }
+    };
+    visitNode(QModelIndex());
+}
+
+void MapEditorInspectorObjectController::expandInspectorObjectAncestors(const QModelIndex &index)
+{
+    if (context_.objectsTree == nullptr || !index.isValid()) {
+        return;
+    }
+
+    QModelIndex parentIndex = index.parent();
+    while (parentIndex.isValid()) {
+        context_.objectsTree->expand(parentIndex);
+        parentIndex = parentIndex.parent();
+    }
+}
+
+void MapEditorInspectorObjectController::focusInspectorObjectScrap(const QModelIndex &index)
+{
+    if (context_.objectsTree == nullptr || context_.objectsModel == nullptr || !index.isValid()) {
+        return;
+    }
+
+    QSet<int> focusedScrapLines;
+    QModelIndex ancestorIndex = index;
+    while (ancestorIndex.isValid()) {
+        const int lineNumber = ancestorIndex.data(kInspectorSourceLineRole).toInt();
+        const QString category = ancestorIndex.data(kInspectorObjectCategoryRole).toString();
+        if (lineNumber > 0 && isScrapCategory(category)) {
+            focusedScrapLines.insert(lineNumber);
+        }
+        ancestorIndex = ancestorIndex.parent();
+    }
+
+    expandInspectorObjectAncestors(index);
+
+    std::function<void(const QModelIndex &)> visitNode = [&](const QModelIndex &parentIndex) {
+        const int rowCount = context_.objectsModel->rowCount(parentIndex);
+        for (int row = 0; row < rowCount; ++row) {
+            const QModelIndex childIndex = context_.objectsModel->index(row, kInspectorObjectNameColumn, parentIndex);
+            if (!childIndex.isValid()) {
+                continue;
+            }
+
+            const int lineNumber = childIndex.data(kInspectorSourceLineRole).toInt();
+            const QString category = childIndex.data(kInspectorObjectCategoryRole).toString();
+            if (lineNumber > 0 && isScrapCategory(category)) {
+                if (focusedScrapLines.contains(lineNumber)) {
+                    context_.objectsTree->expand(childIndex);
+                } else {
+                    context_.objectsTree->collapse(childIndex);
+                }
+            }
+
+            visitNode(childIndex);
+        }
+    };
+    visitNode(QModelIndex());
+}
+
+void MapEditorInspectorObjectController::collapseAllInspectorObjectScraps()
+{
+    if (context_.objectsTree == nullptr || context_.objectsModel == nullptr) {
+        return;
+    }
+
+    std::function<void(const QModelIndex &)> visitNode = [&](const QModelIndex &parentIndex) {
+        const int rowCount = context_.objectsModel->rowCount(parentIndex);
+        for (int row = 0; row < rowCount; ++row) {
+            const QModelIndex childIndex = context_.objectsModel->index(row, kInspectorObjectNameColumn, parentIndex);
+            if (!childIndex.isValid()) {
+                continue;
+            }
+
+            const int lineNumber = childIndex.data(kInspectorSourceLineRole).toInt();
+            const QString category = childIndex.data(kInspectorObjectCategoryRole).toString();
+            if (lineNumber > 0 && isScrapCategory(category)) {
+                context_.objectsTree->collapse(childIndex);
+            }
+
+            visitNode(childIndex);
+        }
+    };
+    visitNode(QModelIndex());
 }
 }

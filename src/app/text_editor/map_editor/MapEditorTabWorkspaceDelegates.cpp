@@ -202,7 +202,7 @@ void MapEditorTab::handleTextEditorCurrentLineChanged(int lineNumber)
     if (!selectionSyncState_.textNavigationInProgress_) {
         syncMapSelectionFromTextCursor(lineNumber, textEditor_ != nullptr ? textEditor_->currentColumnNumber() : 1);
     }
-    syncInspectorObjectSelectionToLine(lineNumber);
+    syncInspectorObjectSelectionToLineForNavigation(lineNumber);
     emit currentLineChanged(lineNumber);
 }
 

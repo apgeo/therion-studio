@@ -491,6 +491,17 @@ void MapEditorTab::buildInspectorPanelUi()
     auto *objectsTab = inspectorPanel->addPlainTab(tr("Objects"));
     auto *objectsLayout = qobject_cast<QVBoxLayout *>(objectsTab->layout());
 
+    mapObjectsAutoCollapseExpandScrapsCheck_ = new QCheckBox(tr("Auto-collapse/expand Scraps"), objectsTab);
+    mapObjectsAutoCollapseExpandScrapsCheck_->setObjectName(QStringLiteral("mapObjectsAutoCollapseExpandScrapsCheck"));
+    mapObjectsAutoCollapseExpandScrapsCheck_->setToolTip(
+        tr("Keep only the selected object's scrap expanded in the Objects inspector."));
+    mapObjectsAutoCollapseExpandScrapsCheck_->setChecked(objectsInspectorAutoCollapseExpandScrapsEnabled_);
+    connect(mapObjectsAutoCollapseExpandScrapsCheck_,
+            &QCheckBox::toggled,
+            this,
+            &MapEditorTab::setObjectsInspectorAutoCollapseExpandScrapsEnabled);
+    objectsLayout->addWidget(mapObjectsAutoCollapseExpandScrapsCheck_);
+
     mapObjectsTree_ = new QTreeView(objectsTab);
     mapObjectsTree_->setObjectName(QStringLiteral("mapObjectsTree"));
     mapObjectsTree_->setRootIsDecorated(true);

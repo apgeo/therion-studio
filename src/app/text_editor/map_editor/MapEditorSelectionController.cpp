@@ -803,6 +803,9 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
     }
 
     if (selectedCard != nullptr) {
+        if (selectedSourceLineNumber > 0 && context_.syncInspectorObjectSelectionToLineExpanding) {
+            context_.syncInspectorObjectSelectionToLineExpanding(selectedSourceLineNumber);
+        }
         updateGeometrySelectionPresentation();
         context_.updateCommandSurfaceState();
         context_.updateHelpPanel();
@@ -823,6 +826,9 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
                                   selectedLineNumber);
     }
 
+    if (selectedSourceLineNumber > 0 && context_.syncInspectorObjectSelectionToLineExpanding) {
+        context_.syncInspectorObjectSelectionToLineExpanding(selectedSourceLineNumber);
+    }
     updateGeometrySelectionPresentation();
     context_.updateCommandSurfaceState();
     context_.updateHelpPanel();

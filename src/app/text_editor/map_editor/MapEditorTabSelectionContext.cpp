@@ -52,6 +52,9 @@ MapEditorSelectionContext MapEditorTab::selectionContext()
         .clearInspectorObjectSelection = [this]() {
             clearInspectorObjectSelection();
         },
+        .syncInspectorObjectSelectionToLineExpanding = [this](int lineNumber) {
+            syncInspectorObjectSelectionToLineExpanding(lineNumber, true);
+        },
     };
 }
 

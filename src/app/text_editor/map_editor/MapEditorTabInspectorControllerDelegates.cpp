@@ -20,6 +20,7 @@
 #include "MapEditorInspectorObjectController.h"
 #include "MapEditorObjectDetailsEditController.h"
 #include "MapEditorObjectDetailsPanelController.h"
+#include "../../../core/ISessionStore.h"
 
 #include <optional>
 
@@ -56,6 +57,20 @@ void MapEditorTab::syncInspectorObjectSelectionToLine(int lineNumber, bool scrol
     MapEditorInspectorObjectController(inspectorObjectContext()).syncInspectorObjectSelectionToLine(lineNumber, scrollToSelection);
 }
 
+void MapEditorTab::syncInspectorObjectSelectionToLineExpanding(int lineNumber, bool scrollToSelection)
+{
+    MapEditorInspectorObjectController(inspectorObjectContext()).syncInspectorObjectSelectionToLineExpanding(lineNumber, scrollToSelection);
+}
+
+void MapEditorTab::syncInspectorObjectSelectionToLineForNavigation(int lineNumber, bool scrollToSelection)
+{
+    if (objectsInspectorAutoCollapseExpandScrapsEnabled_) {
+        syncInspectorObjectSelectionToLineExpanding(lineNumber, scrollToSelection);
+    } else {
+        syncInspectorObjectSelectionToLine(lineNumber, scrollToSelection);
+    }
+}
+
 void MapEditorTab::setInspectorObjectCurrentIndex(const QModelIndex &index)
 {
     MapEditorInspectorObjectController(inspectorObjectContext()).setInspectorObjectCurrentIndex(index);
@@ -74,6 +89,28 @@ void MapEditorTab::handleInspectorObjectSelectionChanged(const QModelIndex &curr
 void MapEditorTab::handleInspectorObjectClicked(const QModelIndex &index)
 {
     MapEditorInspectorObjectController(inspectorObjectContext()).handleInspectorObjectClicked(index);
+}
+
+void MapEditorTab::setObjectsInspectorAutoCollapseExpandScrapsEnabled(bool enabled)
+{
+    if (objectsInspectorAutoCollapseExpandScrapsEnabled_ == enabled) {
+        return;
+    }
+
+    objectsInspectorAutoCollapseExpandScrapsEnabled_ = enabled;
+    if (sessionStore_ != nullptr) {
+        sessionStore_->setTherionMapObjectsAutoCollapseExpandScrapsEnabled(enabled);
+    }
+
+    if (mapObjectsAutoCollapseExpandScrapsCheck_ != nullptr
+        && mapObjectsAutoCollapseExpandScrapsCheck_->isChecked() != enabled) {
+        QSignalBlocker blocker(mapObjectsAutoCollapseExpandScrapsCheck_);
+        mapObjectsAutoCollapseExpandScrapsCheck_->setChecked(enabled);
+    }
+
+    if (enabled && objectSelectionState_.selectedObjectLineNumber_ > 0) {
+        syncInspectorObjectSelectionToLineExpanding(objectSelectionState_.selectedObjectLineNumber_, true);
+    }
 }
 
 void MapEditorTab::applyInspectorObjectVisibility()

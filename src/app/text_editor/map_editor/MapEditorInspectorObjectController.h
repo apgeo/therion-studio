@@ -17,6 +17,7 @@ public:
     QModelIndex findInspectorObjectIndexForLine(int lineNumber) const;
     void syncInspectorObjectSelectionToLine(int lineNumber);
     void syncInspectorObjectSelectionToLine(int lineNumber, bool scrollToSelection);
+    void syncInspectorObjectSelectionToLineExpanding(int lineNumber, bool scrollToSelection);
     void setInspectorObjectCurrentIndex(const QModelIndex &index);
     void clearInspectorObjectSelection(const QSet<int> &suppressAutoReselectLineNumbers = {});
     void handleInspectorObjectSelectionChanged(const QModelIndex &current);
@@ -26,6 +27,12 @@ public:
 
 private:
     QString tr(const char *text) const;
+    void syncInspectorObjectSelectionToLine(int lineNumber, bool scrollToSelection, bool expandAncestors);
+    QSet<int> collapsedScrapLineNumbers() const;
+    void restoreInspectorObjectExpansion(const QSet<int> &collapsedScrapLines);
+    void expandInspectorObjectAncestors(const QModelIndex &index);
+    void focusInspectorObjectScrap(const QModelIndex &index);
+    void collapseAllInspectorObjectScraps();
 
     MapEditorInspectorObjectContext context_;
 };

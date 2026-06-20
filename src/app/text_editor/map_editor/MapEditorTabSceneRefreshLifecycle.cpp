@@ -89,7 +89,7 @@ void MapEditorTab::applyPendingNavigationSelection(bool consume)
     }
 
     syncMapSelectionFromTextCursor(lineNumber, textEditor_->currentColumnNumber());
-    syncInspectorObjectSelectionToLine(lineNumber);
+    syncInspectorObjectSelectionToLineForNavigation(lineNumber);
     if (consume) {
         selectionSyncState_.pendingNavigationLineNumber_ = 0;
     }

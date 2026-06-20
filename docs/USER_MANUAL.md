@@ -326,7 +326,7 @@ The `Preview` row shows how the selected or pending object will look. The previe
 
 ### 6.9 Objects and Backgrounds
 
-In `Inspector -> Objects`, you can select objects, reorder objects by drag/drop, toggle visibility in the current view, and delete objects with confirmation.
+In `Inspector -> Objects`, you can select objects, reorder objects by drag/drop, toggle visibility in the current view, and delete objects with confirmation. By default, manually collapsed scraps stay collapsed across object-tree refreshes and text-cursor navigation. Selecting a map object in a collapsed scrap expands that scrap so the selected object is visible. Turn on `Auto-collapse/expand Scraps` in this tab when you want the inspector to keep only the selected object's scrap expanded and collapse the other scraps automatically.
 
 In `Inspector -> Backgrounds`, you can:
 

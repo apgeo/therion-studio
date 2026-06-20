@@ -52,5 +52,6 @@ struct MapEditorSelectionContext
     std::function<void()> updateHelpPanel;
     std::function<void()> refreshObjectDetailsPanel;
     std::function<void()> clearInspectorObjectSelection;
+    std::function<void(int)> syncInspectorObjectSelectionToLineExpanding;
 };
 }

@@ -62,6 +62,9 @@ public:
     virtual bool therionMapMagnifierEnabled() const = 0;
     virtual void setTherionMapMagnifierEnabled(bool enabled) = 0;
 
+    virtual bool therionMapObjectsAutoCollapseExpandScrapsEnabled() const = 0;
+    virtual void setTherionMapObjectsAutoCollapseExpandScrapsEnabled(bool enabled) = 0;
+
     virtual QString therionMapBackgroundLayers() const = 0;
     virtual void setTherionMapBackgroundLayers(const QString &json) = 0;
 };

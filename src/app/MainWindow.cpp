@@ -870,6 +870,8 @@ void MainWindow::createNewWindow()
         sessionStore->setTherionExecutablePath(sessionStore_->therionExecutablePath());
         sessionStore->setTherionRunTargetMode(sessionStore_->therionRunTargetMode());
         sessionStore->setTherionMapMagnifierEnabled(sessionStore_->therionMapMagnifierEnabled());
+        sessionStore->setTherionMapObjectsAutoCollapseExpandScrapsEnabled(
+            sessionStore_->therionMapObjectsAutoCollapseExpandScrapsEnabled());
         sessionStore->setLastProjectParentDirectory(sessionStore_->lastProjectParentDirectory());
         sessionStore->setRecentProjectPaths(sessionStore_->recentProjectPaths());
     }

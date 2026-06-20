@@ -29,6 +29,7 @@ struct MapEditorInspectorObjectContext
     QPersistentModelIndex *pressedNameIndex = nullptr;
     bool *pressedWasSelected = nullptr;
     bool *updatingSelection = nullptr;
+    bool *autoCollapseExpandScraps = nullptr;
     int *lastClickedLineNumber = nullptr;
     QSet<int> *suppressedAutoReselectLineNumbers = nullptr;
     int *selectedObjectLineNumber = nullptr;

@@ -5,6 +5,7 @@
 #include "FakeSessionStore.h"
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QCompleter>
 #include <QCoreApplication>
@@ -12,13 +13,18 @@
 #include <QEventLoop>
 #include <QFormLayout>
 #include <QGraphicsScene>
+#include <QGraphicsItem>
 #include <QGraphicsView>
 #include <QItemSelectionModel>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMainWindow>
+#include <QMouseEvent>
+#include <QPlainTextEdit>
 #include <QPushButton>
 #include <QTemporaryDir>
+#include <QTextCursor>
+#include <QThread>
 #include <QTabWidget>
 #include <QTreeView>
 #include <QVBoxLayout>
@@ -46,6 +52,16 @@ void pumpEvents()
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
 }
 
+void pumpEventsFor(int milliseconds)
+{
+    const int iterations = qMax(1, milliseconds / 10);
+    for (int index = 0; index < iterations; ++index) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 25);
+        QThread::msleep(10);
+    }
+    QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+}
+
 void sendKey(QWidget *widget, QEvent::Type type, int key, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
 {
     if (widget == nullptr) {
@@ -54,6 +70,29 @@ void sendKey(QWidget *widget, QEvent::Type type, int key, Qt::KeyboardModifiers 
 
     QKeyEvent event(type, key, modifiers);
     QCoreApplication::sendEvent(widget, &event);
+}
+
+void sendMouseClick(QWidget *widget, const QPoint &position)
+{
+    if (widget == nullptr) {
+        return;
+    }
+
+    const QPoint globalPosition = widget->mapToGlobal(position);
+    QMouseEvent pressEvent(QEvent::MouseButtonPress,
+                           position,
+                           globalPosition,
+                           Qt::LeftButton,
+                           Qt::LeftButton,
+                           Qt::NoModifier);
+    QCoreApplication::sendEvent(widget, &pressEvent);
+    QMouseEvent releaseEvent(QEvent::MouseButtonRelease,
+                             position,
+                             globalPosition,
+                             Qt::LeftButton,
+                             Qt::NoButton,
+                             Qt::NoModifier);
+    QCoreApplication::sendEvent(widget, &releaseEvent);
 }
 
 bool visibleNoSelectionLabel(QWidget *root)
@@ -215,6 +254,25 @@ QModelIndex treeIndexForSourceLine(QAbstractItemModel *model, int lineNumber, co
     }
 
     return QModelIndex();
+}
+
+QGraphicsItem *sceneItemForSourceLine(QGraphicsScene *scene, int lineNumber)
+{
+    if (scene == nullptr || lineNumber <= 0) {
+        return nullptr;
+    }
+
+    constexpr int kMapSceneLineNumberRoleForTest = Qt::UserRole + 121;
+    const QList<QGraphicsItem *> items = scene->items();
+    for (QGraphicsItem *item : items) {
+        if (item != nullptr
+            && item->data(kMapSceneLineNumberRoleForTest).toInt() == lineNumber
+            && item->flags().testFlag(QGraphicsItem::ItemIsSelectable)
+            && item->acceptedMouseButtons() != Qt::NoButton) {
+            return item;
+        }
+    }
+    return nullptr;
 }
 
 int tabIndexForChild(QTabWidget *tabs, QWidget *child)
@@ -390,6 +448,17 @@ int runSelectionPanelTypeValuesTest()
                 "Objects inspector tree was not found before testing Selection tab refresh.")) {
         return 1;
     }
+    auto *autoCollapseExpandScrapsCheck =
+        mapTab->findChild<QCheckBox *>(QStringLiteral("mapObjectsAutoCollapseExpandScrapsCheck"));
+    if (!expect(autoCollapseExpandScrapsCheck != nullptr,
+                "Objects inspector auto-collapse/expand scraps checkbox was not found.")) {
+        return 1;
+    }
+    if (!expect(!autoCollapseExpandScrapsCheck->isChecked()
+                    && !sessionStore.therionMapObjectsAutoCollapseExpandScrapsEnabled(),
+                "Objects inspector auto-collapse/expand scraps should be disabled by default.")) {
+        return 1;
+    }
     const int objectsTabIndex = tabIndexForChild(inspectorTabs, objectsTree);
     if (!expect(objectsTabIndex > 0,
                 "Objects inspector tab should be available after the Selection tab.")) {
@@ -400,9 +469,57 @@ int runSelectionPanelTypeValuesTest()
                 "Objects inspector tree should contain the line object from the TH2 fixture.")) {
         return 1;
     }
+    QModelIndex scrapObjectIndex = treeIndexForSourceLine(objectsTree->model(), 3);
+    if (!expect(scrapObjectIndex.isValid(),
+                "Objects inspector tree should contain the scrap object from the TH2 fixture before expansion checks.")) {
+        return 1;
+    }
+    objectsTree->collapse(scrapObjectIndex);
+    pumpEvents();
+    if (!expect(!objectsTree->isExpanded(scrapObjectIndex),
+                "Objects inspector test setup should be able to collapse the scrap row.")) {
+        return 1;
+    }
+    auto *sourceEditor = mapTab->findChild<QPlainTextEdit *>();
+    if (!expect(sourceEditor != nullptr,
+                "Embedded source editor was not found before testing Objects expansion preservation.")) {
+        return 1;
+    }
+    sourceEditor->moveCursor(QTextCursor::End);
+    sourceEditor->insertPlainText(QStringLiteral("\n# refresh expansion state\n"));
+    pumpEventsFor(200);
+    scrapObjectIndex = treeIndexForSourceLine(objectsTree->model(), 3);
+    if (!expect(scrapObjectIndex.isValid(),
+                "Objects inspector tree should still contain the scrap object after source refresh.")) {
+        return 1;
+    }
+    if (!expect(!objectsTree->isExpanded(scrapObjectIndex),
+                "Objects inspector should preserve manually collapsed scraps across source-driven rebuilds.")) {
+        return 1;
+    }
+    auto *lineSceneItem = sceneItemForSourceLine(mapView->scene(), 4);
+    if (!expect(lineSceneItem != nullptr,
+                "Map scene should contain the line object before testing map selection expansion.")) {
+        return 1;
+    }
+    mapView->centerOn(lineSceneItem);
+    pumpEvents();
+    const QPoint clickPosition = mapView->mapFromScene(lineSceneItem->sceneBoundingRect().center());
+    sendMouseClick(mapView->viewport(), clickPosition);
+    pumpEvents();
+    scrapObjectIndex = treeIndexForSourceLine(objectsTree->model(), 3);
+    if (!expect(scrapObjectIndex.isValid() && objectsTree->isExpanded(scrapObjectIndex),
+                "Selecting a map object inside a collapsed scrap should expand that scrap in the Objects inspector.")) {
+        return 1;
+    }
     inspectorTabs->setCurrentIndex(objectsTabIndex);
     pumpEvents();
-    objectsTree->selectionModel()->setCurrentIndex(lineObjectIndex,
+    const QModelIndex refreshedLineObjectIndex = treeIndexForSourceLine(objectsTree->model(), 4);
+    if (!expect(refreshedLineObjectIndex.isValid(),
+                "Objects inspector tree should contain the line object after expansion refresh.")) {
+        return 1;
+    }
+    objectsTree->selectionModel()->setCurrentIndex(refreshedLineObjectIndex,
                                                    QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
     pumpEvents();
     inspectorTabs->setCurrentIndex(0);
@@ -491,7 +608,7 @@ int runSelectionPanelTypeValuesTest()
                 "Point selection should keep the full object settings button after Value (-value).")) {
         return 1;
     }
-    const QModelIndex scrapObjectIndex = treeIndexForSourceLine(objectsTree->model(), 3);
+    scrapObjectIndex = treeIndexForSourceLine(objectsTree->model(), 3);
     if (!expect(scrapObjectIndex.isValid(),
                 "Objects inspector tree should contain the scrap object from the TH2 fixture.")) {
         return 1;
@@ -634,10 +751,168 @@ int runSelectionPanelTypeValuesTest()
 
     return 0;
 }
+
+int runObjectsInspectorAutoCollapseExpandScrapsTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory for Objects inspector focus test.")) {
+        return 1;
+    }
+
+    const QString filePath = tempDir.filePath(QStringLiteral("objects_auto_collapse_expand_scraps.th2"));
+    QFile file(filePath);
+    if (!expect(file.open(QIODevice::WriteOnly | QIODevice::Text),
+                "Failed to create temporary TH2 file for Objects inspector focus test.")) {
+        return 1;
+    }
+
+    const QByteArray th2Contents =
+        "encoding utf-8\n"
+        "\n"
+        "scrap primary-focus-test -projection plan\n"
+        "line border -id primary-border\n"
+        "  0 0\n"
+        "  50 0\n"
+        "endline\n"
+        "endscrap\n"
+        "scrap secondary-focus-test -projection plan\n"
+        "line border -id secondary-border\n"
+        "  100 100\n"
+        "  150 100\n"
+        "endline\n"
+        "endscrap\n";
+    file.write(th2Contents);
+    file.close();
+
+    QtFileSystem fileSystem;
+    FakeSessionStore sessionStore;
+    QMainWindow hostWindow;
+    hostWindow.resize(960, 720);
+    auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), &hostWindow);
+    hostWindow.setCentralWidget(mapTab);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                "MapEditorTab failed to load TH2 file for Objects inspector focus test.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+    pumpEvents();
+
+    auto *objectsTree = mapTab->findChild<QTreeView *>(QStringLiteral("mapObjectsTree"));
+    if (!expect(objectsTree != nullptr && objectsTree->selectionModel() != nullptr,
+                "Objects inspector tree was not found for auto-collapse/expand scraps test.")) {
+        return 1;
+    }
+    auto *autoCollapseExpandScrapsCheck =
+        mapTab->findChild<QCheckBox *>(QStringLiteral("mapObjectsAutoCollapseExpandScrapsCheck"));
+    if (!expect(autoCollapseExpandScrapsCheck != nullptr,
+                "Objects inspector auto-collapse/expand scraps checkbox was not found in focus test.")) {
+        return 1;
+    }
+    if (!expect(!autoCollapseExpandScrapsCheck->isChecked()
+                    && !sessionStore.therionMapObjectsAutoCollapseExpandScrapsEnabled(),
+                "Objects inspector auto-collapse/expand scraps should be disabled by default in focus test.")) {
+        return 1;
+    }
+
+    mapTab->goToLine(4);
+    pumpEvents();
+    QModelIndex primaryScrapIndex = treeIndexForSourceLine(objectsTree->model(), 3);
+    QModelIndex secondaryScrapIndex = treeIndexForSourceLine(objectsTree->model(), 9);
+    if (!expect(primaryScrapIndex.isValid() && secondaryScrapIndex.isValid(),
+                "Objects inspector should contain both scraps for auto-collapse/expand scraps test.")) {
+        return 1;
+    }
+    objectsTree->expand(secondaryScrapIndex);
+    pumpEvents();
+    if (!expect(objectsTree->isExpanded(secondaryScrapIndex),
+                "Objects inspector test setup should be able to expand the secondary scrap.")) {
+        return 1;
+    }
+
+    autoCollapseExpandScrapsCheck->setChecked(true);
+    pumpEvents();
+    primaryScrapIndex = treeIndexForSourceLine(objectsTree->model(), 3);
+    secondaryScrapIndex = treeIndexForSourceLine(objectsTree->model(), 9);
+    if (!expect(sessionStore.therionMapObjectsAutoCollapseExpandScrapsEnabled(),
+                "Objects inspector auto-collapse/expand scraps checkbox should persist to the session store.")) {
+        return 1;
+    }
+    if (!expect(primaryScrapIndex.isValid()
+                    && secondaryScrapIndex.isValid()
+                    && objectsTree->isExpanded(primaryScrapIndex)
+                    && !objectsTree->isExpanded(secondaryScrapIndex),
+                "Auto-collapse/expand scraps should keep the current object's scrap open and close other scraps.")) {
+        return 1;
+    }
+    auto *sourceEditor = mapTab->findChild<QPlainTextEdit *>();
+    if (!expect(sourceEditor != nullptr,
+                "Embedded source editor was not found before testing auto-collapse/expand scraps refresh.")) {
+        return 1;
+    }
+    sourceEditor->moveCursor(QTextCursor::End);
+    sourceEditor->insertPlainText(QStringLiteral("\n# refresh auto-collapse expansion state\n"));
+    pumpEventsFor(200);
+    primaryScrapIndex = treeIndexForSourceLine(objectsTree->model(), 3);
+    secondaryScrapIndex = treeIndexForSourceLine(objectsTree->model(), 9);
+    if (!expect(primaryScrapIndex.isValid()
+                    && secondaryScrapIndex.isValid()
+                    && objectsTree->isExpanded(primaryScrapIndex)
+                    && !objectsTree->isExpanded(secondaryScrapIndex),
+                "Auto-collapse/expand scraps should keep other scraps collapsed across source-driven rebuilds.")) {
+        return 1;
+    }
+
+    mapTab->goToLine(10);
+    pumpEvents();
+    primaryScrapIndex = treeIndexForSourceLine(objectsTree->model(), 3);
+    secondaryScrapIndex = treeIndexForSourceLine(objectsTree->model(), 9);
+    if (!expect(primaryScrapIndex.isValid()
+                    && secondaryScrapIndex.isValid()
+                    && !objectsTree->isExpanded(primaryScrapIndex)
+                    && objectsTree->isExpanded(secondaryScrapIndex),
+                "Auto-collapse/expand scraps should follow raw-editor object-line navigation.")) {
+        return 1;
+    }
+
+    auto *mapView = mapTab->findChild<QGraphicsView *>();
+    if (!expect(mapView != nullptr && mapView->scene() != nullptr,
+                "Map graphics view was not found for auto-collapse/expand scraps test.")) {
+        return 1;
+    }
+    QGraphicsItem *secondaryLineItem = sceneItemForSourceLine(mapView->scene(), 10);
+    if (!expect(secondaryLineItem != nullptr,
+                "Map scene should contain the secondary scrap line before testing focus switch.")) {
+        return 1;
+    }
+    mapView->centerOn(secondaryLineItem);
+    pumpEvents();
+    sendMouseClick(mapView->viewport(), mapView->mapFromScene(secondaryLineItem->sceneBoundingRect().center()));
+    pumpEvents();
+    primaryScrapIndex = treeIndexForSourceLine(objectsTree->model(), 3);
+    secondaryScrapIndex = treeIndexForSourceLine(objectsTree->model(), 9);
+    if (!expect(primaryScrapIndex.isValid()
+                    && secondaryScrapIndex.isValid()
+                    && !objectsTree->isExpanded(primaryScrapIndex)
+                    && objectsTree->isExpanded(secondaryScrapIndex),
+                "Selecting an object in another scrap should expand that scrap and collapse the previous scrap.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
-    return runSelectionPanelTypeValuesTest();
+    if (const int result = runSelectionPanelTypeValuesTest(); result != 0) {
+        return result;
+    }
+    return runObjectsInspectorAutoCollapseExpandScrapsTest();
 }

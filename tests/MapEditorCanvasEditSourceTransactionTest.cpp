@@ -359,12 +359,17 @@ int runStaleSourceChangeIsSkippedTest()
     tab.applySourceSnapshotForTransaction(concurrentText);
     pumpEvents();
 
-    controller.applySourceTextChangeWithSnapshot(QStringLiteral("Insert Map Point"),
-                                                 beforeText,
-                                                 plannedAfterText,
-                                                 3);
+    const TextEditorSourceTransactionResult result =
+        controller.applySourceTextChangeWithSnapshot(QStringLiteral("Insert Map Point"),
+                                                     beforeText,
+                                                     plannedAfterText,
+                                                     3);
     pumpEvents();
 
+    if (!expect(result == TextEditorSourceTransactionResult::Stale,
+                "Stale map source change should report a stale transaction result.")) {
+        return 1;
+    }
     if (!expect(tab.text() == concurrentText,
                 "Stale map source change should not overwrite newer document text.")) {
         return 1;

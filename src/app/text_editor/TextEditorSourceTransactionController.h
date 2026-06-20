@@ -26,6 +26,15 @@ enum class TextEditorSourceSelectionRestorePolicy
     CustomHook,
 };
 
+enum class TextEditorSourceTransactionResult
+{
+    Applied,
+    NoChange,
+    Stale,
+    Unavailable,
+    InvalidEdit,
+};
+
 struct TextEditorSourceTransactionContext
 {
     TextEditorTab *textEditor = nullptr;
@@ -64,8 +73,8 @@ class TextEditorSourceTransactionController final
 public:
     explicit TextEditorSourceTransactionController(TextEditorSourceTransactionContext context);
 
-    void recordSnapshot(const TextEditorSourceTransactionRequest &request);
-    void applyChangeWithSnapshot(const TextEditorSourceTransactionRequest &request);
+    TextEditorSourceTransactionResult recordSnapshot(const TextEditorSourceTransactionRequest &request);
+    TextEditorSourceTransactionResult applyChangeWithSnapshot(const TextEditorSourceTransactionRequest &request);
 
 private:
     TextEditorSourceTransactionContext context_;

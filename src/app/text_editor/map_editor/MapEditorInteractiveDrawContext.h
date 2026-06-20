@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MapEditorInteractiveDrawLogic.h"
+#include "../TextEditorSourceTransactionController.h"
 #include "../../../core/TherionDocumentEditor.h"
 
 #include <QPointF>
@@ -62,7 +63,7 @@ struct MapEditorInteractiveDrawContext
     std::function<QString(const char *)> translate;
     std::function<void()> emitModeStatusChanged;
     std::function<QPointF(const QPointF &)> sourcePointFromScenePosition;
-    std::function<void(const QString &, const QString &, const QString &, int, std::function<void()>)>
+    std::function<TextEditorSourceTransactionResult(const QString &, const QString &, const QString &, int, std::function<void()>)>
         applySourceTextChangeWithSnapshot;
     std::function<TherionDraftObjectOptions(const QString &)> draftObjectOptions;
     std::function<void(const QString &, const TherionDraftObjectOptions &)> recordCommittedDraftObjectOptions;

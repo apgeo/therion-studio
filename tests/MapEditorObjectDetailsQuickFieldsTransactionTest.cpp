@@ -13,6 +13,7 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QLineEdit>
+#include <QPlainTextEdit>
 #include <QTemporaryDir>
 #include <QUndoStack>
 
@@ -159,6 +160,9 @@ struct QuickFieldsFixture
     QDoubleSpinBox orientationSpin;
     QCheckBox linePointLeftSizeEnabledCheck;
     QDoubleSpinBox linePointLeftSizeSpin;
+    QComboBox linePointSegmentSubtypeCombo;
+    QCheckBox linePointAltitudeAutoCheck;
+    QPlainTextEdit linePointFlagsEdit;
 };
 
 MapEditorObjectDetailsContext makeDetailsContext(QuickFieldsFixture *fixture,
@@ -186,6 +190,9 @@ MapEditorObjectDetailsContext makeDetailsContext(QuickFieldsFixture *fixture,
     context.orientationSpin = &fixture->orientationSpin;
     context.linePointLeftSizeEnabledCheck = &fixture->linePointLeftSizeEnabledCheck;
     context.linePointLeftSizeSpin = &fixture->linePointLeftSizeSpin;
+    context.linePointSegmentSubtypeCombo = &fixture->linePointSegmentSubtypeCombo;
+    context.linePointAltitudeAutoCheck = &fixture->linePointAltitudeAutoCheck;
+    context.linePointFlagsEdit = &fixture->linePointFlagsEdit;
     context.refreshToolbarSummary = [fixture]() {
         ++fixture->refreshCount;
     };
@@ -201,16 +208,15 @@ MapEditorObjectDetailsContext makeDetailsContext(QuickFieldsFixture *fixture,
         fixture->snapshotAfterText = afterText;
         fixture->snapshotLineNumber = insertedLineNumber;
         if (selectionRestoreHook) {
-            canvasController->applySourceTextChangeWithSnapshot(label,
-                                                                beforeText,
-                                                                afterText,
-                                                                insertedLineNumber,
-                                                                TextEditorSourceSelectionRestorePolicy::CustomHook,
-                                                                std::move(selectionRestoreHook));
-            return;
+            return canvasController->applySourceTextChangeWithSnapshot(label,
+                                                                       beforeText,
+                                                                       afterText,
+                                                                       insertedLineNumber,
+                                                                       TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                                                       std::move(selectionRestoreHook));
         }
 
-        canvasController->applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
+        return canvasController->applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
     };
     return context;
 }
@@ -706,6 +712,88 @@ int runScrapProjectionTransactionTest()
 
     return 0;
 }
+
+int runLinePointOptionsStaleTransactionDoesNotReportSuccessTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString beforeText = QStringLiteral("line wall\n  0 0\n  1 1\nendline\n");
+    const QString filePath = createTestFile(tempDir, beforeText.toUtf8());
+    if (!expect(!filePath.isEmpty(), "Failed to create line-point stale transaction test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load line-point stale transaction test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    QString canvasToolbarStatus;
+    bool commandApplyInProgress = false;
+    int canvasRefreshCount = 0;
+    int flushCount = 0;
+    MapEditorCanvasEditController canvasController = makeCanvasController(&tab,
+                                                                          &undoStack,
+                                                                          &canvasToolbarStatus,
+                                                                          &commandApplyInProgress,
+                                                                          &canvasRefreshCount,
+                                                                          &flushCount);
+
+    QuickFieldsFixture fixture;
+    fixture.selectedObjectKind = QStringLiteral("line");
+    fixture.selectedObjectLineNumber = 1;
+    fixture.selectedObjectVertexIndex = 0;
+    MapEditorObjectDetailsContext context = makeDetailsContext(&fixture, &tab, &canvasController);
+    context.applySourceTextChangeWithSnapshot = [&fixture](const QString &label,
+                                                           const QString &beforeText,
+                                                           const QString &afterText,
+                                                           int insertedLineNumber,
+                                                           std::function<void()> selectionRestoreHook) {
+        Q_UNUSED(selectionRestoreHook);
+        ++fixture.snapshotCount;
+        fixture.snapshotLabel = label;
+        fixture.snapshotBeforeText = beforeText;
+        fixture.snapshotAfterText = afterText;
+        fixture.snapshotLineNumber = insertedLineNumber;
+        fixture.toolbarStatus = QStringLiteral("Source transaction skipped: document changed.");
+        return TextEditorSourceTransactionResult::Stale;
+    };
+
+    MapEditorObjectDetailsEditController controller = MapEditorObjectDetailsEditController(context);
+    fixture.linePointFlagsEdit.setPlainText(QStringLiteral("altitude ."));
+    controller.applyLinePointFlagsEdits();
+    if (!expect(fixture.snapshotCount == 1,
+                "Stale line-point options edit should still attempt one source transaction.")) {
+        return 1;
+    }
+    if (!expect(fixture.snapshotLabel == QStringLiteral("Edit Line Point Options"),
+                "Stale line-point options edit should use the line-point options undo label.")) {
+        return 1;
+    }
+    if (!expect(tab.text() == beforeText,
+                "Stale line-point options transaction should not rewrite source text.")) {
+        return 1;
+    }
+    if (!expect(undoStack.count() == 0,
+                "Stale line-point options transaction should not push an undo command.")) {
+        return 1;
+    }
+    if (!expect(fixture.toolbarStatus == QStringLiteral("Source transaction skipped: document changed."),
+                "Stale line-point options transaction should not be overwritten by a success status.")) {
+        return 1;
+    }
+    if (!expect(!fixture.toolbarStatus.contains(QStringLiteral("Updated additional line-point options")),
+                "Stale line-point options transaction must not report a successful update.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char **argv)
@@ -727,5 +815,8 @@ int main(int argc, char **argv)
     if (const int result = runLineAnchorOrientationTransactionTest(); result != 0) {
         return result;
     }
-    return runScrapProjectionTransactionTest();
+    if (const int result = runScrapProjectionTransactionTest(); result != 0) {
+        return result;
+    }
+    return runLinePointOptionsStaleTransactionDoesNotReportSuccessTest();
 }

@@ -59,11 +59,11 @@ MapEditorInspectorObjectContext MapEditorTab::inspectorObjectContext()
                                                     const QString &afterText,
                                                     int insertedLineNumber,
                                                     std::function<void()> selectionRestoreHook) {
-            applySourceTextChangeWithSnapshot(label,
-                                              beforeText,
-                                              afterText,
-                                              insertedLineNumber,
-                                              std::move(selectionRestoreHook));
+            return applySourceTextChangeWithSnapshot(label,
+                                                     beforeText,
+                                                     afterText,
+                                                     insertedLineNumber,
+                                                     std::move(selectionRestoreHook));
         },
     };
 }

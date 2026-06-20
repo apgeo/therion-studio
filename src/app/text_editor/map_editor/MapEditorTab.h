@@ -62,6 +62,7 @@ namespace TherionStudio
 {
 struct TherionParsedLine;
 enum class DraftGeometryKind;
+enum class TextEditorSourceTransactionResult;
 }
 
 namespace TherionStudio
@@ -166,6 +167,36 @@ public:
     void triggerAddFreehandLine();
     void triggerAddArea();
     void triggerSmartArea();
+#ifdef THERION_STUDIO_TESTING
+    bool testBeginLineExtensionFromSelection(int lineNumber, int sourceVertexIndex, bool prepend)
+    {
+        return beginLineExtensionFromSelection(lineNumber, sourceVertexIndex, prepend);
+    }
+    void testAppendInteractiveDrawLineVertex(const MapEditorInteractiveLineDraftVertex &vertex)
+    {
+        interactiveDrawState_.lineVertices_.append(vertex);
+    }
+    bool testCommitLineExtensionSession()
+    {
+        return commitLineExtensionSession();
+    }
+    bool testLineExtensionActive() const
+    {
+        return interactiveDrawState_.lineExtensionActive_;
+    }
+    InteractiveDrawMode testInteractiveDrawMode() const
+    {
+        return interactiveDrawState_.mode_;
+    }
+    int testInteractiveDrawLineVertexCount() const
+    {
+        return interactiveDrawState_.lineVertices_.size();
+    }
+    QPointF testScenePointFromSourcePosition(const QPointF &sourcePosition) const
+    {
+        return scenePointFromSourcePosition(sourcePosition);
+    }
+#endif
     void setMagnifierEnabled(bool enabled);
     void setRightPanelCollapsed(bool collapsed);
     void setContextHelpPanelCollapsed(bool collapsed);
@@ -550,15 +581,16 @@ private:
                                          qreal leftSize);
     void restorePointSelection(int lineNumber);
     void restoreLineAnchorSelection(int lineNumber, int sourceVertexIndex);
-    void recordSourceTextSnapshot(const QString &label,
-                                  const QString &beforeText,
-                                  const QString &afterText,
-                                  int insertedLineNumber);
-    void applySourceTextChangeWithSnapshot(const QString &label,
-                                           const QString &beforeText,
-                                           const QString &afterText,
-                                           int insertedLineNumber,
-                                           std::function<void()> selectionRestoreHook = {});
+    TextEditorSourceTransactionResult recordSourceTextSnapshot(const QString &label,
+                                                               const QString &beforeText,
+                                                               const QString &afterText,
+                                                               int insertedLineNumber);
+    TextEditorSourceTransactionResult applySourceTextChangeWithSnapshot(
+        const QString &label,
+        const QString &beforeText,
+        const QString &afterText,
+        int insertedLineNumber,
+        std::function<void()> selectionRestoreHook = {});
     bool insertLineVertexFromSelection(bool before);
     bool insertLineVertexAtSelectionCoordinate();
     bool splitLineAtSelection();

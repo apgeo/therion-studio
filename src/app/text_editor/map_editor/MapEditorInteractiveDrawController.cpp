@@ -186,19 +186,16 @@ SourceApplyResult applyInsertWithSnapshot(const MapEditorInteractiveDrawContext 
         return SourceApplyResult::Unavailable;
     }
 
-    bool applied = false;
-    context.applySourceTextChangeWithSnapshot(label,
-                                              beforeText,
-                                              afterText,
-                                              insertedLineNumber,
-                                              [&applied]() {
-                                                  applied = true;
-                                              });
-    if (applied) {
+    const TextEditorSourceTransactionResult result =
+        context.applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber, {});
+    if (result == TextEditorSourceTransactionResult::Applied
+        || (result == TextEditorSourceTransactionResult::NoChange
+            && context.textEditor != nullptr
+            && context.textEditor->text() == afterText)) {
         return SourceApplyResult::Applied;
     }
-    if (context.textEditor != nullptr && context.textEditor->text() == afterText) {
-        return SourceApplyResult::Applied;
+    if (result == TextEditorSourceTransactionResult::Unavailable) {
+        return SourceApplyResult::Unavailable;
     }
     return SourceApplyResult::NotApplied;
 }

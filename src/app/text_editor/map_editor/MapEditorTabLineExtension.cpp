@@ -2,6 +2,7 @@
 
 #include "MapEditorLineExtensionPlanner.h"
 #include "MapEditorSourceReferenceResolver.h"
+#include "../TextEditorSourceTransactionController.h"
 #include "../TextEditorTab.h"
 #include "../../../core/TherionDocumentEditor.h"
 
@@ -144,7 +145,7 @@ bool MapEditorTab::commitLineExtensionSession()
         refreshedFeature.has_value() && restoredVertexIndex >= 0 && restoredVertexIndex < refreshedFeature->lineVertices.size()
         ? refreshedFeature->lineVertices.at(restoredVertexIndex).anchorSourceVertexIndex
         : -1;
-    applySourceTextChangeWithSnapshot(
+    const TextEditorSourceTransactionResult transactionResult = applySourceTextChangeWithSnapshot(
         tr("Extend Line"),
         beforeText,
         afterText,
@@ -165,6 +166,10 @@ bool MapEditorTab::commitLineExtensionSession()
             updateHelpPanel();
             updateCommandSurfaceState();
         }));
+    if (transactionResult != TextEditorSourceTransactionResult::Applied) {
+        refreshToolbarSummary();
+        updateCommandSurfaceState();
+    }
     return true;
 }
 

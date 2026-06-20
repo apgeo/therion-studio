@@ -681,11 +681,11 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
                                                     const QString &afterText,
                                                     int insertedLineNumber,
                                                     std::function<void()> selectionRestoreHook) {
-            applySourceTextChangeWithSnapshot(label,
-                                              beforeText,
-                                              afterText,
-                                              insertedLineNumber,
-                                              std::move(selectionRestoreHook));
+            return applySourceTextChangeWithSnapshot(label,
+                                                     beforeText,
+                                                     afterText,
+                                                     insertedLineNumber,
+                                                     std::move(selectionRestoreHook));
         },
         .insertLineVertexFromSelection = [this](bool before) {
             return insertLineVertexFromSelection(before);

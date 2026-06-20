@@ -129,32 +129,34 @@ void MapEditorTab::restoreLineAnchorSelection(int lineNumber, int sourceVertexIn
     MapEditorCanvasEditController(canvasEditContext()).restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
 }
 
-void MapEditorTab::recordSourceTextSnapshot(const QString &label,
-                                            const QString &beforeText,
-                                            const QString &afterText,
-                                            int insertedLineNumber)
+TextEditorSourceTransactionResult MapEditorTab::recordSourceTextSnapshot(const QString &label,
+                                                                         const QString &beforeText,
+                                                                         const QString &afterText,
+                                                                         int insertedLineNumber)
 {
-    MapEditorCanvasEditController(canvasEditContext()).recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
+    return MapEditorCanvasEditController(canvasEditContext()).recordSourceTextSnapshot(label,
+                                                                                      beforeText,
+                                                                                      afterText,
+                                                                                      insertedLineNumber);
 }
 
-void MapEditorTab::applySourceTextChangeWithSnapshot(const QString &label,
-                                                     const QString &beforeText,
-                                                     const QString &afterText,
-                                                     int insertedLineNumber,
-                                                     std::function<void()> selectionRestoreHook)
+TextEditorSourceTransactionResult MapEditorTab::applySourceTextChangeWithSnapshot(const QString &label,
+                                                                                  const QString &beforeText,
+                                                                                  const QString &afterText,
+                                                                                  int insertedLineNumber,
+                                                                                  std::function<void()> selectionRestoreHook)
 {
     MapEditorCanvasEditController controller(canvasEditContext());
     if (selectionRestoreHook) {
-        controller.applySourceTextChangeWithSnapshot(label,
-                                                     beforeText,
-                                                     afterText,
-                                                     insertedLineNumber,
-                                                     TextEditorSourceSelectionRestorePolicy::CustomHook,
-                                                     std::move(selectionRestoreHook));
-        return;
+        return controller.applySourceTextChangeWithSnapshot(label,
+                                                            beforeText,
+                                                            afterText,
+                                                            insertedLineNumber,
+                                                            TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                                            std::move(selectionRestoreHook));
     }
 
-    controller.applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
+    return controller.applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
 }
 
 bool MapEditorTab::insertLineVertexFromSelection(bool before)

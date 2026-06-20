@@ -10,6 +10,8 @@
 #include <functional>
 #include <optional>
 
+#include "../TextEditorSourceTransactionController.h"
+
 class QGraphicsScene;
 class QStandardItemModel;
 class QTreeView;
@@ -48,7 +50,7 @@ struct MapEditorInspectorObjectContext
     std::function<void()> updateGeometrySelectionPresentation;
     std::function<void(int, int)> syncMapSelectionFromTextCursor;
     std::function<void(const QSet<int> &, bool)> selectMapLines;
-    std::function<void(const QString &, const QString &, const QString &, int, std::function<void()>)>
+    std::function<TextEditorSourceTransactionResult(const QString &, const QString &, const QString &, int, std::function<void()>)>
         applySourceTextChangeWithSnapshot;
 };
 }

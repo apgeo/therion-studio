@@ -42,17 +42,18 @@ public:
                                          qreal leftSize);
     void restorePointSelection(int lineNumber);
     void restoreLineAnchorSelection(int lineNumber, int sourceVertexIndex);
-    void recordSourceTextSnapshot(const QString &label,
-                                  const QString &beforeText,
-                                  const QString &afterText,
-                                  int insertedLineNumber);
-    void applySourceTextChangeWithSnapshot(const QString &label,
-                                           const QString &beforeText,
-                                           const QString &afterText,
-                                           int insertedLineNumber,
-                                           TextEditorSourceSelectionRestorePolicy selectionRestorePolicy =
-                                               TextEditorSourceSelectionRestorePolicy::PreserveCurrentSelection,
-                                           std::function<void()> selectionRestoreHook = {});
+    TextEditorSourceTransactionResult recordSourceTextSnapshot(const QString &label,
+                                                               const QString &beforeText,
+                                                               const QString &afterText,
+                                                               int insertedLineNumber);
+    TextEditorSourceTransactionResult applySourceTextChangeWithSnapshot(
+        const QString &label,
+        const QString &beforeText,
+        const QString &afterText,
+        int insertedLineNumber,
+        TextEditorSourceSelectionRestorePolicy selectionRestorePolicy =
+            TextEditorSourceSelectionRestorePolicy::PreserveCurrentSelection,
+        std::function<void()> selectionRestoreHook = {});
     bool insertLineVertexFromSelection(MapEditorLineVertexInsertPlacement placement);
     bool insertLineVertexAtSelectionCoordinate();
     bool splitLineAtSelection();

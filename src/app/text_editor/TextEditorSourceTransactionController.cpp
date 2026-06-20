@@ -211,34 +211,47 @@ void applyTextEditorSourceSnapshot(TextEditorTab *textEditor, const QString &con
     textEditor->applySourceSnapshotForTransaction(contents);
 }
 
-void TextEditorSourceTransactionController::recordSnapshot(const TextEditorSourceTransactionRequest &request)
+TextEditorSourceTransactionResult TextEditorSourceTransactionController::recordSnapshot(
+    const TextEditorSourceTransactionRequest &request)
 {
     const std::optional<QString> afterText = resolvedAfterText(request);
-    if (!afterText.has_value() || context_.textEditor == nullptr || request.beforeText == afterText.value()) {
-        return;
+    if (!afterText.has_value()) {
+        return TextEditorSourceTransactionResult::InvalidEdit;
+    }
+    if (request.beforeText == afterText.value()) {
+        return TextEditorSourceTransactionResult::NoChange;
+    }
+    if (context_.textEditor == nullptr) {
+        return TextEditorSourceTransactionResult::Unavailable;
     }
 
     if (!sourceRevisionMatches(context_, request) || !currentTextMatches(context_, afterText.value())) {
         reportStaleRequest(context_, request);
-        return;
+        return TextEditorSourceTransactionResult::Stale;
     }
 
     pushSnapshotCommand(context_, request, afterText.value());
     applyRequestPolicies(context_, request);
+    return TextEditorSourceTransactionResult::Applied;
 }
 
-void TextEditorSourceTransactionController::applyChangeWithSnapshot(const TextEditorSourceTransactionRequest &request)
+TextEditorSourceTransactionResult TextEditorSourceTransactionController::applyChangeWithSnapshot(
+    const TextEditorSourceTransactionRequest &request)
 {
     const std::optional<QString> afterText = resolvedAfterText(request);
-    if (!afterText.has_value()
-        || context_.textEditor == nullptr
-        || request.beforeText == afterText.value()) {
-        return;
+    if (!afterText.has_value()) {
+        return TextEditorSourceTransactionResult::InvalidEdit;
+    }
+    if (request.beforeText == afterText.value()) {
+        return TextEditorSourceTransactionResult::NoChange;
+    }
+    if (context_.textEditor == nullptr) {
+        return TextEditorSourceTransactionResult::Unavailable;
     }
 
     if (!sourceRevisionMatches(context_, request) || !currentTextMatches(context_, request.beforeText)) {
         reportStaleRequest(context_, request);
-        return;
+        return TextEditorSourceTransactionResult::Stale;
     }
 
     if (context_.commandApplyInProgress != nullptr) {
@@ -249,7 +262,7 @@ void TextEditorSourceTransactionController::applyChangeWithSnapshot(const TextEd
         }
         pushSnapshotCommand(context_, request, afterText.value());
         applyRequestPolicies(context_, request);
-        return;
+        return TextEditorSourceTransactionResult::Applied;
     }
 
     applyTextEditorSourceSnapshot(context_.textEditor, afterText.value());
@@ -258,5 +271,6 @@ void TextEditorSourceTransactionController::applyChangeWithSnapshot(const TextEd
     }
     pushSnapshotCommand(context_, request, afterText.value());
     applyRequestPolicies(context_, request);
+    return TextEditorSourceTransactionResult::Applied;
 }
 }

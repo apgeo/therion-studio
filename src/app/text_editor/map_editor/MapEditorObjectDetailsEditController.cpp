@@ -104,18 +104,18 @@ bool requireSourceTransaction(const MapEditorObjectDetailsContext &context, cons
     return false;
 }
 
-void applySourceTransactionWithOptionalHook(const MapEditorObjectDetailsContext &context,
-                                            const QString &label,
-                                            const QString &beforeText,
-                                            const QString &afterText,
-                                            int targetLineNumber,
-                                            std::function<void()> postApplyHook = {})
+TextEditorSourceTransactionResult applySourceTransactionWithOptionalHook(const MapEditorObjectDetailsContext &context,
+                                                                         const QString &label,
+                                                                         const QString &beforeText,
+                                                                         const QString &afterText,
+                                                                         int targetLineNumber,
+                                                                         std::function<void()> postApplyHook = {})
 {
-    context.applySourceTextChangeWithSnapshot(label,
-                                              beforeText,
-                                              afterText,
-                                              targetLineNumber,
-                                              std::move(postApplyHook));
+    return context.applySourceTextChangeWithSnapshot(label,
+                                                     beforeText,
+                                                     afterText,
+                                                     targetLineNumber,
+                                                     std::move(postApplyHook));
 }
 
 bool applySourceTextEdits(QString *contents,
@@ -1344,12 +1344,20 @@ bool MapEditorObjectDetailsEditController::applyLinePointStandaloneRowsEdits(con
               }
           })
         : std::function<void()>();
-    applySourceTransactionWithOptionalHook(context_,
-                                           tr("Edit Line Point Options"),
-                                           beforeText,
-                                           afterText,
-                                           lineNumber,
-                                           selectionRestoreHook);
+    const TextEditorSourceTransactionResult transactionResult =
+        applySourceTransactionWithOptionalHook(context_,
+                                               tr("Edit Line Point Options"),
+                                               beforeText,
+                                               afterText,
+                                               lineNumber,
+                                               selectionRestoreHook);
+    if (transactionResult != TextEditorSourceTransactionResult::Applied) {
+        context_.refreshToolbarSummary();
+        if (context_.refreshObjectDetailsPanel) {
+            context_.refreshObjectDetailsPanel();
+        }
+        return false;
+    }
 
     (*context_.toolbarStatusNote) = updatedRows.isEmpty()
         ? tr("Cleared additional line-point options for line %1, point %2.").arg(lineNumber).arg(vertexIndex + 1)

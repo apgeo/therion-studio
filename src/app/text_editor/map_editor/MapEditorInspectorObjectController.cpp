@@ -63,6 +63,20 @@ bool requireSourceTransaction(const MapEditorInspectorObjectContext &context, co
     return false;
 }
 
+TextEditorSourceTransactionResult applySourceTransaction(const MapEditorInspectorObjectContext &context,
+                                                         const QString &label,
+                                                         const QString &beforeText,
+                                                         const QString &afterText,
+                                                         int targetLineNumber,
+                                                         std::function<void()> postApplyHook = {})
+{
+    return context.applySourceTextChangeWithSnapshot(label,
+                                                     beforeText,
+                                                     afterText,
+                                                     targetLineNumber,
+                                                     std::move(postApplyHook));
+}
+
 class InspectorObjectTreeVisualGuard final
 {
 public:
@@ -506,11 +520,22 @@ void MapEditorInspectorObjectController::handleInspectorObjectClicked(const QMod
             *context_.lastClickedLineNumber = 0;
         };
 
-        context_.applySourceTextChangeWithSnapshot(tr("Delete Map Object"),
-                                                   beforeText,
-                                                   deletePlan.updatedText,
-                                                   deletePlan.focusLineAfterDelete,
-                                                   postDeleteHook);
+        const TextEditorSourceTransactionResult transactionResult =
+            applySourceTransaction(context_,
+                                   tr("Delete Map Object"),
+                                   beforeText,
+                                   deletePlan.updatedText,
+                                   deletePlan.focusLineAfterDelete,
+                                   postDeleteHook);
+        if (transactionResult != TextEditorSourceTransactionResult::Applied) {
+            if (context_.refreshToolbarSummary) {
+                context_.refreshToolbarSummary();
+            }
+            if (context_.refreshObjectDetailsPanel) {
+                context_.refreshObjectDetailsPanel();
+            }
+            return;
+        }
 
         if (context_.toolbarStatusNote != nullptr) {
             *context_.toolbarStatusNote = tr("Deleted selected object from source.");
@@ -615,11 +640,22 @@ bool MapEditorInspectorObjectController::moveInspectorObject(const QModelIndex &
         syncInspectorObjectSelectionToLine(movePlan.insertBeforeLineAfterRemoval, true);
     };
 
-    context_.applySourceTextChangeWithSnapshot(tr("Move Map Object"),
-                                               beforeText,
-                                               movePlan.movedText,
-                                               movePlan.insertBeforeLineAfterRemoval,
-                                               postMoveHook);
+    const TextEditorSourceTransactionResult transactionResult =
+        applySourceTransaction(context_,
+                               tr("Move Map Object"),
+                               beforeText,
+                               movePlan.movedText,
+                               movePlan.insertBeforeLineAfterRemoval,
+                               postMoveHook);
+    if (transactionResult != TextEditorSourceTransactionResult::Applied) {
+        if (context_.refreshToolbarSummary) {
+            context_.refreshToolbarSummary();
+        }
+        if (context_.refreshObjectDetailsPanel) {
+            context_.refreshObjectDetailsPanel();
+        }
+        return false;
+    }
 
     if (context_.toolbarStatusNote != nullptr) {
         *context_.toolbarStatusNote = tr("Moved map object to line %1.").arg(movePlan.insertBeforeLineAfterRemoval);

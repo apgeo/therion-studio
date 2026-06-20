@@ -144,9 +144,14 @@ int runApplyChangeCreatesUndoSnapshotTest()
 
     const QString beforeText = tab.text();
     const QString afterText = beforeText + QStringLiteral("survey demo\nendsurvey\n");
-    controller.applyChangeWithSnapshot(request(QStringLiteral("Append Survey"), beforeText, afterText));
+    const TextEditorSourceTransactionResult result =
+        controller.applyChangeWithSnapshot(request(QStringLiteral("Append Survey"), beforeText, afterText));
     pumpEvents();
 
+    if (!expect(result == TextEditorSourceTransactionResult::Applied,
+                "applyChangeWithSnapshot should report an applied transaction.")) {
+        return 1;
+    }
     if (!expect(tab.text() == afterText, "applyChangeWithSnapshot should apply afterText immediately.")) {
         return 1;
     }
@@ -217,7 +222,12 @@ int runRecordSnapshotForAlreadyAppliedChangeTest()
     tab.applySourceSnapshotForTransaction(afterText);
     pumpEvents();
 
-    controller.recordSnapshot(request(QStringLiteral("Already Applied"), beforeText, afterText));
+    const TextEditorSourceTransactionResult result =
+        controller.recordSnapshot(request(QStringLiteral("Already Applied"), beforeText, afterText));
+    if (!expect(result == TextEditorSourceTransactionResult::Applied,
+                "recordSnapshot should report an applied transaction snapshot.")) {
+        return 1;
+    }
     if (!expect(undoStack.count() == 1, "recordSnapshot should push one undo snapshot.")) {
         return 1;
     }
@@ -399,9 +409,19 @@ int runNoOpChangeDoesNotPushSnapshotTest()
     });
 
     const QString text = QStringLiteral("encoding utf-8\n");
-    controller.applyChangeWithSnapshot(request(QStringLiteral("No-op"), text, text));
-    controller.recordSnapshot(request(QStringLiteral("No-op"), text, text));
+    const TextEditorSourceTransactionResult applyResult =
+        controller.applyChangeWithSnapshot(request(QStringLiteral("No-op"), text, text));
+    const TextEditorSourceTransactionResult recordResult =
+        controller.recordSnapshot(request(QStringLiteral("No-op"), text, text));
 
+    if (!expect(applyResult == TextEditorSourceTransactionResult::NoChange,
+                "No-op source transaction should report no change.")) {
+        return 1;
+    }
+    if (!expect(recordResult == TextEditorSourceTransactionResult::NoChange,
+                "No-op source snapshot should report no change.")) {
+        return 1;
+    }
     if (!expect(undoStack.count() == 0, "No-op source transaction should not push undo snapshots.")) {
         return 1;
     }
@@ -451,13 +471,18 @@ int runApplyChangeWithStaleBeforeTextRejectedTest()
     tab.applySourceSnapshotForTransaction(driftText);
     pumpEvents();
 
-    controller.applyChangeWithSnapshot(request(QStringLiteral("Stale Apply"),
-                                              beforeText,
-                                              afterText,
-                                              beforeRevision,
-                                              QStringLiteral("stale status")));
+    const TextEditorSourceTransactionResult result =
+        controller.applyChangeWithSnapshot(request(QStringLiteral("Stale Apply"),
+                                                  beforeText,
+                                                  afterText,
+                                                  beforeRevision,
+                                                  QStringLiteral("stale status")));
     pumpEvents();
 
+    if (!expect(result == TextEditorSourceTransactionResult::Stale,
+                "Stale applyChangeWithSnapshot should report a stale transaction.")) {
+        return 1;
+    }
     if (!expect(tab.text() == driftText, "Stale applyChangeWithSnapshot should not overwrite concurrent source changes.")) {
         return 1;
     }
@@ -516,13 +541,18 @@ int runRecordSnapshotWithStaleAfterTextRejectedTest()
     tab.applySourceSnapshotForTransaction(driftText);
     pumpEvents();
 
-    controller.recordSnapshot(request(QStringLiteral("Stale Record"),
-                                     beforeText,
-                                     afterText,
-                                     appliedRevision,
-                                     QStringLiteral("stale status")));
+    const TextEditorSourceTransactionResult result =
+        controller.recordSnapshot(request(QStringLiteral("Stale Record"),
+                                          beforeText,
+                                          afterText,
+                                          appliedRevision,
+                                          QStringLiteral("stale status")));
     pumpEvents();
 
+    if (!expect(result == TextEditorSourceTransactionResult::Stale,
+                "Stale recordSnapshot should report a stale transaction.")) {
+        return 1;
+    }
     if (!expect(tab.text() == driftText, "Stale recordSnapshot should preserve concurrent source changes.")) {
         return 1;
     }

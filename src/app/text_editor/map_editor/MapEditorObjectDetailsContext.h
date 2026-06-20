@@ -10,6 +10,7 @@
 
 #include "MapEditorInspectorData.h"
 #include "MapEditorObjectDetailsLogic.h"
+#include "../TextEditorSourceTransactionController.h"
 
 class QCheckBox;
 class QComboBox;
@@ -147,7 +148,7 @@ struct MapEditorObjectDetailsContext
     std::function<void(int, bool)> selectMapLine;
     std::function<void(int)> restorePointSelectionLater;
     std::function<void(int, int)> restoreLineAnchorSelectionLater;
-    std::function<void(const QString &, const QString &, const QString &, int, std::function<void()>)>
+    std::function<TextEditorSourceTransactionResult(const QString &, const QString &, const QString &, int, std::function<void()>)>
         applySourceTextChangeWithSnapshot;
     std::function<bool(bool)> insertLineVertexFromSelection;
     std::function<bool()> splitLineAtSelection;

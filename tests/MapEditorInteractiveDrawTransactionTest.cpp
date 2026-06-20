@@ -147,6 +147,7 @@ int runPointInsertStaleTransactionStatusTest()
         Q_UNUSED(selectionRestoreHook);
         ++transactionCallCount;
         toolbarStatus = staleStatus;
+        return TextEditorSourceTransactionResult::Stale;
     };
     context.draftObjectOptions = [](const QString &) {
         return TherionDraftObjectOptions{};

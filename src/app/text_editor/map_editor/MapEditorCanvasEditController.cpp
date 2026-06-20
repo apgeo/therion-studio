@@ -1024,23 +1024,24 @@ void MapEditorCanvasEditController::restoreLineAnchorSelection(int lineNumber, i
     context_.refreshObjectDetailsPanel();
 }
 
-void MapEditorCanvasEditController::recordSourceTextSnapshot(const QString &label,
-                                            const QString &beforeText,
-                                            const QString &afterText,
-                                            int insertedLineNumber)
+TextEditorSourceTransactionResult MapEditorCanvasEditController::recordSourceTextSnapshot(const QString &label,
+                                                                                          const QString &beforeText,
+                                                                                          const QString &afterText,
+                                                                                          int insertedLineNumber)
 {
-    sourceTransactionController(context_).recordSnapshot(
+    return sourceTransactionController(context_).recordSnapshot(
         sourceTransactionRequest(context_, label, beforeText, afterText, insertedLineNumber));
 }
 
-void MapEditorCanvasEditController::applySourceTextChangeWithSnapshot(const QString &label,
-                                                                      const QString &beforeText,
-                                                                      const QString &afterText,
-                                                                      int insertedLineNumber,
-                                                                      TextEditorSourceSelectionRestorePolicy selectionRestorePolicy,
-                                                                      std::function<void()> selectionRestoreHook)
+TextEditorSourceTransactionResult MapEditorCanvasEditController::applySourceTextChangeWithSnapshot(
+    const QString &label,
+    const QString &beforeText,
+    const QString &afterText,
+    int insertedLineNumber,
+    TextEditorSourceSelectionRestorePolicy selectionRestorePolicy,
+    std::function<void()> selectionRestoreHook)
 {
-    sourceTransactionController(context_).applyChangeWithSnapshot(
+    return sourceTransactionController(context_).applyChangeWithSnapshot(
         sourceTransactionRequest(context_,
                                  label,
                                  beforeText,

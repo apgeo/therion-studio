@@ -4,6 +4,7 @@
 #include "../../../core/ProjectStructureIndex.h"
 #include "../../../core/TherionCommandLineModel.h"
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceLogicalDocument.h"
 #include "../../../core/TherionTokenRules.h"
 
 #include <QComboBox>
@@ -811,6 +812,12 @@ std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromParsedLi
     }
 
     return std::nullopt;
+}
+
+std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromLogicalCommand(
+    const TherionSourceLogicalCommand &command)
+{
+    return inspectorObjectQuickFieldsFromParsedLine(command.parsed);
 }
 
 }

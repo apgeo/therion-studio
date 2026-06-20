@@ -1,6 +1,8 @@
 #include "../src/app/text_editor/map_editor/MapEditorInspectorData.h"
 #include "../src/core/CommandCatalogStore.h"
 #include "../src/core/TherionDocumentParser.h"
+#include "../src/core/TherionSourceLogicalDocument.h"
+#include "../src/core/TherionSourceSnapshotCache.h"
 
 #include <QComboBox>
 #include <QApplication>
@@ -19,6 +21,20 @@ bool expect(bool condition, const char *message)
     }
 
     return condition;
+}
+
+std::optional<InspectorObjectQuickFields> firstLogicalCommandQuickFields(const QString &contents)
+{
+    TherionSourceSnapshotCache sourceSnapshotCache;
+    TherionSourceDocumentMetadata metadata;
+    metadata.sourceType = TherionSourceDocumentType::TherionMap;
+    metadata.revisionId = 1;
+    const TherionSourceLogicalDocument &logicalDocument =
+        sourceSnapshotCache.logicalDocument(contents, metadata);
+    if (logicalDocument.commands().isEmpty()) {
+        return std::nullopt;
+    }
+    return inspectorObjectQuickFieldsFromLogicalCommand(logicalDocument.commands().constFirst());
 }
 
 int runInspectorTypeCatalogLoadTest()
@@ -94,11 +110,9 @@ int runAreaQuickTypeComboPopulationTest()
 
 int runLineClipOptionDoesNotBecomeSubtypeTest()
 {
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(
-        QStringLiteral("line rock-border -close on -clip off"),
-        1);
-    const std::optional<InspectorObjectQuickFields> fields = inspectorObjectQuickFieldsFromParsedLine(parsedLine);
-    if (!expect(fields.has_value(), "Line quick fields should be extracted from parsed line.")) {
+    const std::optional<InspectorObjectQuickFields> fields =
+        firstLogicalCommandQuickFields(QStringLiteral("line rock-border -close on -clip off\n"));
+    if (!expect(fields.has_value(), "Line quick fields should be extracted from a logical command.")) {
         return 1;
     }
     if (!expect(fields->type == QStringLiteral("rock-border"),

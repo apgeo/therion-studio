@@ -18,6 +18,7 @@ namespace TherionStudio
 {
 struct ProjectStructureEntry;
 struct TherionParsedLine;
+struct TherionSourceLogicalCommand;
 
 struct InspectorObjectQuickFields
 {
@@ -85,4 +86,6 @@ bool inspectorValueOptionSupportedForCommandType(const InspectorSymbolCatalog &c
                                                  const QString &type);
 void setEditableComboValues(QComboBox *combo, const QStringList &values, const QString &currentText);
 std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromParsedLine(const TherionParsedLine &parsedLine);
+std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromLogicalCommand(
+    const TherionSourceLogicalCommand &command);
 }

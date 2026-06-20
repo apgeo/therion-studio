@@ -206,6 +206,58 @@ int runPointInsertStaleTransactionStatusTest()
 
     return 0;
 }
+
+int runDraftAnchorMovePreservesControlOffsetsTest()
+{
+    QVector<MapEditorInteractiveLineDraftVertex> vertices;
+    MapEditorInteractiveLineDraftVertex vertex;
+    vertex.anchorScene = QPointF(10.0, 20.0);
+    vertex.anchorSource = QPointF(1.0, 2.0);
+    vertex.incomingControlScene = QPointF(7.0, 18.0);
+    vertex.incomingControlSource = QPointF(0.7, 1.8);
+    vertex.outgoingControlScene = QPointF(14.0, 24.0);
+    vertex.outgoingControlSource = QPointF(1.4, 2.4);
+    vertices.append(vertex);
+
+    const auto handle = interactiveLineControlAt(vertices, QPointF(11.0, 20.5), 4.0);
+    if (!expect(handle.has_value(), "Expected draft anchor hit testing to find a handle.")) {
+        return 1;
+    }
+    if (!expect(handle->kind == MapEditorInteractiveLineControlHandleRef::Kind::Anchor,
+                "Expected draft anchor hit testing to return an anchor handle.")) {
+        return 1;
+    }
+
+    const auto sceneToSource = [](const QPointF &scenePoint) {
+        return QPointF(scenePoint.x() / 10.0, scenePoint.y() / 10.0);
+    };
+    if (!expect(setInteractiveLineControlScenePoint(&vertices,
+                                                    handle.value(),
+                                                    QPointF(30.0, 45.0),
+                                                    sceneToSource),
+                "Expected moving a draft anchor to succeed.")) {
+        return 1;
+    }
+
+    const MapEditorInteractiveLineDraftVertex &moved = vertices.first();
+    if (!expect(moved.anchorScene == QPointF(30.0, 45.0)
+                    && moved.anchorSource == QPointF(3.0, 4.5),
+                "Expected draft anchor move to update anchor scene/source positions.")) {
+        return 1;
+    }
+    if (!expect(moved.incomingControlScene == QPointF(27.0, 43.0)
+                    && moved.incomingControlSource == QPointF(2.7, 4.3),
+                "Expected draft anchor move to preserve incoming control offset.")) {
+        return 1;
+    }
+    if (!expect(moved.outgoingControlScene == QPointF(34.0, 49.0)
+                    && moved.outgoingControlSource == QPointF(3.4, 4.9),
+                "Expected draft anchor move to preserve outgoing control offset.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char **argv)
@@ -213,6 +265,9 @@ int main(int argc, char **argv)
     QApplication app(argc, argv);
 
     if (runPointInsertStaleTransactionStatusTest() != 0) {
+        return 1;
+    }
+    if (runDraftAnchorMovePreservesControlOffsetsTest() != 0) {
         return 1;
     }
 

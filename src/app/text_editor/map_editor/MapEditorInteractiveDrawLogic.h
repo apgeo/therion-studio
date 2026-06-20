@@ -27,6 +27,7 @@ struct MapEditorInteractiveLineControlHandleRef
 {
     enum class Kind
     {
+        Anchor,
         Incoming,
         Outgoing
     };

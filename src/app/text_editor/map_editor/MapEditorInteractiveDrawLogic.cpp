@@ -379,6 +379,12 @@ std::optional<MapEditorInteractiveLineControlHandleRef> interactiveLineControlAt
     std::optional<MapEditorInteractiveLineControlHandleRef> bestHandle;
     for (int index = 0; index < vertices.size(); ++index) {
         const MapEditorInteractiveLineDraftVertex &vertex = vertices.at(index);
+        const qreal anchorDistance = QLineF(scenePosition, vertex.anchorScene).length();
+        if (anchorDistance <= bestDistance) {
+            bestDistance = anchorDistance;
+            bestHandle = MapEditorInteractiveLineControlHandleRef{index,
+                                                                  MapEditorInteractiveLineControlHandleRef::Kind::Anchor};
+        }
         if (vertex.incomingControlScene.has_value()) {
             const qreal distance = QLineF(scenePosition, vertex.incomingControlScene.value()).length();
             if (distance <= bestDistance) {
@@ -413,6 +419,23 @@ bool setInteractiveLineControlScenePoint(QVector<MapEditorInteractiveLineDraftVe
     }
 
     MapEditorInteractiveLineDraftVertex &vertex = (*vertices)[handle.vertexIndex];
+    if (handle.kind == MapEditorInteractiveLineControlHandleRef::Kind::Anchor) {
+        const QPointF delta = scenePoint - vertex.anchorScene;
+        vertex.anchorScene = scenePoint;
+        vertex.anchorSource = sceneToSource(scenePoint);
+        if (vertex.incomingControlScene.has_value()) {
+            const QPointF movedControl = vertex.incomingControlScene.value() + delta;
+            vertex.incomingControlScene = movedControl;
+            vertex.incomingControlSource = sceneToSource(movedControl);
+        }
+        if (vertex.outgoingControlScene.has_value()) {
+            const QPointF movedControl = vertex.outgoingControlScene.value() + delta;
+            vertex.outgoingControlScene = movedControl;
+            vertex.outgoingControlSource = sceneToSource(movedControl);
+        }
+        return true;
+    }
+
     if (handle.kind == MapEditorInteractiveLineControlHandleRef::Kind::Incoming) {
         vertex.incomingControlScene = scenePoint;
         vertex.incomingControlSource = sceneToSource(scenePoint);

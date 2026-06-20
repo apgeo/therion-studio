@@ -1101,9 +1101,15 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                             context_.interactiveDrawHoverSnapGuideScenePoints->clear();
                         }
                         viewport->setCursor(Qt::ClosedHandCursor);
-                        (*context_.toolbarStatusNote) = drawMode() == MapEditorInteractiveDrawMode::Line
-                            ? tr("Line mode: dragging bezier control point.")
-                            : tr("Area mode: dragging bezier control point.");
+                        if (handle->kind == MapEditorInteractiveLineControlHandleRef::Kind::Anchor) {
+                            (*context_.toolbarStatusNote) = drawMode() == MapEditorInteractiveDrawMode::Line
+                                ? tr("Line mode: dragging draft point.")
+                                : tr("Area mode: dragging draft point.");
+                        } else {
+                            (*context_.toolbarStatusNote) = drawMode() == MapEditorInteractiveDrawMode::Line
+                                ? tr("Line mode: dragging bezier control point.")
+                                : tr("Area mode: dragging bezier control point.");
+                        }
                         context_.refreshToolbarSummary();
                         context_.updateCommandSurfaceState();
                         (*context_.primaryPointerInteractionActive) = false;
@@ -1321,6 +1327,22 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                 && (*context_.interactiveDrawControlDragActive)
                 && mouseEvent->button() == Qt::LeftButton) {
                 const QPointF scenePoint = context_.view->mapToScene(mouseEvent->pos());
+                const MapEditorInteractiveLineControlHandleRef dragHandle = (*context_.interactiveDrawControlDragHandle);
+                if (dragHandle.kind == MapEditorInteractiveLineControlHandleRef::Kind::Anchor
+                    && context_.interactiveDrawLineVertices != nullptr
+                    && dragHandle.vertexIndex == 0
+                    && context_.interactiveDrawLineVertices->size() >= (drawMode() == MapEditorInteractiveDrawMode::Line ? 2 : 3)) {
+                    const QPointF closeHitProbe = context_.view->mapToScene(mouseEvent->pos() + QPoint(10, 0));
+                    const qreal closeHitRadius = std::max<qreal>(5.0, QLineF(scenePoint, closeHitProbe).length());
+                    const QPointF firstAnchorScenePoint = context_.interactiveDrawLineVertices->first().anchorScene;
+                    if (QLineF(scenePoint, firstAnchorScenePoint).length() <= closeHitRadius
+                        && context_.commitInteractiveDrawSession != nullptr) {
+                        (*context_.interactiveDrawControlDragActive) = false;
+                        context_.commitInteractiveDrawSession(drawMode() == MapEditorInteractiveDrawMode::Line);
+                        event->accept();
+                        return true;
+                    }
+                }
                 context_.setInteractiveLineControlScenePoint((*context_.interactiveDrawControlDragHandle), scenePoint);
                 (*context_.interactiveDrawControlDragActive) = false;
                 const QPointF sceneOffset = context_.view->mapToScene(mouseEvent->pos() + QPoint(8, 0));
@@ -1330,9 +1352,17 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                 } else {
                     applyDefaultMapViewportCursor(context_, viewport);
                 }
-                (*context_.toolbarStatusNote) = drawMode() == MapEditorInteractiveDrawMode::Line
-                    ? tr("Line mode: bezier control adjusted.")
-                    : tr("Area mode: bezier control adjusted.");
+                const bool draggedAnchor =
+                    context_.interactiveDrawControlDragHandle->kind == MapEditorInteractiveLineControlHandleRef::Kind::Anchor;
+                if (draggedAnchor) {
+                    (*context_.toolbarStatusNote) = drawMode() == MapEditorInteractiveDrawMode::Line
+                        ? tr("Line mode: draft point moved.")
+                        : tr("Area mode: draft point moved.");
+                } else {
+                    (*context_.toolbarStatusNote) = drawMode() == MapEditorInteractiveDrawMode::Line
+                        ? tr("Line mode: bezier control adjusted.")
+                        : tr("Area mode: bezier control adjusted.");
+                }
                 context_.refreshToolbarSummary();
                 context_.updateCommandSurfaceState();
                 event->accept();

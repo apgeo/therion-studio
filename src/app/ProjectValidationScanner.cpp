@@ -5,6 +5,7 @@
 #include "../core/TherionFileTypes.h"
 #include "../core/TherionSourceLogicalDocument.h"
 #include "../core/TherionSourceReferenceResolver.h"
+#include "../core/TherionSourceSnapshotCache.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -256,7 +257,9 @@ QSet<QString> indexedProjectSourceFiles(const ProjectIndexSnapshot &snapshot)
 
 void appendUnindexedTh2StationNameFindings(ProjectValidationScanner::Result *result,
                                            const QString &filePath,
-                                           const QString &text)
+                                           const QString &text,
+                                           TherionSourceSnapshotCache &sourceSnapshotCache,
+                                           int sourceRevisionId)
 {
     if (result == nullptr
         || result->limitReached
@@ -266,7 +269,9 @@ void appendUnindexedTh2StationNameFindings(ProjectValidationScanner::Result *res
 
     TherionSourceDocumentMetadata metadata;
     metadata.sourceType = TherionSourceDocumentType::TherionMap;
-    const TherionSourceLogicalDocument logicalDocument = TherionSourceLogicalDocument::fromText(text, metadata);
+    metadata.revisionId = sourceRevisionId;
+    const TherionSourceLogicalDocument &logicalDocument =
+        sourceSnapshotCache.logicalDocument(text, metadata);
     for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
         const TherionSourceLogicalArgumentRange *nameRange = pointStationNameRange(command);
         if (nameRange == nullptr) {
@@ -301,7 +306,9 @@ void appendUnindexedTh2StationNameFindings(ProjectValidationScanner::Result *res
 void appendProjectIndexFindings(ProjectValidationScanner::Result *result,
                                 const QString &projectRootPath,
                                 const QHash<QString, QString> &inMemoryProjectContentsByPath,
-                                const QHash<QString, QString> &searchedTextByPath)
+                                const QHash<QString, QString> &searchedTextByPath,
+                                TherionSourceSnapshotCache &sourceSnapshotCache,
+                                int &sourceRevisionCounter)
 {
     if (result == nullptr || result->limitReached) {
         return;
@@ -355,7 +362,12 @@ void appendProjectIndexFindings(ProjectValidationScanner::Result *result,
         if (indexedSourceFiles.contains(it.key())) {
             continue;
         }
-        appendUnindexedTh2StationNameFindings(result, it.key(), it.value());
+        const int sourceRevisionId = ++sourceRevisionCounter;
+        appendUnindexedTh2StationNameFindings(result,
+                                              it.key(),
+                                              it.value(),
+                                              sourceSnapshotCache,
+                                              sourceRevisionId);
         if (result->limitReached) {
             return;
         }
@@ -366,7 +378,9 @@ void appendFindingsForText(ProjectValidationScanner::Result *result,
                            const QString &filePath,
                            const QString &text,
                            const TherionSourceValidationCatalog &validationCatalog,
-                           const QSet<QString> &knownProjectFilePaths)
+                           const QSet<QString> &knownProjectFilePaths,
+                           TherionSourceSnapshotCache &sourceSnapshotCache,
+                           int sourceRevisionId)
 {
     if (result == nullptr) {
         return;
@@ -374,9 +388,18 @@ void appendFindingsForText(ProjectValidationScanner::Result *result,
 
     TherionSourceDocumentMetadata metadata;
     metadata.sourceType = therionSourceDocumentTypeForFilePath(filePath);
+    metadata.revisionId = sourceRevisionId;
+
+    const TherionSourceDocument &sourceDocument =
+        sourceSnapshotCache.sourceDocument(text, metadata);
+    const TherionSourceLogicalDocument &logicalDocument =
+        sourceSnapshotCache.logicalDocument(text,
+                                            validationCatalog,
+                                            metadata,
+                                            TherionSourceSnapshotCatalogKey::fromRevision(sourceRevisionId));
 
     const TherionSourceValidationResult validation =
-        TherionSourceValidator::validate(text, validationCatalog, metadata);
+        TherionSourceValidator::validate(sourceDocument, logicalDocument, validationCatalog);
     const bool suppressUnknownCommandWarnings = isTherionConfigFilePath(filePath);
     for (const TherionSourceDiagnostic &diagnostic : validation.diagnostics) {
         if (suppressUnknownCommandWarnings && diagnostic.code == QStringLiteral("unknown-command")) {
@@ -389,7 +412,6 @@ void appendFindingsForText(ProjectValidationScanner::Result *result,
         }
     }
 
-    const TherionSourceLogicalDocument logicalDocument = TherionSourceLogicalDocument::fromText(text, metadata);
     for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
         QString commandName = command.metadata.commandName;
         if (commandName.isEmpty()) {
@@ -459,6 +481,8 @@ ProjectValidationScanner::Result performProjectValidation(const QString &project
 
     QSet<QString> searchedPaths;
     QHash<QString, QString> searchedTextByPath;
+    TherionSourceSnapshotCache sourceSnapshotCache;
+    int sourceRevisionCounter = 0;
     QVector<QString> filePaths;
     collectValidatableFiles(result.projectRootPath, &filePaths);
     QSet<QString> knownProjectFilePaths;
@@ -481,7 +505,13 @@ ProjectValidationScanner::Result performProjectValidation(const QString &project
             ? *memoryIt
             : readValidatableFileText(filePath);
         searchedTextByPath.insert(filePath, text);
-        appendFindingsForText(&result, filePath, text, validationCatalog, knownProjectFilePaths);
+        appendFindingsForText(&result,
+                              filePath,
+                              text,
+                              validationCatalog,
+                              knownProjectFilePaths,
+                              sourceSnapshotCache,
+                              ++sourceRevisionCounter);
         if (result.limitReached) {
             return result;
         }
@@ -497,7 +527,13 @@ ProjectValidationScanner::Result performProjectValidation(const QString &project
         searchedPaths.insert(filePath);
         ++result.searchedFileCount;
         searchedTextByPath.insert(filePath, *it);
-        appendFindingsForText(&result, filePath, *it, validationCatalog, knownProjectFilePaths);
+        appendFindingsForText(&result,
+                              filePath,
+                              *it,
+                              validationCatalog,
+                              knownProjectFilePaths,
+                              sourceSnapshotCache,
+                              ++sourceRevisionCounter);
         if (result.limitReached) {
             return result;
         }
@@ -506,7 +542,9 @@ ProjectValidationScanner::Result performProjectValidation(const QString &project
     appendProjectIndexFindings(&result,
                                result.projectRootPath,
                                normalizedInMemoryProjectContentsByPath,
-                               searchedTextByPath);
+                               searchedTextByPath,
+                               sourceSnapshotCache,
+                               sourceRevisionCounter);
 
     return result;
 }

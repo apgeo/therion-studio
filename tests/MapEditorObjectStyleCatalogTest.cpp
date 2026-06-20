@@ -276,7 +276,7 @@ int runCatalogTest()
     }
 
     const MapEditorResolvedLineStyle wallStyle = resolveMapEditorLineStyle(catalog, QStringLiteral("wall"));
-    if (!expect(std::abs(wallStyle.strokeWidth - 4.0) < 1e-6,
+    if (!expect(std::abs(wallStyle.strokeWidth - 3.0) < 1e-6,
                 "Expected line style override width for wall.")) {
         return 1;
     }

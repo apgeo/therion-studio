@@ -31,6 +31,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
   deleting a whole selected line unless an actual vertex/control handle is selected.
 - Keep map geometry strokes readable on HiDPI/Retina displays without changing TH2 source geometry or XTherion
   background-reference loading semantics.
+- Keep map object style catalog tests aligned with intentional resource-backed visual tuning such as `line wall`
+  stroke width changes.
 - Keep interactive map drawing previews and control guides readable on HiDPI/Retina displays while preserving their
   transient UI-only behavior.
 - Keep interactive line/area drafts editable before commit: captured anchors and their Bezier controls must both be

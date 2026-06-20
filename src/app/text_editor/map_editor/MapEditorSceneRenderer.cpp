@@ -32,6 +32,7 @@ namespace TherionStudio {
 namespace {
 constexpr int kMapItemRole = Qt::UserRole + 120;
 constexpr int kMapItemGeometryValue = 1;
+constexpr qreal kMinimumMapGeometryStrokeLogicalPx = 1.15;
 
 struct LineControlConnectorBinding
 {
@@ -103,6 +104,19 @@ qreal zoomOutStrokeScale(qreal lod)
     return qBound<qreal>(0.32, std::pow(qMax<qreal>(0.01, lod), 0.72), 1.0);
 }
 
+qreal paintDevicePixelRatio(QPainter *painter)
+{
+    return painter != nullptr && painter->device() != nullptr
+        ? qMax<qreal>(1.0, painter->device()->devicePixelRatioF())
+        : 1.0;
+}
+
+qreal cosmeticStrokeWidthForPaintDevice(QPainter *painter, qreal requestedLogicalWidth)
+{
+    return qMax<qreal>(kMinimumMapGeometryStrokeLogicalPx, requestedLogicalWidth)
+        * paintDevicePixelRatio(painter);
+}
+
 class MapZoomAwarePathItem final : public QGraphicsPathItem
 {
 public:
@@ -147,7 +161,7 @@ protected:
 
         QPen drawPen = basePen_;
         drawPen.setCosmetic(true);
-        drawPen.setWidthF(qMax<qreal>(0.15, basePen_.widthF() * widthScale));
+        drawPen.setWidthF(cosmeticStrokeWidthForPaintDevice(painter, basePen_.widthF() * widthScale));
 
         painter->save();
         painter->setPen(drawPen);
@@ -196,9 +210,11 @@ private:
 
         QColor overlayColor = selected ? mapEditorInteractionSelectionColor() : mapEditorInteractionHoverColor();
         overlayColor.setAlpha(selected ? 235 : 220);
-        const qreal overlayWidth = selected
-            ? qMax<qreal>(selectionOverlayMinimumWidth_, drawPen.widthF() + selectionOverlayExtraWidth_)
-            : qMax<qreal>(hoverOverlayMinimumWidth_, drawPen.widthF() + hoverOverlayExtraWidth_);
+        const qreal devicePixelRatio = paintDevicePixelRatio(painter);
+        const qreal overlayMinimumWidth = selected ? selectionOverlayMinimumWidth_ : hoverOverlayMinimumWidth_;
+        const qreal overlayExtraWidth = selected ? selectionOverlayExtraWidth_ : hoverOverlayExtraWidth_;
+        const qreal overlayWidth = qMax<qreal>(overlayMinimumWidth * devicePixelRatio,
+                                               drawPen.widthF() + (overlayExtraWidth * devicePixelRatio));
         QPen overlayPen(overlayColor,
                         overlayWidth,
                         Qt::SolidLine,

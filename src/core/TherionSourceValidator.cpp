@@ -6,6 +6,7 @@
 #include "TherionDocumentParser.h"
 #include "TherionSourceDocument.h"
 #include "TherionSourceLogicalDocument.h"
+#include "TherionSourceSnapshotCache.h"
 
 #include <QCoreApplication>
 
@@ -969,11 +970,15 @@ TherionSourceValidationResult TherionSourceValidator::validate(const QString &co
                                                                const TherionSourceValidationCatalog &catalog,
                                                                const TherionSourceDocumentMetadata &metadata)
 {
-    const TherionSourceDocument sourceDocument = TherionSourceDocument::fromText(contents, metadata);
-    const TherionSourceLogicalDocument logicalDocument =
+    TherionSourceSnapshotCache sourceSnapshotCache;
+    const TherionSourceDocument &sourceDocument = sourceSnapshotCache.sourceDocument(contents, metadata);
+    const TherionSourceLogicalDocument &logicalDocument =
         catalog.commandNames.isEmpty()
-            ? TherionSourceLogicalDocument::fromSourceDocument(sourceDocument)
-            : TherionSourceLogicalDocument::fromSourceDocument(sourceDocument, catalog);
+            ? sourceSnapshotCache.logicalDocument(contents, metadata)
+            : sourceSnapshotCache.logicalDocument(contents,
+                                                  catalog,
+                                                  metadata,
+                                                  TherionSourceSnapshotCatalogKey::fromRevision(metadata.revisionId));
     return validateSourceDocuments(sourceDocument, logicalDocument, !catalog.commandNames.isEmpty());
 }
 

@@ -112,8 +112,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
   normalization, validation fixes, and cursor insertions can distinguish applied, no-op, stale, invalid, and unavailable edits.
 - Keep `TherionSourceSnapshotCache` invalidation covered for revision, undo/redo-style revision replay, encoding,
   source type, catalog revision, and uncached catalog projections before migrating more Structure/Validation consumers.
-- Slice 2 - Continue tightening shared source snapshot ownership now that app-side validation, project-index,
-  raw completion/context consumers, and legacy validator string overloads route projections through `TherionSourceSnapshotCache`.
+- Slice 2 - Continue expanding shared source projections into Blocks/Map consumers now that app-side validation,
+  project-index, raw completion/context, validator string overloads, and transient cache paths share `TherionSourceSnapshotCache`.
 - Slice 4 - Migrate Blocks cards/details/move planning toward shared logical command and option ranges while preserving one source transaction per user-visible change.
 - Slice 5 - Migrate Map/TH2 object discovery, generic option parsing, reference resolution, and Smart Area insert planning to shared logical commands while keeping map geometry parsing map-specific.
 - Slice 6 - Close source transaction ownership by routing remaining user-visible source mutations through `TextEditorSourceTransactionController` or a narrow successor with undo label, expected revision, invalidation, dirty-state, and selection/cursor policy.

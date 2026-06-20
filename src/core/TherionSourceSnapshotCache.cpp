@@ -71,7 +71,7 @@ const TherionSourceLogicalDocument &TherionSourceSnapshotCache::logicalDocument(
     if (!key.isCacheable()) {
         transientLogicalEntry_ = LogicalEntry{
             .key = key,
-            .document = TherionSourceLogicalDocument::fromText(contents, metadata),
+            .document = TherionSourceLogicalDocument::fromSourceDocument(sourceDocument(contents, metadata)),
         };
         return transientLogicalEntry_->document;
     }
@@ -95,7 +95,8 @@ const TherionSourceLogicalDocument &TherionSourceSnapshotCache::logicalDocument(
     if (!key.isCacheable() || !catalogKey.enabled) {
         transientLogicalEntry_ = LogicalEntry{
             .key = key,
-            .document = TherionSourceLogicalDocument::fromText(contents, catalog, metadata),
+            .document = TherionSourceLogicalDocument::fromSourceDocument(sourceDocument(contents, metadata),
+                                                                        catalog),
         };
         return transientLogicalEntry_->document;
     }

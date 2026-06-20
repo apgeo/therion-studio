@@ -14,6 +14,7 @@ class TherionSourceSnapshotCacheTest : public QObject
 private slots:
     void cachesSourceDocumentsByRevisionMetadata();
     void doesNotCacheUnrevisionedSourceDocuments();
+    void doesNotCacheUnrevisionedLogicalDocuments();
     void invalidatesSourceDocumentsWhenEncodingChanges();
     void invalidatesLogicalDocumentsWhenSourceRevisionChanges();
     void invalidatesLogicalDocumentsAcrossUndoRedoRevisions();
@@ -70,6 +71,34 @@ void TherionSourceSnapshotCacheTest::doesNotCacheUnrevisionedSourceDocuments()
 
     QCOMPARE(firstText, QStringLiteral("survey a\n"));
     QCOMPARE(second.toText(), QStringLiteral("survey b\n"));
+}
+
+void TherionSourceSnapshotCacheTest::doesNotCacheUnrevisionedLogicalDocuments()
+{
+    TherionSourceSnapshotCache cache;
+    TherionSourceDocumentMetadata metadata;
+    metadata.sourceType = TherionSourceDocumentType::TherionConfig;
+    const TherionSourceValidationCatalog catalog = catalogWithSourceCommand();
+
+    const TherionSourceLogicalDocument &first = cache.logicalDocument(
+        QStringLiteral("source first.th\n"),
+        catalog,
+        metadata,
+        TherionSourceSnapshotCatalogKey::none());
+    const QString firstReference = first.commands().constFirst().parsed.tokens.at(1);
+    const bool firstKnown = first.commands().constFirst().metadata.catalogCommandKnown;
+
+    const TherionSourceLogicalDocument &second = cache.logicalDocument(
+        QStringLiteral("source second.th\n"),
+        catalog,
+        metadata,
+        TherionSourceSnapshotCatalogKey::none());
+
+    QCOMPARE(firstReference, QStringLiteral("first.th"));
+    QVERIFY(firstKnown);
+    QCOMPARE(second.commands().constFirst().parsed.tokens.at(1), QStringLiteral("second.th"));
+    QVERIFY(second.commands().constFirst().metadata.catalogCommandKnown);
+    QVERIFY(second.metadata().sourceType == TherionSourceDocumentType::TherionConfig);
 }
 
 void TherionSourceSnapshotCacheTest::invalidatesSourceDocumentsWhenEncodingChanges()

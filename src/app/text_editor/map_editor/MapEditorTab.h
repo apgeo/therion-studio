@@ -283,7 +283,7 @@ private:
     {
         InteractiveDrawMode mode_ = InteractiveDrawMode::None;
         InspectorObjectQuickFields pendingInsertFields_;
-        QHash<QString, InspectorObjectQuickFields> lastPendingInsertFieldsByCommand_;
+        QHash<QString, QVector<InspectorObjectQuickFields>> recentPendingInsertFieldsByCommand_;
         QString pendingTargetScrapIdentifier_;
         bool lineExtensionActive_ = false;
         int lineExtensionLineNumber_ = 0;
@@ -342,6 +342,7 @@ private:
         QLabel *objectQuickProjectionLabel_ = nullptr;
         QLabel *objectQuickTypeLabel_ = nullptr;
         QLabel *objectQuickSubtypeLabel_ = nullptr;
+        QLabel *objectQuickRecentLabel_ = nullptr;
         QLabel *objectQuickTargetScrapLabel_ = nullptr;
         QLabel *objectStylePreviewLabel_ = nullptr;
         QComboBox *objectQuickTypeCombo_ = nullptr;
@@ -352,6 +353,8 @@ private:
         QWidget *objectQuickNameEditor_ = nullptr;
         QWidget *objectQuickTextEditor_ = nullptr;
         QWidget *objectQuickValueEditor_ = nullptr;
+        QWidget *objectQuickRecentEditor_ = nullptr;
+        QVector<QPushButton *> objectQuickRecentButtons_;
         QLineEdit *objectQuickNameEdit_ = nullptr;
         QLineEdit *objectQuickTextEdit_ = nullptr;
         QLineEdit *objectQuickValueEdit_ = nullptr;
@@ -606,9 +609,11 @@ private:
     void clearPendingInsertObject();
     std::optional<InspectorObjectQuickFields> pendingInsertQuickFields() const;
     void setPendingInsertQuickFields(const InspectorObjectQuickFields &fields);
+    QVector<InspectorObjectQuickFields> recentPendingInsertQuickFields(const QString &commandKind) const;
     std::optional<InspectorScrapContext> pendingInsertTargetScrapContext() const;
     void setPendingInsertTargetScrapIdentifier(const QString &identifier);
     TherionDraftObjectOptions pendingDraftObjectOptions(const QString &commandKind) const;
+    void applyRecentPendingInsertQuickFields(int index);
     QString pendingScrapPreferredName() const;
     QString pendingScrapOptions(const QString &scaleOption) const;
     void activateSelectionInspector();

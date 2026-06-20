@@ -523,6 +523,8 @@ set(THERION_MAP_EDITOR_SOURCES
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
     src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.cpp
     src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h
+    src/app/text_editor/map_editor/MapEditorRecentSymbolsLayout.cpp
+    src/app/text_editor/map_editor/MapEditorRecentSymbolsLayout.h
     src/app/text_editor/map_editor/MapEditorLineDecorationItem.cpp
     src/app/text_editor/map_editor/MapEditorLineDecorationItem.h
     src/app/text_editor/map_editor/MapEditorPointSymbolGeometry.h

@@ -108,6 +108,21 @@ void commitComboEdit(QComboBox *combo, const QString &text)
     }
 }
 
+QPushButton *visibleRecentSymbolButton(QWidget *root, const QString &text)
+{
+    if (root == nullptr) {
+        return nullptr;
+    }
+
+    for (int index = 0; index < 6; ++index) {
+        auto *button = root->findChild<QPushButton *>(QStringLiteral("mapObjectQuickRecentSymbolButton%1").arg(index));
+        if (button != nullptr && button->isVisible() && button->text() == text) {
+            return button;
+        }
+    }
+    return nullptr;
+}
+
 bool visibleNoSelectionLabel(QWidget *root)
 {
     if (root == nullptr) {
@@ -716,6 +731,31 @@ int runSelectionPanelTypeValuesTest()
                     && typeCombo->currentText() == QStringLiteral("border")
                     && subtypeCombo->currentText() == QStringLiteral("invisible"),
                 "Line insert should remember the last pending type and subtype as the next default.")) {
+        return 1;
+    }
+    auto *recentButton0 = mapTab->findChild<QPushButton *>(QStringLiteral("mapObjectQuickRecentSymbolButton0"));
+    if (!expect(recentButton0 != nullptr
+                    && recentButton0->isVisible()
+                    && recentButton0->text() == QStringLiteral("border:invisible"),
+                "Line insert should expose the remembered type/subtype as the first recent symbol button.")) {
+        return 1;
+    }
+    commitComboEdit(typeCombo, QStringLiteral("wall"));
+    pumpEvents();
+    commitComboEdit(subtypeCombo, QStringLiteral("sand"));
+    pumpEvents();
+    QPushButton *borderRecentButton = visibleRecentSymbolButton(mapTab, QStringLiteral("border:invisible"));
+    if (!expect(recentButton0->isVisible()
+                    && borderRecentButton != nullptr
+                    && recentButton0->text() == QStringLiteral("wall:sand"),
+                "Line insert should keep a deduplicated MRU list of recent type/subtype choices.")) {
+        return 1;
+    }
+    borderRecentButton->click();
+    pumpEvents();
+    if (!expect(typeCombo->currentText() == QStringLiteral("border")
+                    && subtypeCombo->currentText() == QStringLiteral("invisible"),
+                "Clicking a recent symbol button should apply its type and subtype to the pending object.")) {
         return 1;
     }
     subtypeCombo->setFocus(Qt::OtherFocusReason);

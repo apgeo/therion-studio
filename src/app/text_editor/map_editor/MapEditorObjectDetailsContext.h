@@ -60,6 +60,7 @@ struct MapEditorObjectDetailsContext
     QLabel *quickProjectionLabel = nullptr;
     QLabel *quickTypeLabel = nullptr;
     QLabel *quickSubtypeLabel = nullptr;
+    QLabel *quickRecentLabel = nullptr;
     QLabel *quickTargetScrapLabel = nullptr;
     QLabel *stylePreviewLabel = nullptr;
     QComboBox *quickTypeCombo = nullptr;
@@ -70,6 +71,8 @@ struct MapEditorObjectDetailsContext
     QWidget *quickNameEditor = nullptr;
     QWidget *quickTextEditor = nullptr;
     QWidget *quickValueEditor = nullptr;
+    QWidget *quickRecentEditor = nullptr;
+    QVector<QPushButton *> quickRecentButtons;
     QLineEdit *quickNameEdit = nullptr;
     QLineEdit *quickTextEdit = nullptr;
     QLineEdit *quickValueEdit = nullptr;
@@ -125,6 +128,7 @@ struct MapEditorObjectDetailsContext
     std::function<void()> refreshObjectDetailsPanel;
     std::function<std::optional<InspectorObjectQuickFields>()> pendingInsertQuickFields;
     std::function<void(const InspectorObjectQuickFields &)> setPendingInsertQuickFields;
+    std::function<QVector<InspectorObjectQuickFields>(const QString &)> recentPendingInsertQuickFields;
     std::function<void()> clearInspectorObjectSelection;
     std::function<void(int, bool)> selectMapLine;
     std::function<void(int)> restorePointSelectionLater;

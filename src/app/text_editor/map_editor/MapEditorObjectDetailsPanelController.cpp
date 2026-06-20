@@ -92,6 +92,51 @@ QString metadataForPendingInsert(const std::optional<InspectorScrapContext> &scr
         .arg(suffix);
 }
 
+QString recentPendingSymbolButtonText(const InspectorObjectQuickFields &fields)
+{
+    const QString type = fields.type.trimmed();
+    const QString subtype = fields.subtype.trimmed();
+    return subtype.isEmpty() ? type : QStringLiteral("%1:%2").arg(type, subtype);
+}
+
+void updateRecentPendingSymbolButtons(const MapEditorObjectDetailsContext &context,
+                                      const QString &commandKind,
+                                      bool visible)
+{
+    const QVector<InspectorObjectQuickFields> recentFields =
+        visible && context.recentPendingInsertQuickFields
+            ? context.recentPendingInsertQuickFields(commandKind)
+            : QVector<InspectorObjectQuickFields>{};
+    const bool recentVisible = visible && !recentFields.isEmpty();
+    if (context.quickRecentLabel != nullptr) {
+        context.quickRecentLabel->setVisible(recentVisible);
+    }
+    if (context.quickRecentEditor != nullptr) {
+        context.quickRecentEditor->setVisible(recentVisible);
+    }
+
+    for (int index = 0; index < context.quickRecentButtons.size(); ++index) {
+        QPushButton *button = context.quickRecentButtons.at(index);
+        if (button == nullptr) {
+            continue;
+        }
+
+        const bool buttonVisible = index < recentFields.size();
+        button->setVisible(buttonVisible);
+        button->setEnabled(buttonVisible);
+        if (buttonVisible) {
+            const QString label = recentPendingSymbolButtonText(recentFields.at(index));
+            button->setText(label);
+            button->setToolTip(QCoreApplication::translate("TherionStudio::MapEditorObjectDetailsPanelController",
+                                                           "Use recent type/subtype %1")
+                                   .arg(label));
+        } else {
+            button->setText(QString());
+            button->setToolTip(QString());
+        }
+    }
+}
+
 QString metadataForSourceLine(const QVector<TherionParsedLine> &parsedLines, int lineNumber)
 {
     const std::optional<InspectorScrapContext> scrapContext = inspectorScrapContextForSourceLine(parsedLines,
@@ -276,10 +321,12 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.quickProjectionLabel == nullptr
         || context_.quickTypeLabel == nullptr
         || context_.quickSubtypeLabel == nullptr
+        || context_.quickRecentLabel == nullptr
         || context_.quickTargetScrapLabel == nullptr
         || context_.quickNameEditor == nullptr
         || context_.quickTextEditor == nullptr
         || context_.quickValueEditor == nullptr
+        || context_.quickRecentEditor == nullptr
         || context_.stylePreviewLabel == nullptr
         || context_.quickTypeCombo == nullptr
         || context_.quickSubtypeCombo == nullptr
@@ -488,6 +535,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                                    inspectorSubtypeValuesForCommandTypeWithEmptyChoice(catalog, commandKind, pendingFields->type),
                                    pendingFields->subtype);
             setTargetScrapComboValues(context_.quickTargetScrapCombo, scrapContexts, targetScrapContext);
+            updateRecentPendingSymbolButtons(context_, commandKind, typeFieldsVisible);
             context_.quickIdentifierLabel->setText(tr("ID"));
             context_.quickIdentifierEdit->setText(pendingFields->identifier);
             context_.quickNameEdit->setText(pendingFields->name);
@@ -680,6 +728,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                 setEditableComboValues(context_.quickSubtypeCombo,
                                        inspectorSubtypeValuesForCommandTypeWithEmptyChoice(catalog, fields->commandKind, fields->type),
                                        fields->subtype);
+                updateRecentPendingSymbolButtons(context_, fields->commandKind, false);
                 showStylePreview(fields->commandKind, fields->type, fields->subtype);
             }
         }
@@ -689,6 +738,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.quickNameEditor->setVisible(false);
         context_.quickTextEditor->setVisible(false);
         context_.quickValueEditor->setVisible(false);
+        updateRecentPendingSymbolButtons(context_, QString(), false);
         objectQuickOptionsVisible = false;
         context_.scrapOptionsEditor->setVisible(false);
         scrapOptionsVisible = false;

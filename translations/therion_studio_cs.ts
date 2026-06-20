@@ -5563,6 +5563,16 @@ subtype blocks</translation>
         <translation>Náhled</translation>
     </message>
     <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="173"/>
+        <source>Recent</source>
+        <translation>Poslední</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="131"/>
+        <source>Use recent type/subtype %1</source>
+        <translation>Použít poslední typ/podtyp %1</translation>
+    </message>
+    <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="273"/>
         <source>Geometry</source>
         <translation>Geometrie</translation>

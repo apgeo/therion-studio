@@ -57,6 +57,52 @@ bool pendingValueVisible(const InspectorSymbolCatalog &catalog,
     return inspectorValueOptionSupportedForCommandType(catalog, commandKind, type)
         || !value.trimmed().isEmpty();
 }
+
+bool remembersPendingTypeForCommand(const QString &commandKind)
+{
+    return commandKind == QStringLiteral("point")
+        || commandKind == QStringLiteral("line")
+        || commandKind == QStringLiteral("area");
+}
+
+QString recentPendingTypeKey(const InspectorObjectQuickFields &fields)
+{
+    return fields.type.trimmed().toLower() + QLatin1Char('\n') + fields.subtype.trimmed().toLower();
+}
+
+void recordRecentPendingInsertFields(QHash<QString, QVector<InspectorObjectQuickFields>> *recentByCommand,
+                                     const InspectorObjectQuickFields &fields)
+{
+    if (recentByCommand == nullptr) {
+        return;
+    }
+
+    const QString normalizedCommand = normalizedPendingCommandKind(fields.commandKind);
+    if (!remembersPendingTypeForCommand(normalizedCommand) || fields.type.trimmed().isEmpty()) {
+        return;
+    }
+
+    InspectorObjectQuickFields rememberedFields;
+    rememberedFields.commandKind = normalizedCommand;
+    rememberedFields.type = fields.type.trimmed();
+    rememberedFields.subtype = fields.subtype.trimmed();
+
+    QVector<InspectorObjectQuickFields> recent = recentByCommand->value(normalizedCommand);
+    const QString key = recentPendingTypeKey(rememberedFields);
+    for (auto it = recent.begin(); it != recent.end();) {
+        if (recentPendingTypeKey(*it) == key) {
+            it = recent.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
+    recent.prepend(rememberedFields);
+    while (recent.size() > 6) {
+        recent.removeLast();
+    }
+    recentByCommand->insert(normalizedCommand, recent);
+}
 }
 
 void MapEditorTab::beginPendingInsertObject(const QString &commandKind)
@@ -71,12 +117,13 @@ void MapEditorTab::beginPendingInsertObject(const QString &commandKind)
     fields.commandKind = normalizedCommand;
     fields.typeEditable = normalizedCommand != QStringLiteral("scrap");
     fields.type = defaultPendingTypeForCommand(normalizedCommand);
-    const auto rememberedIt = interactiveDrawState_.lastPendingInsertFieldsByCommand_.constFind(normalizedCommand);
-    if (rememberedIt != interactiveDrawState_.lastPendingInsertFieldsByCommand_.constEnd()) {
-        if (!rememberedIt->type.trimmed().isEmpty()) {
-            fields.type = rememberedIt->type;
+    const QVector<InspectorObjectQuickFields> recentFields =
+        interactiveDrawState_.recentPendingInsertFieldsByCommand_.value(normalizedCommand);
+    if (!recentFields.isEmpty()) {
+        if (!recentFields.constFirst().type.trimmed().isEmpty()) {
+            fields.type = recentFields.constFirst().type;
         }
-        fields.subtype = rememberedIt->subtype;
+        fields.subtype = recentFields.constFirst().subtype;
     }
     if (normalizedCommand == QStringLiteral("scrap")) {
         fields.identifier = QStringLiteral("new-scrap");
@@ -178,15 +225,31 @@ void MapEditorTab::setPendingInsertQuickFields(const InspectorObjectQuickFields 
                             normalizedCommand,
                             interactiveDrawState_.pendingInsertFields_.type,
                             interactiveDrawState_.pendingInsertFields_.value);
-    if (normalizedCommand == QStringLiteral("point")
-        || normalizedCommand == QStringLiteral("line")
-        || normalizedCommand == QStringLiteral("area")) {
-        InspectorObjectQuickFields rememberedFields;
-        rememberedFields.commandKind = normalizedCommand;
-        rememberedFields.type = interactiveDrawState_.pendingInsertFields_.type;
-        rememberedFields.subtype = interactiveDrawState_.pendingInsertFields_.subtype;
-        interactiveDrawState_.lastPendingInsertFieldsByCommand_.insert(normalizedCommand, rememberedFields);
+    recordRecentPendingInsertFields(&interactiveDrawState_.recentPendingInsertFieldsByCommand_,
+                                    interactiveDrawState_.pendingInsertFields_);
+}
+
+QVector<InspectorObjectQuickFields> MapEditorTab::recentPendingInsertQuickFields(const QString &commandKind) const
+{
+    return interactiveDrawState_.recentPendingInsertFieldsByCommand_.value(normalizedPendingCommandKind(commandKind));
+}
+
+void MapEditorTab::applyRecentPendingInsertQuickFields(int index)
+{
+    std::optional<InspectorObjectQuickFields> pendingFields = pendingInsertQuickFields();
+    if (!pendingFields.has_value()) {
+        return;
     }
+
+    const QVector<InspectorObjectQuickFields> recentFields = recentPendingInsertQuickFields(pendingFields->commandKind);
+    if (index < 0 || index >= recentFields.size()) {
+        return;
+    }
+
+    pendingFields->type = recentFields.at(index).type;
+    pendingFields->subtype = recentFields.at(index).subtype;
+    setPendingInsertQuickFields(*pendingFields);
+    refreshObjectDetailsPanel();
 }
 
 TherionDraftObjectOptions MapEditorTab::pendingDraftObjectOptions(const QString &commandKind) const
@@ -279,6 +342,7 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .quickProjectionLabel = objectDetailsUiState_.objectQuickProjectionLabel_,
         .quickTypeLabel = objectDetailsUiState_.objectQuickTypeLabel_,
         .quickSubtypeLabel = objectDetailsUiState_.objectQuickSubtypeLabel_,
+        .quickRecentLabel = objectDetailsUiState_.objectQuickRecentLabel_,
         .quickTargetScrapLabel = objectDetailsUiState_.objectQuickTargetScrapLabel_,
         .stylePreviewLabel = objectDetailsUiState_.objectStylePreviewLabel_,
         .quickTypeCombo = objectDetailsUiState_.objectQuickTypeCombo_,
@@ -289,6 +353,8 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .quickNameEditor = objectDetailsUiState_.objectQuickNameEditor_,
         .quickTextEditor = objectDetailsUiState_.objectQuickTextEditor_,
         .quickValueEditor = objectDetailsUiState_.objectQuickValueEditor_,
+        .quickRecentEditor = objectDetailsUiState_.objectQuickRecentEditor_,
+        .quickRecentButtons = objectDetailsUiState_.objectQuickRecentButtons_,
         .quickNameEdit = objectDetailsUiState_.objectQuickNameEdit_,
         .quickTextEdit = objectDetailsUiState_.objectQuickTextEdit_,
         .quickValueEdit = objectDetailsUiState_.objectQuickValueEdit_,
@@ -358,6 +424,9 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         },
         .setPendingInsertQuickFields = [this](const InspectorObjectQuickFields &fields) {
             setPendingInsertQuickFields(fields);
+        },
+        .recentPendingInsertQuickFields = [this](const QString &commandKind) {
+            return recentPendingInsertQuickFields(commandKind);
         },
         .clearInspectorObjectSelection = [this]() {
             clearInspectorObjectSelection();

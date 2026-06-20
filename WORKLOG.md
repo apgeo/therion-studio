@@ -36,8 +36,9 @@ Active planning only. Completed history belongs in archive files. Stable archite
   `Auto-collapse/expand Scraps` toggle switches the inspector to a focused mode that keeps only the selected
   object's scrap expanded without briefly expanding or repainting other scraps during source-driven object-tree
   refreshes, including raw-editor navigation while the map pane is detached.
-- Keep pending map drawing defaults session-local to the open map editor: Point, Line, and Area remember their last
-  selected type/subtype and use it for the next new object instead of resetting to built-in defaults every time.
+- Keep pending map drawing defaults local to the open map editor: Point, Line, and Area remember deduplicated recent
+  type/subtype choices, expose them as compact wrapping quick buttons below symbol preview, and use the newest choice
+  for the next new object instead of resetting to built-in defaults every time.
 - Keep selected map line/area vertex markers close to XTherion styling: larger red anchor circles with blue
   outlines, smaller blue control-point squares, and a red focused-vertex halo.
 - Keep empty scrap object cleanup explicit through validator warnings and `Apply Fix`, not silent source mutation.

@@ -47,6 +47,7 @@
 #include "MapEditorRasterBackgroundImage.h"
 #include "MapEditorRasterBackgroundPlacement.h"
 #include "MapEditorSceneSupport.h"
+#include "../TextEditorSourceTransactionController.h"
 #include "../TextEditorTab.h"
 #include "../../../core/MapBackgroundPlacement.h"
 #include "../../../core/ISessionStore.h"
@@ -1729,15 +1730,12 @@ void MapEditorTab::browseAndAddBackgroundImages()
                                                                           metadataLine,
                                                                           false);
                 if (afterText != beforeText) {
-                    bool metadataApplied = false;
-                    applySourceTextChangeWithSnapshot(tr("Import PocketTopo Background"),
-                                                      beforeText,
-                                                      afterText,
-                                                      0,
-                                                      [&metadataApplied]() {
-                                                          metadataApplied = true;
-                                                      });
-                    if (!metadataApplied) {
+                    const TextEditorSourceTransactionResult transactionResult =
+                        applySourceTextChangeWithSnapshot(tr("Import PocketTopo Background"),
+                                                          beforeText,
+                                                          afterText,
+                                                          0);
+                    if (transactionResult != TextEditorSourceTransactionResult::Applied) {
                         pocketTopoMetadataSkipped = true;
                     }
                 }
@@ -3073,20 +3071,19 @@ void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item
         return;
     }
 
-    bool metadataApplied = false;
-    applySourceTextChangeWithSnapshot(label,
-                                      beforeText,
-                                      afterText,
-                                      0,
-                                      [this, &metadataApplied]() {
-                                          metadataApplied = true;
-                                          MapEditorUndoArbitrationService::markMapCommandApplied(undoOwnershipState_);
-                                          updateCommandSurfaceState();
-                                          if (!toolbarStatusNote_.isEmpty()) {
-                                              refreshToolbarSummary();
-                                          }
-                                      });
-    if (!metadataApplied) {
+    const TextEditorSourceTransactionResult transactionResult =
+        applySourceTextChangeWithSnapshot(label,
+                                          beforeText,
+                                          afterText,
+                                          0,
+                                          [this]() {
+                                              MapEditorUndoArbitrationService::markMapCommandApplied(undoOwnershipState_);
+                                              updateCommandSurfaceState();
+                                              if (!toolbarStatusNote_.isEmpty()) {
+                                                  refreshToolbarSummary();
+                                              }
+                                          });
+    if (transactionResult != TextEditorSourceTransactionResult::Applied) {
         toolbarStatusNote_ = tr("Background metadata sync skipped: document changed.");
         refreshToolbarSummary();
     }
@@ -3186,20 +3183,19 @@ void MapEditorTab::syncBackgroundLayerMapiahMetadata(QGraphicsPixmapItem *item,
         return;
     }
 
-    bool metadataApplied = false;
-    applySourceTextChangeWithSnapshot(label,
-                                      beforeText,
-                                      afterText,
-                                      0,
-                                      [this, &metadataApplied]() {
-                                          metadataApplied = true;
-                                          MapEditorUndoArbitrationService::markMapCommandApplied(undoOwnershipState_);
-                                          updateCommandSurfaceState();
-                                          if (!toolbarStatusNote_.isEmpty()) {
-                                              refreshToolbarSummary();
-                                          }
-                                      });
-    if (!metadataApplied) {
+    const TextEditorSourceTransactionResult transactionResult =
+        applySourceTextChangeWithSnapshot(label,
+                                          beforeText,
+                                          afterText,
+                                          0,
+                                          [this]() {
+                                              MapEditorUndoArbitrationService::markMapCommandApplied(undoOwnershipState_);
+                                              updateCommandSurfaceState();
+                                              if (!toolbarStatusNote_.isEmpty()) {
+                                                  refreshToolbarSummary();
+                                              }
+                                          });
+    if (transactionResult != TextEditorSourceTransactionResult::Applied) {
         toolbarStatusNote_ = tr("Background transform metadata sync skipped: document changed.");
         refreshToolbarSummary();
     }
@@ -3230,24 +3226,23 @@ bool MapEditorTab::syncBackgroundLayerXtherionGammaMetadata(QGraphicsPixmapItem 
         return false;
     }
 
-    bool metadataApplied = false;
-    applySourceTextChangeWithSnapshot(label,
-                                      beforeText,
-                                      afterText,
-                                      0,
-                                      [this, &metadataApplied]() {
-                                          metadataApplied = true;
-                                          MapEditorUndoArbitrationService::markMapCommandApplied(undoOwnershipState_);
-                                          updateCommandSurfaceState();
-                                          if (!toolbarStatusNote_.isEmpty()) {
-                                              refreshToolbarSummary();
-                                          }
-                                      });
-    if (!metadataApplied) {
+    const TextEditorSourceTransactionResult transactionResult =
+        applySourceTextChangeWithSnapshot(label,
+                                          beforeText,
+                                          afterText,
+                                          0,
+                                          [this]() {
+                                              MapEditorUndoArbitrationService::markMapCommandApplied(undoOwnershipState_);
+                                              updateCommandSurfaceState();
+                                              if (!toolbarStatusNote_.isEmpty()) {
+                                                  refreshToolbarSummary();
+                                              }
+                                          });
+    if (transactionResult != TextEditorSourceTransactionResult::Applied) {
         toolbarStatusNote_ = tr("Background gamma metadata sync skipped: document changed.");
         refreshToolbarSummary();
     }
-    return metadataApplied;
+    return transactionResult == TextEditorSourceTransactionResult::Applied;
 }
 
 void MapEditorTab::removeBackgroundLayerXtherionMetadata(const QString &layerPath, const QString &label)
@@ -3273,20 +3268,19 @@ void MapEditorTab::removeBackgroundLayerXtherionMetadata(const QString &layerPat
         return;
     }
 
-    bool metadataApplied = false;
-    applySourceTextChangeWithSnapshot(label,
-                                      beforeText,
-                                      afterText,
-                                      0,
-                                      [this, &metadataApplied]() {
-                                          metadataApplied = true;
-                                          MapEditorUndoArbitrationService::markMapCommandApplied(undoOwnershipState_);
-                                          updateCommandSurfaceState();
-                                          if (!toolbarStatusNote_.isEmpty()) {
-                                              refreshToolbarSummary();
-                                          }
-                                      });
-    if (!metadataApplied) {
+    const TextEditorSourceTransactionResult transactionResult =
+        applySourceTextChangeWithSnapshot(label,
+                                          beforeText,
+                                          afterText,
+                                          0,
+                                          [this]() {
+                                              MapEditorUndoArbitrationService::markMapCommandApplied(undoOwnershipState_);
+                                              updateCommandSurfaceState();
+                                              if (!toolbarStatusNote_.isEmpty()) {
+                                                  refreshToolbarSummary();
+                                              }
+                                          });
+    if (transactionResult != TextEditorSourceTransactionResult::Applied) {
         toolbarStatusNote_ = tr("Background metadata removal skipped: document changed.");
         refreshToolbarSummary();
     }

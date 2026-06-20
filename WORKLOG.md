@@ -42,6 +42,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Keep `Extend Before/After` covered by a transaction regression so successful commits exit draft mode and preserve undo/redo.
 - Keep map object-details and object-tree source transactions result-aware so stale or skipped edits do not overwrite
   transaction status with success messages.
+- Keep map background metadata writes result-aware so skipped XTherion/Mapiah metadata syncs report the transaction
+  result directly without depending on post-apply hooks.
 - Keep map background layer refreshes isolated from viewport-only command-surface updates so loaded raster/XVI metadata
   does not cause inspector blinking or interrupt line vertex/control-handle interaction.
 - Keep new raster background insertion metadata compatible with XTherion defaults without changing how existing
@@ -100,6 +102,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
   source edits without relying on selection-restore hooks as success signals.
 - Continue propagating transaction results through map-editor inspector/object-details contexts before migrating broader
   source-write ownership.
+- Continue propagating transaction results through map-editor background metadata workflows without changing XTherion
+  background-reference loading semantics.
 - Slice 2 - Expand `TherionSourceSnapshotCache` into Structure/Validation once stale-projection behavior is covered for text edits, undo/redo, document reload, source type changes, and catalog refresh.
 - Slice 4 - Migrate Blocks cards/details/move planning toward shared logical command and option ranges while preserving one source transaction per user-visible change.
 - Slice 5 - Migrate Map/TH2 object discovery, generic option parsing, reference resolution, and Smart Area insert planning to shared logical commands while keeping map geometry parsing map-specific.

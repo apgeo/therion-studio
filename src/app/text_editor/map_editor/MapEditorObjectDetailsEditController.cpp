@@ -513,7 +513,10 @@ void MapEditorObjectDetailsEditController::handleLineClosedToggled(bool checked)
                                            beforeText,
                                            afterText,
                                            targetLineNumber,
-                                           [context]() {
+                                           [context, targetLineNumber]() {
+                                               if (context.selectMapLine) {
+                                                   context.selectMapLine(targetLineNumber, false);
+                                               }
                                                context.refreshObjectDetailsPanel();
                                            });
 }
@@ -560,7 +563,10 @@ void MapEditorObjectDetailsEditController::handleLineReversedToggled(bool checke
                                            beforeText,
                                            afterText,
                                            targetLineNumber,
-                                           [context]() {
+                                           [context, targetLineNumber]() {
+                                               if (context.selectMapLine) {
+                                                   context.selectMapLine(targetLineNumber, false);
+                                               }
                                                context.refreshObjectDetailsPanel();
                                            });
 }

@@ -363,18 +363,6 @@ void captureInteractiveLineAnchor(QVector<MapEditorInteractiveLineDraftVertex> *
             current.incomingControlScene = current.anchorScene - (dragScenePoint.value() - current.anchorScene);
             current.incomingControlSource = sceneToSource(current.incomingControlScene.value());
         }
-    } else if (smooth && vertices->size() >= 2) {
-        MapEditorInteractiveLineDraftVertex &current = vertices->last();
-        const MapEditorInteractiveLineDraftVertex &previous = vertices->at(vertices->size() - 2);
-        const QPointF deltaScene = current.anchorScene - previous.anchorScene;
-        if (incomingControl) {
-            current.incomingControlScene = current.anchorScene - deltaScene / 3.0;
-            current.incomingControlSource = sceneToSource(current.incomingControlScene.value());
-        }
-        if (outgoingControl) {
-            current.outgoingControlScene = current.anchorScene + deltaScene / 3.0;
-            current.outgoingControlSource = sceneToSource(current.outgoingControlScene.value());
-        }
     }
 }
 

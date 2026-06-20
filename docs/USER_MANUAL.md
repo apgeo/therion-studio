@@ -241,7 +241,7 @@ The map canvas uses a stable light paper-style surface in both light and dark ap
 - `Freehand`: press, drag, and release to insert a simplified Bezier line.
 - `Insert Scrap`: creates a new scrap immediately, selects it in `Selection` and `Objects`, then lets you edit its ID/projection before adding points, lines, freehand lines, or areas.
 
-Starting `Point`, `Line`, `Freehand`, or `Area` activates `Inspector -> Selection` before the first point or vertex is placed. Set type, subtype, ID, point name, label text, or supported point value there before committing the new object. The editor remembers recent type/subtype choices separately for new points, lines, and areas, uses the latest choice as the next default while the map editor stays open, and shows recent choices as compact quick buttons in `Recent` below the symbol preview. During new line or area drawing, `Options` stays available and `Line Point` controls the next vertex before it is placed; `<<`, `Smooth (-smooth)`, and `>>` control the next vertex's Bezier handles and smooth state, and `Subtype` writes a line-point subtype override from that vertex onward. `line slope` also exposes its supported line-point `Orientation (-orientation)` and `Left size (-l-size)` controls before each click. Empty line-point subtype leaves that vertex without a subtype override, and line-point subtype is cleared for each new line or area draft. After a point, line, or area is committed while its drawing tool stays active, `Selection` remains on the next pending object so type, subtype, recent choices, and other draft fields are still editable for repeated drawing. Repeated `point station` insertion advances the next `Name (-name)` by incrementing the last numeric station segment before any `@survey` suffix; changing the pending point type away from `station` clears that pending station name instead of carrying it into other point types. If a scrap or an object inside a scrap was selected when you started the tool, the new object is inserted into that scrap; the pending metadata line shows the target scrap ID. Use `Insert into` to choose a different existing target scrap before committing.
+Starting `Point`, `Line`, `Freehand`, or `Area` activates `Inspector -> Selection` before the first point or vertex is placed. Set type, subtype, ID, point name, label text, or supported point value there before committing the new object. The editor remembers recent type/subtype choices separately for new points, lines, and areas, uses the latest choice as the next default while the map editor stays open, and shows recent choices as compact quick buttons in `Recent` below the symbol preview. During new line or area drawing, `Options` stays available and `Line Point` controls the next vertex before it is placed; `<<`, `Smooth (-smooth)`, and `>>` control the next vertex's Bezier handles and smooth state, and `Subtype` writes a line-point subtype override from that vertex onward. `line slope` also exposes its supported line-point `Orientation (-orientation)` and `Left size (-l-size)` controls before each click. Empty line-point subtype leaves that vertex without a subtype override, and line-point subtype is cleared for each new line or area draft. After a point, line, or area is committed while its drawing tool stays active, `Selection` remains on the next pending object so type, subtype, recent choices, and other draft fields are still editable for repeated drawing. Single-key map drawing shortcuts are ignored while a text field, combo editor, spin box, or raw source editor has focus. Repeated `point station` insertion advances the next `Name (-name)` by incrementing the last numeric station segment before any `@survey` suffix; changing the pending point type away from `station` clears that pending station name instead of carrying it into other point types. If a scrap or an object inside a scrap was selected when you started the tool, the new object is inserted into that scrap; the pending metadata line shows the target scrap ID. Use `Insert into` to choose a different existing target scrap before committing.
 
 When a `.th2` has no XTherion `xth_me_area_adjust` metadata, the first committed map insertion writes stable `xth_me_area_adjust` and `xth_me_area_zoom_to` header lines so later drawing does not remap after the new geometry appears.
 
@@ -411,9 +411,17 @@ Use `Command` on macOS and `Ctrl` on Windows/Linux unless the platform menu show
 | Zoom map | Toolbar `Zoom In` / `Zoom Out`; non-precision mouse wheel; `Command/Ctrl+scroll` |
 | Fit map geometry | Toolbar `Fit` |
 | Fit map geometry and backgrounds | Toolbar `Fit With Background` |
+| Start point drawing | `P` |
+| Start line drawing | `L` |
+| Start area drawing | `A` |
 | Complete the current map draft | `Enter` |
 | Cancel map insertion/drawing | `Esc` |
 | Delete the selected map object or selected line point; while drawing, delete the last draft point | `Delete` / `Backspace` |
+| Toggle selected line reverse | `R` |
+| Toggle selected line closed; while drawing a line, complete it as closed | `C` |
+| Toggle selected or next line point smooth | `S` |
+| Toggle selected or next line point previous control handle | `,` |
+| Toggle selected or next line point next control handle | `.` |
 
 ## 10. Help And About
 

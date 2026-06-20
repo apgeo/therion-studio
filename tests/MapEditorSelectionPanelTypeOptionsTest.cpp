@@ -740,12 +740,35 @@ int runSelectionPanelTypeValuesTest()
                 "Esc from a focused pending insert field should hide the pending style preview.")) {
         return 1;
     }
-    mapTab->triggerAddLine();
+    mapView->viewport()->setFocus(Qt::OtherFocusReason);
+    pumpEvents();
+    sendKey(mapView->viewport(), QEvent::KeyPress, Qt::Key_P);
+    sendKey(mapView->viewport(), QEvent::KeyRelease, Qt::Key_P);
+    pumpEvents();
+    if (!expect(visibleLabelStartingWith(mapTab, QStringLiteral("New Point")),
+                "P shortcut should start pending point insertion from the map editor.")) {
+        return 1;
+    }
+    sendKey(mapView->viewport(), QEvent::KeyPress, Qt::Key_Escape);
+    sendKey(mapView->viewport(), QEvent::KeyRelease, Qt::Key_Escape);
+    pumpEvents();
+    sendKey(mapView->viewport(), QEvent::KeyPress, Qt::Key_A);
+    sendKey(mapView->viewport(), QEvent::KeyRelease, Qt::Key_A);
+    pumpEvents();
+    if (!expect(visibleLabelStartingWith(mapTab, QStringLiteral("New Area")),
+                "A shortcut should start pending area insertion from the map editor.")) {
+        return 1;
+    }
+    sendKey(mapView->viewport(), QEvent::KeyPress, Qt::Key_Escape);
+    sendKey(mapView->viewport(), QEvent::KeyRelease, Qt::Key_Escape);
+    pumpEvents();
+    sendKey(mapView->viewport(), QEvent::KeyPress, Qt::Key_L);
+    sendKey(mapView->viewport(), QEvent::KeyRelease, Qt::Key_L);
     pumpEvents();
     if (!expect(typeCombo->isVisible()
                     && typeCombo->currentText() == QStringLiteral("border")
                     && subtypeCombo->currentText() == QStringLiteral("invisible"),
-                "Line insert should remember the last pending type and subtype as the next default.")) {
+                "L shortcut should start line insertion and remember the last pending type and subtype as the next default.")) {
         return 1;
     }
     auto *recentButton0 = mapTab->findChild<QPushButton *>(QStringLiteral("mapObjectQuickRecentSymbolButton0"));
@@ -813,6 +836,35 @@ int runSelectionPanelTypeValuesTest()
     if (!expect(visibleCheckBoxWithText(mapTab, QStringLiteral("Orientation (-orientation)")) == nullptr
                     && visibleCheckBoxWithText(mapTab, QStringLiteral("Left size (-l-size)")) == nullptr,
                 "Switching pending line insert from slope back to wall should hide slope-only line point options.")) {
+        return 1;
+    }
+    auto *previousControlCheck = visibleCheckBoxWithText(mapTab, QStringLiteral("<<"));
+    auto *nextControlCheck = visibleCheckBoxWithText(mapTab, QStringLiteral(">>"));
+    if (!expect(previousControlCheck != nullptr && nextControlCheck != nullptr,
+                "Pending line insert should expose shortcut-toggleable line point control handles.")) {
+        return 1;
+    }
+    mapView->viewport()->setFocus(Qt::OtherFocusReason);
+    pumpEvents();
+    sendKey(mapView->viewport(), QEvent::KeyPress, Qt::Key_S);
+    sendKey(mapView->viewport(), QEvent::KeyRelease, Qt::Key_S);
+    pumpEvents();
+    if (!expect(!smoothCheck->isChecked(),
+                "S shortcut should toggle pending line point smooth.")) {
+        return 1;
+    }
+    sendKey(mapView->viewport(), QEvent::KeyPress, Qt::Key_Comma);
+    sendKey(mapView->viewport(), QEvent::KeyRelease, Qt::Key_Comma);
+    pumpEvents();
+    if (!expect(previousControlCheck->isChecked(),
+                "Comma shortcut should toggle the pending previous line point control handle.")) {
+        return 1;
+    }
+    sendKey(mapView->viewport(), QEvent::KeyPress, Qt::Key_Period);
+    sendKey(mapView->viewport(), QEvent::KeyRelease, Qt::Key_Period);
+    pumpEvents();
+    if (!expect(nextControlCheck->isChecked(),
+                "Period shortcut should toggle the pending next line point control handle.")) {
         return 1;
     }
     smoothCheck->setChecked(false);

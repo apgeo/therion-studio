@@ -4,6 +4,7 @@
 
 #include <QApplication>
 #include <QAbstractSpinBox>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QEvent>
 #include <QFrame>
@@ -203,6 +204,10 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         return true;
     }
 
+    if (handleMapEditorDrawingShortcutKeyEvent(watched, event)) {
+        return true;
+    }
+
     if (watched == mapInspectorTabs_) {
         switch (event->type()) {
         case QEvent::Resize:
@@ -323,6 +328,71 @@ bool MapEditorTab::handleMapEditorEscapeKeyEvent(QObject *receiver, QEvent *even
 
     keyEvent->accept();
     return true;
+}
+
+bool MapEditorTab::handleMapEditorDrawingShortcutKeyEvent(QObject *receiver, QEvent *event)
+{
+    if (event == nullptr || event->type() != QEvent::KeyPress) {
+        return false;
+    }
+    if (!isMapEditorEventReceiver(receiver) || isTextEditingReceiver(receiver)) {
+        return false;
+    }
+
+    auto *keyEvent = static_cast<QKeyEvent *>(event);
+    const Qt::KeyboardModifiers disallowedModifiers =
+        keyEvent->modifiers() & ~(Qt::KeyboardModifier::KeypadModifier);
+    if (disallowedModifiers != Qt::NoModifier) {
+        return false;
+    }
+
+    auto acceptHandled = [keyEvent]() {
+        keyEvent->accept();
+        return true;
+    };
+    auto toggleCheckBox = [this, acceptHandled](QCheckBox *checkBox, auto toggleHandler) {
+        if (checkBox == nullptr || !checkBox->isVisible() || !checkBox->isEnabled()) {
+            return false;
+        }
+        toggleHandler(!checkBox->isChecked());
+        return acceptHandled();
+    };
+
+    switch (keyEvent->key()) {
+    case Qt::Key_P:
+        triggerAddPoint();
+        return acceptHandled();
+    case Qt::Key_L:
+        triggerAddLine();
+        return acceptHandled();
+    case Qt::Key_A:
+        triggerAddArea();
+        return acceptHandled();
+    case Qt::Key_R:
+        return toggleCheckBox(objectDetailsUiState_.lineReversedCheck_,
+                              [this](bool checked) { handleLineReversedToggled(checked); });
+    case Qt::Key_C:
+        if (interactiveDrawState_.mode_ == InteractiveDrawMode::Line) {
+            if (!hasCompletableInteractiveDrawSession()) {
+                return false;
+            }
+            commitInteractiveDrawSession(true);
+            return acceptHandled();
+        }
+        return toggleCheckBox(objectDetailsUiState_.lineClosedCheck_,
+                              [this](bool checked) { handleLineClosedToggled(checked); });
+    case Qt::Key_S:
+        return toggleCheckBox(objectDetailsUiState_.linePointSmoothCheck_,
+                              [this](bool checked) { handleLinePointSmoothToggled(checked); });
+    case Qt::Key_Comma:
+        return toggleCheckBox(objectDetailsUiState_.linePointPreviousControlCheck_,
+                              [this](bool checked) { handleLinePointPreviousControlToggled(checked); });
+    case Qt::Key_Period:
+        return toggleCheckBox(objectDetailsUiState_.linePointNextControlCheck_,
+                              [this](bool checked) { handleLinePointNextControlToggled(checked); });
+    default:
+        return false;
+    }
 }
 
 }

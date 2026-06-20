@@ -336,6 +336,7 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
         return true;
     }
 
+    int committedDraftLineNumber = 0;
     if (modeAtCommit == MapEditorInteractiveDrawMode::Line) {
         QString errorMessage;
         int insertedLineNumber = 0;
@@ -375,6 +376,7 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
         if (context_.recordCommittedDraftObjectOptions) {
             context_.recordCommittedDraftObjectOptions(QStringLiteral("line"), objectOptions);
         }
+        committedDraftLineNumber = insertedLineNumber;
     } else {
         QString errorMessage;
         int insertedLineNumber = 0;
@@ -409,6 +411,19 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
         if (context_.recordCommittedDraftObjectOptions) {
             context_.recordCommittedDraftObjectOptions(QStringLiteral("area"), objectOptions);
         }
+        committedDraftLineNumber = insertedLineNumber;
+    }
+
+    if (modeAtCommit == MapEditorInteractiveDrawMode::Line && closeLineDraft) {
+        clearInteractiveDrawSession(true);
+        if (committedDraftLineNumber > 0 && context_.selectCommittedDraftObject) {
+            context_.selectCommittedDraftObject(committedDraftLineNumber);
+        }
+        (*context_.toolbarStatusNote) = tr("Selection mode: draft committed.");
+        context_.refreshToolbarSummary();
+        context_.updateHelpPanel();
+        context_.updateCommandSurfaceState();
+        return true;
     }
 
     clearInteractiveDrawSession(false);

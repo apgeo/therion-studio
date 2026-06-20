@@ -444,6 +444,18 @@ int lastDirectiveLineNumber(const QString &text, const QString &directive)
     return lineNumber;
 }
 
+QString sourceLineAt(const QString &text, int lineNumber)
+{
+    if (lineNumber <= 0) {
+        return QString();
+    }
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    if (lineNumber > lines.size()) {
+        return QString();
+    }
+    return lines.at(lineNumber - 1).trimmed();
+}
+
 bool hasVisibleLabelText(QWidget *root, const QString &text)
 {
     if (root == nullptr) {
@@ -2193,6 +2205,10 @@ int runDragUndoRedoSmoke()
                 "Committing a 4-vertex line draft should preserve all captured vertices in source text.")) {
         return 1;
     }
+    if (!expect(!lastDraftLineHasBezierCoordinateRow(mapTab->text()),
+                "Line mode click-to-add without drag should commit straight coordinate rows, not bezier rows.")) {
+        return 1;
+    }
     const QString textAfterLineInsert = mapTab->text();
     mapTab->triggerUndo();
     pumpEvents();
@@ -2479,6 +2495,62 @@ int runDragUndoRedoSmoke()
     }
     if (!expect(mapTab->currentLineNumber() == lastDirectiveLineNumber(mapTab->text(), QStringLiteral("line")),
                 "Esc after committing a line draft should move the Raw cursor to the inserted line.")) {
+        return 1;
+    }
+    const int selectedEscLineNumber = mapTab->currentLineNumber();
+    mapView->viewport()->setFocus(Qt::OtherFocusReason);
+    pumpEvents();
+    sendKey(mapView->viewport(), QEvent::KeyPress, Qt::Key_C);
+    sendKey(mapView->viewport(), QEvent::KeyRelease, Qt::Key_C);
+    pumpEvents();
+    if (!expect(sourceLineAt(mapTab->text(), selectedEscLineNumber).contains(QStringLiteral("-close on")),
+                "C shortcut should toggle close on the selected line.")) {
+        return 1;
+    }
+    if (!expect(hasVisibleLabelText(mapTab, QStringLiteral("Line"))
+                    && mapTab->currentLineNumber() == selectedEscLineNumber,
+                "C shortcut should keep the selected line focused.")) {
+        return 1;
+    }
+    sendKey(mapView->viewport(), QEvent::KeyPress, Qt::Key_R);
+    sendKey(mapView->viewport(), QEvent::KeyRelease, Qt::Key_R);
+    pumpEvents();
+    if (!expect(sourceLineAt(mapTab->text(), selectedEscLineNumber).contains(QStringLiteral("-reverse on")),
+                "R shortcut should toggle reverse on the selected line.")) {
+        return 1;
+    }
+    if (!expect(hasVisibleLabelText(mapTab, QStringLiteral("Line"))
+                    && mapTab->currentLineNumber() == selectedEscLineNumber,
+                "R shortcut should keep the selected line focused.")) {
+        return 1;
+    }
+
+    const int lineDirectivesBeforeClosedShortcutDraft = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
+    mapTab->triggerAddLine();
+    pumpEvents();
+    const QPoint closedShortcutFirstVertex(viewportCenter.x() - 54, viewportCenter.y() + 46);
+    const QPoint closedShortcutSecondVertex(viewportCenter.x() + 10, viewportCenter.y() + 50);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, closedShortcutFirstVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, closedShortcutFirstVertex, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, closedShortcutSecondVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, closedShortcutSecondVertex, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    mapView->viewport()->setFocus(Qt::OtherFocusReason);
+    sendKey(mapView->viewport(), QEvent::KeyPress, Qt::Key_C);
+    sendKey(mapView->viewport(), QEvent::KeyRelease, Qt::Key_C);
+    pumpEvents();
+    const int closedShortcutLineNumber = lastDirectiveLineNumber(mapTab->text(), QStringLiteral("line"));
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeClosedShortcutDraft + 1,
+                "C shortcut while drawing a line should insert one closed line directive.")) {
+        return 1;
+    }
+    if (!expect(sourceLineAt(mapTab->text(), closedShortcutLineNumber).contains(QStringLiteral("-close on")),
+                "C shortcut while drawing a line should commit the draft as closed.")) {
+        return 1;
+    }
+    if (!expect(hasVisibleLabelText(mapTab, QStringLiteral("Line"))
+                    && mapTab->currentLineNumber() == closedShortcutLineNumber,
+                "C shortcut while drawing a line should keep the inserted line focused.")) {
         return 1;
     }
 

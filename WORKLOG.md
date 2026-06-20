@@ -49,6 +49,9 @@ Active planning only. Completed history belongs in archive files. Stable archite
   to the just-inserted object, so recent choices and draft fields remain available for repeated drawing.
 - Keep `Smooth (-smooth)` behavior visual and source-backed: disabling it removes line-point control handles immediately
   for draft and selected lines, and committed line tools return to the next line draft after insertion.
+- Keep single-key map drawing shortcuts focused on canvas workflows: `P`/`L`/`A` start object drawing,
+  `R`/`C` toggle selected line state or close the active line draft, and `S`/`,`/`.` adjust selected or next line-point
+  smooth/control-handle state without firing from text-editing widgets.
 - Keep selected map line/area vertex markers close to XTherion styling: larger red anchor circles with blue
   outlines, smaller blue control-point squares, and a red focused-vertex halo.
 - Keep empty scrap object cleanup explicit through validator warnings and `Apply Fix`, not silent source mutation.

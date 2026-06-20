@@ -139,7 +139,6 @@ bool MapEditorTab::commitLineExtensionSession()
 
     const int extendedLineNumber = interactiveDrawState_.lineExtensionLineNumber_;
     const int restoredVertexIndex = extensionPlan.restoredVertexIndex;
-    applySourceTextChangeWithSnapshot(tr("Extend Line"), beforeText, afterText, extendedLineNumber);
     const std::optional<MapGeometryFeature> refreshedFeature = lineFeatureForLineNumber(afterText, extendedLineNumber);
     const int restoredSourceVertexIndex =
         refreshedFeature.has_value() && restoredVertexIndex >= 0 && restoredVertexIndex < refreshedFeature->lineVertices.size()

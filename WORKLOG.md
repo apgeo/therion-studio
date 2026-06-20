@@ -35,6 +35,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
   transient UI-only behavior.
 - Keep interactive line/area drafts editable before commit: captured anchors and their Bezier controls must both be
   movable without writing source text until the draft is completed.
+- Keep line extension completion as one source transaction so `Extend Before/After` exits draft mode only after the
+  extended line rewrite, selection restore, and UI refresh hook run together.
 - Keep map background layer refreshes isolated from viewport-only command-surface updates so loaded raster/XVI metadata
   does not cause inspector blinking or interrupt line vertex/control-handle interaction.
 - Keep new raster background insertion metadata compatible with XTherion defaults without changing how existing

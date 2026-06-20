@@ -3471,10 +3471,13 @@ bool MapEditorTab::addBackgroundImageFromSourceImage(const QString &imagePath,
     cacheRasterSourceImage(backgroundItem, image);
 
     bool placed = false;
-    if (writeXtherionMetadata && !mapSourceBoundsForCurrentDocument().isValid()) {
+    if (writeXtherionMetadata) {
         const QSizeF modelSize = mapEditorRasterModelSize(imagePath, 1.0);
         const QRectF modelRect(QPointF(0.0, -modelSize.height()), modelSize);
-        const QRectF modelBounds = modelRect.adjusted(-128.0, -128.0, 128.0, 128.0);
+        QRectF modelBounds = mapSourceBoundsForCurrentDocument();
+        if (!modelBounds.isValid()) {
+            modelBounds = modelRect.adjusted(-128.0, -128.0, 128.0, 128.0);
+        }
         placed = placeMapEditorRasterLayerByModelRect(backgroundItem, image, modelRect, modelBounds, previewBounds);
     }
     if (!placed) {

@@ -86,8 +86,9 @@ auto withLogicalDocumentForEditor(const QPlainTextEdit *editor,
         return handler(sourceSnapshotCache->logicalDocument(sourceText, metadata));
     }
 
+    TherionStudio::TherionSourceSnapshotCache localSourceSnapshotCache;
     const TherionStudio::TherionSourceLogicalDocument logicalDocument =
-        TherionStudio::TherionSourceLogicalDocument::fromText(sourceText, metadata);
+        localSourceSnapshotCache.logicalDocument(sourceText, metadata);
     return handler(logicalDocument);
 }
 

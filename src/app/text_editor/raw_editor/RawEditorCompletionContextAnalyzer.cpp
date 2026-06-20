@@ -76,8 +76,9 @@ auto withLogicalDocumentForEditor(const QPlainTextEdit *editor,
         return handler(sourceSnapshotCache->logicalDocument(sourceText, metadata));
     }
 
+    TherionStudio::TherionSourceSnapshotCache localSourceSnapshotCache;
     const TherionStudio::TherionSourceLogicalDocument logicalDocument =
-        TherionStudio::TherionSourceLogicalDocument::fromText(sourceText, metadata);
+        localSourceSnapshotCache.logicalDocument(sourceText, metadata);
     return handler(logicalDocument);
 }
 
@@ -351,7 +352,11 @@ QString RawEditorCompletionContextAnalyzer::resolveScopeForCommandAtLine(const Q
         return preferredScope;
     }
 
-    const TherionSourceLogicalDocument logicalDocument = TherionSourceLogicalDocument::fromText(lines.join(QLatin1Char('\n')));
+    TherionSourceSnapshotCache sourceSnapshotCache;
+    TherionSourceDocumentMetadata metadata;
+    metadata.revisionId = 1;
+    const TherionSourceLogicalDocument logicalDocument =
+        sourceSnapshotCache.logicalDocument(lines.join(QLatin1Char('\n')), metadata);
     const QStringList scopeStack = scopeStackBeforeLine(logicalDocument.commands(),
                                                         lineNumber,
                                                         context_.normalizedDirectiveToken,

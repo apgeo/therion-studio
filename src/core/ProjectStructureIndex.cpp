@@ -5,6 +5,7 @@
 #include "TherionFileTypes.h"
 #include "TherionSourceLogicalDocument.h"
 #include "TherionSourceReferenceResolver.h"
+#include "TherionSourceSnapshotCache.h"
 #include "TherionTokenRules.h"
 
 #include <QCoreApplication>
@@ -33,6 +34,8 @@ struct ProjectBlock
 struct ParsedFileCache
 {
     QHash<QString, TherionSourceLogicalDocument> logicalDocuments;
+    TherionSourceSnapshotCache sourceSnapshotCache;
+    int sourceRevisionCounter = 0;
 };
 
 struct ProjectObjectIdentityGenerator
@@ -87,9 +90,11 @@ bool pathIsInsideDirectory(const QString &path, const QString &directoryPath)
         && !QDir::isAbsolutePath(relativePath);
 }
 
-TherionSourceLogicalDocument logicalDocumentForText(const QString &text)
+TherionSourceLogicalDocument logicalDocumentForText(const QString &text,
+                                                   TherionSourceSnapshotCache &sourceSnapshotCache,
+                                                   TherionSourceDocumentMetadata metadata)
 {
-    return TherionSourceLogicalDocument::fromText(text);
+    return sourceSnapshotCache.logicalDocument(text, metadata);
 }
 
 QString sectionNameFromLine(const TherionParsedLine &parsedLine);
@@ -914,11 +919,19 @@ const TherionSourceLogicalDocument &logicalDocumentForFile(const QString &filePa
     if (inMemoryFileContentsByPath.contains(normalizedPath)) {
         fileContents = inMemoryFileContentsByPath.value(normalizedPath);
     } else if (!DocumentFile::readUtf8TextFile(normalizedPath, &fileContents, nullptr)) {
-        cache->logicalDocuments.insert(normalizedPath, logicalDocumentForText(QString()));
+        TherionSourceDocumentMetadata metadata;
+        metadata.sourceType = therionSourceDocumentTypeForFilePath(normalizedPath);
+        metadata.revisionId = ++cache->sourceRevisionCounter;
+        cache->logicalDocuments.insert(normalizedPath,
+                                       logicalDocumentForText(QString(), cache->sourceSnapshotCache, metadata));
         return cache->logicalDocuments[normalizedPath];
     }
 
-    cache->logicalDocuments.insert(normalizedPath, logicalDocumentForText(fileContents));
+    TherionSourceDocumentMetadata metadata;
+    metadata.sourceType = therionSourceDocumentTypeForFilePath(normalizedPath);
+    metadata.revisionId = ++cache->sourceRevisionCounter;
+    cache->logicalDocuments.insert(normalizedPath,
+                                   logicalDocumentForText(fileContents, cache->sourceSnapshotCache, metadata));
     return cache->logicalDocuments[normalizedPath];
 }
 
@@ -2104,7 +2117,13 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QStri
         return {};
     }
 
-    return scanTh2ObjectsFromLogicalCommands(sourceFile, logicalDocumentForText(text).commands());
+    TherionSourceSnapshotCache sourceSnapshotCache;
+    TherionSourceDocumentMetadata metadata;
+    metadata.sourceType = TherionSourceDocumentType::TherionMap;
+    metadata.revisionId = 1;
+    const TherionSourceLogicalDocument logicalDocument =
+        logicalDocumentForText(text, sourceSnapshotCache, metadata);
+    return scanTh2ObjectsFromLogicalCommands(sourceFile, logicalDocument.commands());
 }
 
 QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QString &sourceFile,

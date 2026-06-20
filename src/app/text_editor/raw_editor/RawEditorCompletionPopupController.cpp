@@ -20,7 +20,6 @@
 #include "../../../core/TherionSourceLogicalDocument.h"
 #include "../../../core/TherionSourceSnapshotCache.h"
 
-#include <optional>
 #include <utility>
 
 namespace TherionStudio
@@ -117,13 +116,12 @@ void RawEditorCompletionPopupController::triggerCompletionPopup()
                 metadata.revisionId = context_.editor->document() != nullptr
                     ? context_.editor->document()->revision()
                     : 0;
-                std::optional<TherionSourceLogicalDocument> fallbackLogicalDocument;
+                TherionSourceSnapshotCache fallbackSourceSnapshotCache;
                 const TherionSourceLogicalDocument *logicalDocument = nullptr;
                 if (context_.sourceSnapshotCache != nullptr) {
                     logicalDocument = &context_.sourceSnapshotCache->logicalDocument(context_.editor->toPlainText(), metadata);
                 } else {
-                    fallbackLogicalDocument = TherionSourceLogicalDocument::fromText(context_.editor->toPlainText(), metadata);
-                    logicalDocument = &*fallbackLogicalDocument;
+                    logicalDocument = &fallbackSourceSnapshotCache.logicalDocument(context_.editor->toPlainText(), metadata);
                 }
                 const TherionSourceLogicalCommand *logicalCommand = logicalDocument->commandAtPhysicalLine(lineNumber);
                 if (logicalCommand == nullptr) {

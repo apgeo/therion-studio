@@ -31,6 +31,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
   deleting a whole selected line unless an actual vertex/control handle is selected.
 - Keep map geometry strokes readable on HiDPI/Retina displays without changing TH2 source geometry or XTherion
   background-reference loading semantics.
+- Keep interactive map drawing previews and control guides readable on HiDPI/Retina displays while preserving their
+  transient UI-only behavior.
 - Keep map background layer refreshes isolated from viewport-only command-surface updates so loaded raster/XVI metadata
   does not cause inspector blinking or interrupt line vertex/control-handle interaction.
 - Keep new raster background insertion metadata compatible with XTherion defaults without changing how existing

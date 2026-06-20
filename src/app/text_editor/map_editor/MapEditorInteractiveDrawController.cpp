@@ -625,7 +625,11 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
         } else if ((*context_.previewPath)->scene() != context_.scene) {
             context_.scene->addItem((*context_.previewPath));
         }
-        QPen previewPen(QColor(QStringLiteral("#0077cc")), 2.4, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin);
+        QPen previewPen(QColor(QStringLiteral("#0077cc")),
+                        previewCosmeticWidth(context_, 3.2),
+                        Qt::DashLine,
+                        Qt::RoundCap,
+                        Qt::RoundJoin);
         previewPen.setCosmetic(true);
         QColor fillColor(QStringLiteral("#28a8ff"));
         fillColor.setAlpha(90);
@@ -637,7 +641,7 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
 
     QColor accent;
     if (mode() == MapEditorInteractiveDrawMode::Line) {
-        accent = QColor(QStringLiteral("#ffb15a"));
+        accent = QColor(QStringLiteral("#ff9a2f"));
     } else if (mode() == MapEditorInteractiveDrawMode::Area) {
         accent = QColor(QStringLiteral("#ff7f8f"));
     } else {
@@ -811,7 +815,11 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
         const Qt::PenStyle previewPenStyle = mode() == MapEditorInteractiveDrawMode::Freehand
             ? Qt::SolidLine
             : Qt::DashLine;
-        QPen previewPen(accent, 3.2, previewPenStyle, Qt::RoundCap, Qt::RoundJoin);
+        QPen previewPen(accent,
+                        previewCosmeticWidth(context_, 4.4),
+                        previewPenStyle,
+                        Qt::RoundCap,
+                        Qt::RoundJoin);
         previewPen.setCosmetic(true);
         (*context_.previewPath)->setPen(previewPen);
         (*context_.previewPath)->setPath(path);
@@ -826,7 +834,7 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
         marker->setPos(guidePoint);
         QColor guideColor(QStringLiteral("#00e5ff"));
         guideColor.setAlpha(235);
-        QPen guidePen(guideColor, 2.0);
+        QPen guidePen(guideColor, previewCosmeticWidth(context_, 2.4));
         guidePen.setCosmetic(true);
         QColor guideFill(QStringLiteral("#00e5ff"));
         guideFill.setAlpha(45);
@@ -838,7 +846,7 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
     for (const QPointF &vertex : std::as_const(anchorMarkers)) {
         QGraphicsEllipseItem *marker = ensurePreviewEllipseMarker(previewMarkerIndex++, QRectF(-5.0, -5.0, 10.0, 10.0));
         marker->setPos(vertex);
-        QPen markerPen(accent.darker(130), 1.4);
+        QPen markerPen(accent.darker(130), previewCosmeticWidth(context_, 1.6));
         markerPen.setCosmetic(true);
         marker->setPen(markerPen);
         marker->setBrush(QBrush(accent));
@@ -848,7 +856,7 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
     if (hoverSnapTargetMarker.has_value()) {
         QGraphicsEllipseItem *snapMarker = ensurePreviewEllipseMarker(previewMarkerIndex++, QRectF(-8.5, -8.5, 17.0, 17.0));
         snapMarker->setPos(hoverSnapTargetMarker.value());
-        QPen snapMarkerPen(QColor(QStringLiteral("#ffe16a")), 2.0);
+        QPen snapMarkerPen(QColor(QStringLiteral("#ffe16a")), previewCosmeticWidth(context_, 2.4));
         snapMarkerPen.setCosmetic(true);
         snapMarker->setPen(snapMarkerPen);
         snapMarker->setBrush(Qt::NoBrush);
@@ -858,7 +866,11 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
     for (const QLineF &connector : std::as_const(controlConnectors)) {
         QGraphicsLineItem *connectorItem = ensurePreviewLineMarker(previewMarkerIndex++);
         connectorItem->setLine(connector);
-        QPen connectorPen(controlColor.lighter(115), 1.6, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin);
+        QPen connectorPen(controlColor.lighter(115),
+                          previewCosmeticWidth(context_, 2.2),
+                          Qt::DashLine,
+                          Qt::RoundCap,
+                          Qt::RoundJoin);
         connectorPen.setCosmetic(true);
         connectorItem->setPen(connectorPen);
         connectorItem->setZValue(28.4);
@@ -867,7 +879,7 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
     for (const QPointF &control : std::as_const(controlMarkers)) {
         QGraphicsEllipseItem *marker = ensurePreviewEllipseMarker(previewMarkerIndex++, QRectF(-5.2, -5.2, 10.4, 10.4));
         marker->setPos(control);
-        QPen markerPen(controlColor.darker(150), 1.5);
+        QPen markerPen(controlColor.darker(150), previewCosmeticWidth(context_, 1.7));
         markerPen.setCosmetic(true);
         marker->setPen(markerPen);
         marker->setBrush(QBrush(controlColor));

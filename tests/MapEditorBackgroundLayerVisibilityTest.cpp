@@ -147,6 +147,31 @@ int runBackgroundVisibilityDoesNotDirtyDocumentTest()
         return 1;
     }
 
+    const QSize expectedSize(16, 16);
+    for (int attempt = 0; attempt < 200 && mapTab->backgroundLayerSourcePixelSize(0) != expectedSize; ++attempt) {
+        pumpEvents();
+    }
+    if (!expect(mapTab->backgroundLayerSourcePixelSize(0) == expectedSize,
+                "Expected metadata raster background to finish loading before idle refresh checks.")) {
+        return 1;
+    }
+    pumpEventsFor(100);
+
+    int stableBackgroundLayerRefreshCount = 0;
+    QObject::connect(mapTab, &MapEditorTab::backgroundLayersChanged, mapTab, [&stableBackgroundLayerRefreshCount]() {
+        ++stableBackgroundLayerRefreshCount;
+    });
+    pumpEventsFor(200);
+    stableBackgroundLayerRefreshCount = 0;
+    mapTab->triggerFit();
+    pumpEventsFor(50);
+    mapTab->triggerFit();
+    pumpEventsFor(50);
+    if (!expect(stableBackgroundLayerRefreshCount == 0,
+                "Repeated fits with unchanged metadata should not refresh background layer models.")) {
+        return 1;
+    }
+
     const QString originalText = mapTab->text();
     mapTab->setSelectedBackgroundLayerIndex(0);
     mapTab->toggleSelectedBackgroundLayerVisibility();

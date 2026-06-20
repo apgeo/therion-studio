@@ -37,7 +37,6 @@ void MapEditorTab::updateCommandSurfaceState()
     if (nextSmartAreaCandidateShortcut_ != nullptr) {
         nextSmartAreaCandidateShortcut_->setEnabled(canCycleSmartArea);
     }
-    refreshBackgroundLayerControls();
     refreshToolbarSummary();
     emit commandSurfaceStateChanged();
 }

@@ -76,6 +76,7 @@ constexpr int kBackgroundLayerRasterGammaRequestRole = 104;
 constexpr int kBackgroundLayerRasterLoadRequestRole = 105;
 constexpr int kBackgroundLayerXviBasePositionRole = 106;
 constexpr int kBackgroundLayerXviRootStationRole = 107;
+constexpr int kBackgroundLayerRasterProjectionKeyRole = 108;
 constexpr qreal kDefaultXviLayerOpacity = 1.0;
 constexpr qreal kDefaultRasterLayerOpacity = 0.58;
 
@@ -196,6 +197,43 @@ QString xviGeometryCacheKey(const QString &absolutePath,
              quantizedNumberToken(modelBounds.top()),
              quantizedNumberToken(modelBounds.right()),
              quantizedNumberToken(modelBounds.bottom()),
+             quantizedNumberToken(previewBounds.left()),
+             quantizedNumberToken(previewBounds.top()),
+             QStringLiteral("%1x%2")
+                 .arg(quantizedNumberToken(previewBounds.width()),
+                      quantizedNumberToken(previewBounds.height())));
+}
+
+QString rasterProjectionCacheKey(const XtherionBackgroundReference &reference,
+                                 const XtherionAreaAdjust &areaAdjust,
+                                 const QRectF &sourceBounds,
+                                 const QRectF &previewBounds,
+                                 bool pendingRasterLoad,
+                                 qreal gamma)
+{
+    return QStringLiteral("raster-projection-v1|%1|%2|%3|%4|%5|%6|%7|%8|%9|%10|%11|%12|%13|%14|%15|%16|%17|%18|%19|%20|%21|%22|%23|%24|%25")
+        .arg(normalizedPathKey(reference.absolutePath),
+             quantizedNumberToken(reference.basePosition.x()),
+             quantizedNumberToken(reference.basePosition.y()),
+             reference.metadataTopEdgeAnchor ? QStringLiteral("top") : QStringLiteral("bottom"),
+             QString::number(static_cast<int>(reference.metadataFormat)),
+             quantizedNumberToken(reference.xScale),
+             quantizedNumberToken(reference.yScale),
+             quantizedNumberToken(reference.rotationCenterDx),
+             quantizedNumberToken(reference.rotationCenterDy),
+             quantizedNumberToken(reference.rotationDeg),
+             reference.pivotSet ? QStringLiteral("pivot") : QStringLiteral("auto"),
+             quantizedNumberToken(gamma),
+             pendingRasterLoad ? QStringLiteral("pending") : QStringLiteral("loaded"),
+             areaAdjust.valid ? QStringLiteral("area") : QStringLiteral("no-area"),
+             quantizedNumberToken(areaAdjust.modelRect.left()),
+             quantizedNumberToken(areaAdjust.modelRect.top()),
+             quantizedNumberToken(areaAdjust.modelRect.right()),
+             quantizedNumberToken(areaAdjust.modelRect.bottom()),
+             quantizedNumberToken(sourceBounds.left()),
+             quantizedNumberToken(sourceBounds.top()),
+             quantizedNumberToken(sourceBounds.right()),
+             quantizedNumberToken(sourceBounds.bottom()),
              quantizedNumberToken(previewBounds.left()),
              quantizedNumberToken(previewBounds.top()),
              QStringLiteral("%1x%2")
@@ -2656,6 +2694,21 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
         if (existingMetadata != nullptr && existingMetadata->hasBasePosition && !existingMetadata->xviReference) {
             const bool pendingRasterLoad = existingLayer->data(kBackgroundLayerRasterLoadRequestRole).toULongLong() != 0
                 && !existingLayer->data(kBackgroundLayerSourceImageRole).canConvert<QImage>();
+            const qreal gamma = existingMetadata->hasImageScale
+                ? qBound(0.2, existingMetadata->imageScale, 2.5)
+                : backgroundLayerGammaValue(existingLayer);
+            const QString projectionKey = rasterProjectionCacheKey(*existingMetadata,
+                                                                    areaAdjust,
+                                                                    sourceBounds,
+                                                                    previewBounds,
+                                                                    pendingRasterLoad,
+                                                                    gamma);
+            if (existingLayer->data(kBackgroundLayerRasterProjectionKeyRole).toString() == projectionKey) {
+                if (existingMetadata->hasVisibility) {
+                    setBackgroundLayerVisibleFromMetadata(existingLayer, existingMetadata->visible);
+                }
+                continue;
+            }
             if (pendingRasterLoad) {
                 placeMapEditorRasterLayerPlaceholderFromMetadata(existingLayer,
                                                         *existingMetadata,
@@ -2671,9 +2724,8 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
                                                       previewBounds);
             }
             existingLayer->setData(4, true);
-            if (existingMetadata->hasImageScale) {
-                applyBackgroundLayerGamma(existingLayer, qBound(0.2, existingMetadata->imageScale, 2.5));
-            }
+            existingLayer->setData(kBackgroundLayerRasterProjectionKeyRole, projectionKey);
+            applyBackgroundLayerGamma(existingLayer, gamma);
             if (existingMetadata->hasVisibility) {
                 setBackgroundLayerVisibleFromMetadata(existingLayer, existingMetadata->visible);
             }
@@ -2742,6 +2794,16 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
                                                     areaAdjust,
                                                     sourceBounds,
                                                     previewBounds);
+            const qreal gamma = reference.hasImageScale
+                ? qBound(0.2, reference.imageScale, 2.5)
+                : backgroundLayerGammaValue(item);
+            item->setData(kBackgroundLayerRasterProjectionKeyRole,
+                          rasterProjectionCacheKey(reference,
+                                                   areaAdjust,
+                                                   sourceBounds,
+                                                   previewBounds,
+                                                   true,
+                                                   gamma));
         }
         if (reference.hasImageScale) {
             loadBackgroundImageSourceAsync(item);
@@ -2844,6 +2906,21 @@ void MapEditorTab::reprojectMetadataBackgroundLayersForCurrentDocument()
 
         const bool pendingRasterLoad = existingLayer->data(kBackgroundLayerRasterLoadRequestRole).toULongLong() != 0
             && !existingLayer->data(kBackgroundLayerSourceImageRole).canConvert<QImage>();
+        const qreal gamma = metadataReference->hasImageScale
+            ? qBound(0.2, metadataReference->imageScale, 2.5)
+            : backgroundLayerGammaValue(existingLayer);
+        const QString projectionKey = rasterProjectionCacheKey(*metadataReference,
+                                                               areaAdjust,
+                                                               sourceBounds,
+                                                               previewBounds,
+                                                               pendingRasterLoad,
+                                                               gamma);
+        if (existingLayer->data(kBackgroundLayerRasterProjectionKeyRole).toString() == projectionKey) {
+            if (metadataReference->hasVisibility) {
+                setBackgroundLayerVisibleFromMetadata(existingLayer, metadataReference->visible);
+            }
+            continue;
+        }
         const bool placedLayer = pendingRasterLoad
             ? placeMapEditorRasterLayerPlaceholderFromMetadata(existingLayer,
                                                       *metadataReference,
@@ -2858,9 +2935,7 @@ void MapEditorTab::reprojectMetadataBackgroundLayersForCurrentDocument()
                                                     previewBounds);
         if (placedLayer) {
             existingLayer->setData(4, true);
-            const qreal gamma = metadataReference->hasImageScale
-                ? qBound(0.2, metadataReference->imageScale, 2.5)
-                : backgroundLayerGammaValue(existingLayer);
+            existingLayer->setData(kBackgroundLayerRasterProjectionKeyRole, projectionKey);
             applyBackgroundLayerGamma(existingLayer, gamma);
             if (metadataReference->hasVisibility) {
                 setBackgroundLayerVisibleFromMetadata(existingLayer, metadataReference->visible);
@@ -3329,8 +3404,9 @@ void MapEditorTab::loadBackgroundImageSourceAsync(QGraphicsPixmapItem *item)
         cacheRasterSourceImage(item, cachedImage.value());
         if (item->data(4).toBool()) {
             reprojectMetadataBackgroundLayersForCurrentDocument();
+        } else {
+            applyBackgroundLayerGamma(item, backgroundLayerGammaValue(item));
         }
-        applyBackgroundLayerGamma(item, backgroundLayerGammaValue(item));
         return;
     }
 
@@ -3365,8 +3441,9 @@ void MapEditorTab::loadBackgroundImageSourceAsync(QGraphicsPixmapItem *item)
         cacheRasterSourceImage(item, result.image);
         if (item->data(4).toBool()) {
             reprojectMetadataBackgroundLayersForCurrentDocument();
+        } else {
+            applyBackgroundLayerGamma(item, backgroundLayerGammaValue(item));
         }
-        applyBackgroundLayerGamma(item, backgroundLayerGammaValue(item));
     });
     watcher->setFuture(QtConcurrent::run(readMapEditorRasterSourceImageUncached, imagePath));
 }

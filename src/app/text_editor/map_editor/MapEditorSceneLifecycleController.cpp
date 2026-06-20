@@ -160,10 +160,6 @@ void MapEditorSceneLifecycleController::fitMapToView(bool includeBackgroundImage
         return;
     }
 
-    if (context_.reprojectMetadataBackgroundLayersForCurrentDocument) {
-        context_.reprojectMetadataBackgroundLayersForCurrentDocument();
-    }
-
     QRectF fitBounds = mapGeometryFitBounds();
     const QRectF backgroundBounds = context_.mapBackgroundFitBounds();
     if (backgroundBounds.isValid() && (includeBackgroundImages || !fitBounds.isValid())) {

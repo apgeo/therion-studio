@@ -1,7 +1,7 @@
 #include "BlockEditorDirectiveRules.h"
-#include "BlockEditorSourceText.h"
 
-#include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceLogicalDocument.h"
+#include "../../../core/TherionSourceSnapshotCache.h"
 
 #include <QJsonArray>
 #include <QJsonObject>
@@ -266,26 +266,29 @@ int findMatchingBlockEndLine(const QStringList &lines,
         return -1;
     }
 
-    const QVector<BlockEditorLogicalLine> logicalLines = blockEditorBuildLogicalLines(lines);
-    int openingLogicalIndex = -1;
-    for (int index = 0; index < logicalLines.size(); ++index) {
-        const BlockEditorLogicalLine &logicalLine = logicalLines.at(index);
-        if (openingLineNumber < logicalLine.startLine || openingLineNumber > logicalLine.endLine) {
+    TherionSourceSnapshotCache sourceSnapshotCache;
+    TherionSourceDocumentMetadata metadata;
+    metadata.revisionId = 1;
+    const TherionSourceLogicalDocument &logicalDocument =
+        sourceSnapshotCache.logicalDocument(lines.join(QLatin1Char('\n')), metadata);
+
+    int openingCommandIndex = -1;
+    for (int index = 0; index < logicalDocument.commands().size(); ++index) {
+        const TherionSourceLogicalCommand &command = logicalDocument.commands().at(index);
+        if (openingLineNumber < command.startLineNumber || openingLineNumber > command.endLineNumber) {
             continue;
         }
-        openingLogicalIndex = index;
+        openingCommandIndex = index;
         break;
     }
-    if (openingLogicalIndex < 0) {
+    if (openingCommandIndex < 0) {
         return -1;
     }
 
     int depth = 0;
-    for (int index = openingLogicalIndex; index < logicalLines.size(); ++index) {
-        const BlockEditorLogicalLine &logicalLine = logicalLines.at(index);
-        const TherionParsedLine parsedLine =
-            TherionDocumentParser::parseLine(logicalLine.text, logicalLine.startLine);
-        const QString directive = normalizeDirective(parsedLine.directive);
+    for (int index = openingCommandIndex; index < logicalDocument.commands().size(); ++index) {
+        const TherionSourceLogicalCommand &command = logicalDocument.commands().at(index);
+        const QString directive = normalizeDirective(command.parsed.directive);
         if (directive == openingDirective) {
             ++depth;
             continue;
@@ -296,7 +299,7 @@ int findMatchingBlockEndLine(const QStringList &lines,
 
         --depth;
         if (depth == 0) {
-            return logicalLine.endLine;
+            return command.endLineNumber;
         }
     }
 

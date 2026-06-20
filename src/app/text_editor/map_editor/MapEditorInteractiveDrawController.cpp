@@ -17,6 +17,7 @@
 #include <QLineF>
 #include <QPainterPath>
 #include <QPen>
+#include <QWidget>
 #include <QScopedValueRollback>
 
 #include <utility>
@@ -30,6 +31,19 @@ std::optional<QRectF> draftInitialAreaAdjustRect(const MapEditorInteractiveDrawC
     return context.initialAreaAdjustRectForDraftInsertion
         ? context.initialAreaAdjustRectForDraftInsertion()
         : std::optional<QRectF>{};
+}
+
+qreal previewDevicePixelRatio(const MapEditorInteractiveDrawContext &context)
+{
+    if (context.view != nullptr && context.view->viewport() != nullptr) {
+        return qMax<qreal>(1.0, context.view->viewport()->devicePixelRatioF());
+    }
+    return 1.0;
+}
+
+qreal previewCosmeticWidth(const MapEditorInteractiveDrawContext &context, qreal logicalWidth)
+{
+    return qMax<qreal>(0.1, logicalWidth) * previewDevicePixelRatio(context);
 }
 
 TherionDraftObjectOptions draftObjectOptionsFor(const MapEditorInteractiveDrawContext &context, const QString &commandKind)

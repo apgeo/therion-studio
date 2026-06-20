@@ -7,6 +7,8 @@
 #include "BlockEditorSourceText.h"
 
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceLogicalDocument.h"
+#include "../../../core/TherionSourceSnapshotCache.h"
 
 #include <QApplication>
 #include <QGraphicsItem>
@@ -66,7 +68,8 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         return;
     }
 
-    const BlockEditorSourceController source(context_.sourceContext());
+    const BlockEditorSourceContext sourceContext = context_.sourceContext();
+    const BlockEditorSourceController source(sourceContext);
     if (!source.hasEditor()) {
         return;
     }
@@ -87,8 +90,20 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         return;
     }
 
-    const QStringList lines = blockEditorNormalizedSourceLines(source.text());
+    const QString sourceText = source.text();
+    const QStringList lines = blockEditorNormalizedSourceLines(sourceText);
     const QVector<BlockEditorLogicalLine> logicalLines = blockEditorBuildLogicalLines(lines);
+    TherionSourceSnapshotCache sourceSnapshotCache;
+    TherionSourceDocumentMetadata sourceMetadata;
+    sourceMetadata.revisionId = sourceContext.editor != nullptr && sourceContext.editor->document() != nullptr
+        ? sourceContext.editor->document()->revision()
+        : 0;
+    const TherionSourceLogicalDocument &logicalDocument =
+        sourceSnapshotCache.logicalDocument(sourceText, sourceMetadata);
+    QHash<int, const TherionSourceLogicalCommand *> logicalCommandsByStartLine;
+    for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
+        logicalCommandsByStartLine.insert(command.startLineNumber, &command);
+    }
 
     struct StackEntry
     {
@@ -163,8 +178,11 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         if (logicalLine.startLine <= activeDataEntryEndLine) {
             continue;
         }
-        const TherionParsedLine parsedLine =
-            TherionDocumentParser::parseLine(logicalLine.text, logicalLine.startLine);
+        const TherionSourceLogicalCommand *logicalCommand =
+            logicalCommandsByStartLine.value(logicalLine.startLine, nullptr);
+        const TherionParsedLine parsedLine = logicalCommand != nullptr
+            ? logicalCommand->parsed
+            : TherionDocumentParser::parseLine(logicalLine.text, logicalLine.startLine);
         if (isFullLineComment(parsedLine)) {
             BlockCanvasItem *parentItem = nullptr;
             if (!stack.isEmpty()) {

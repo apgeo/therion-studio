@@ -241,9 +241,10 @@ bool MapEditorInteractiveDrawController::handleInteractiveDrawClick(const QPoint
         int insertedLineNumber = 0;
         const QString beforeText = context_.textEditor->text();
         QString afterText;
+        const TherionDraftObjectOptions objectOptions = draftObjectOptionsFor(context_, QStringLiteral("point"));
         if (!planPointInsert(beforeText,
                              context_.sourcePointFromScenePosition(scenePosition),
-                             draftObjectOptionsFor(context_, QStringLiteral("point")),
+                             objectOptions,
                              draftInitialAreaAdjustRect(context_),
                              &afterText,
                              &insertedLineNumber,
@@ -257,6 +258,10 @@ bool MapEditorInteractiveDrawController::handleInteractiveDrawClick(const QPoint
             if (applyResult == SourceApplyResult::Unavailable) {
                 (*context_.toolbarStatusNote) = tr("Point insert failed: source transaction callback is unavailable.");
             } else if (applyResult == SourceApplyResult::Applied) {
+                if (context_.recordCommittedDraftObjectOptions) {
+                    context_.recordCommittedDraftObjectOptions(QStringLiteral("point"), objectOptions);
+                }
+                context_.refreshObjectDetailsPanel();
                 (*context_.toolbarStatusNote) = insertedLineNumber > 0
                     ? tr("Inserted point at source line %1.").arg(insertedLineNumber)
                     : tr("Inserted point.");
@@ -340,10 +345,11 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
         const QString lineOptions = closeLineDraft ? QStringLiteral("-close on") : QString();
         const QString beforeText = context_.textEditor->text();
         QString afterText;
+        const TherionDraftObjectOptions objectOptions = draftObjectOptionsFor(context_, QStringLiteral("line"));
         if (!planLineInsert(beforeText,
                             coordinateRows,
                             lineOptions,
-                            draftObjectOptionsFor(context_, QStringLiteral("line")),
+                            objectOptions,
                             draftInitialAreaAdjustRect(context_),
                             &afterText,
                             &insertedLineNumber,
@@ -366,14 +372,18 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
             context_.updateCommandSurfaceState();
             return true;
         }
+        if (context_.recordCommittedDraftObjectOptions) {
+            context_.recordCommittedDraftObjectOptions(QStringLiteral("line"), objectOptions);
+        }
     } else {
         QString errorMessage;
         int insertedLineNumber = 0;
         const QString beforeText = context_.textEditor->text();
         QString afterText;
+        const TherionDraftObjectOptions objectOptions = draftObjectOptionsFor(context_, QStringLiteral("area"));
         if (!planAreaInsert(beforeText,
                             context_.areaCoordinateRowsForInteractiveDraft(),
-                            draftObjectOptionsFor(context_, QStringLiteral("area")),
+                            objectOptions,
                             draftInitialAreaAdjustRect(context_),
                             &afterText,
                             &insertedLineNumber,
@@ -396,6 +406,9 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
             context_.updateCommandSurfaceState();
             return true;
         }
+        if (context_.recordCommittedDraftObjectOptions) {
+            context_.recordCommittedDraftObjectOptions(QStringLiteral("area"), objectOptions);
+        }
     }
 
     clearInteractiveDrawSession(false);
@@ -409,6 +422,7 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
         (*context_.toolbarStatusNote) = tr("Area committed. Area mode is still active for the next object.");
     }
     context_.refreshToolbarSummary();
+    context_.refreshObjectDetailsPanel();
     context_.updateHelpPanel();
     context_.updateCommandSurfaceState();
     return true;
@@ -851,16 +865,18 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
     const bool isLineOrArea = modeAtCancel == MapEditorInteractiveDrawMode::Line
         || modeAtCancel == MapEditorInteractiveDrawMode::Area;
     bool committedLineOrAreaDraft = false;
+    int committedDraftLineNumber = 0;
     if (isLineOrArea && context_.hasCompletableInteractiveDrawSession()) {
         if (modeAtCancel == MapEditorInteractiveDrawMode::Line) {
             QString errorMessage;
             int insertedLineNumber = 0;
             const QString beforeText = context_.textEditor->text();
             QString afterText;
+            const TherionDraftObjectOptions objectOptions = draftObjectOptionsFor(context_, QStringLiteral("line"));
             if (!planLineInsert(beforeText,
                                 context_.lineCoordinateRowsForInteractiveDraft(),
                                 QString(),
-                                draftObjectOptionsFor(context_, QStringLiteral("line")),
+                                objectOptions,
                                 draftInitialAreaAdjustRect(context_),
                                 &afterText,
                                 &insertedLineNumber,
@@ -888,14 +904,19 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
                 context_.updateHelpPanel();
                 return false;
             }
+            if (context_.recordCommittedDraftObjectOptions) {
+                context_.recordCommittedDraftObjectOptions(QStringLiteral("line"), objectOptions);
+            }
+            committedDraftLineNumber = insertedLineNumber;
         } else {
             QString errorMessage;
             int insertedLineNumber = 0;
             const QString beforeText = context_.textEditor->text();
             QString afterText;
+            const TherionDraftObjectOptions objectOptions = draftObjectOptionsFor(context_, QStringLiteral("area"));
             if (!planAreaInsert(beforeText,
                                 context_.areaCoordinateRowsForInteractiveDraft(),
-                                draftObjectOptionsFor(context_, QStringLiteral("area")),
+                                objectOptions,
                                 draftInitialAreaAdjustRect(context_),
                                 &afterText,
                                 &insertedLineNumber,
@@ -923,6 +944,10 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
                 context_.updateHelpPanel();
                 return false;
             }
+            if (context_.recordCommittedDraftObjectOptions) {
+                context_.recordCommittedDraftObjectOptions(QStringLiteral("area"), objectOptions);
+            }
+            committedDraftLineNumber = insertedLineNumber;
         }
         committedLineOrAreaDraft = true;
     }
@@ -934,6 +959,9 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
     }
 
     if (committedLineOrAreaDraft) {
+        if (committedDraftLineNumber > 0 && context_.selectCommittedDraftObject) {
+            context_.selectCommittedDraftObject(committedDraftLineNumber);
+        }
         (*context_.toolbarStatusNote) = tr("Selection mode: draft committed.");
     } else if (isLineOrArea) {
         (*context_.toolbarStatusNote) = tr("Selection mode: draft canceled.");

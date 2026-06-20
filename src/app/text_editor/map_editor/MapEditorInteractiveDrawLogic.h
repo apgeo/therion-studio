@@ -17,6 +17,10 @@ struct MapEditorInteractiveLineDraftVertex
     std::optional<QPointF> incomingControlScene;
     std::optional<QPointF> outgoingControlSource;
     std::optional<QPointF> outgoingControlScene;
+    bool isSmooth = true;
+    QString segmentSubtype;
+    std::optional<qreal> orientationDegrees;
+    std::optional<qreal> leftSize;
 };
 
 struct MapEditorInteractiveLineControlHandleRef
@@ -39,6 +43,12 @@ void captureInteractiveLineAnchor(QVector<MapEditorInteractiveLineDraftVertex> *
                                   const QPointF &anchorScenePoint,
                                   const QPointF &anchorSourcePoint,
                                   const std::optional<QPointF> &dragScenePoint,
+                                  bool smooth,
+                                  bool incomingControl,
+                                  bool outgoingControl,
+                                  const QString &segmentSubtype,
+                                  std::optional<qreal> orientationDegrees,
+                                  std::optional<qreal> leftSize,
                                   const std::function<QPointF(const QPointF &)> &sceneToSource);
 std::optional<MapEditorInteractiveLineControlHandleRef> interactiveLineControlAt(
     const QVector<MapEditorInteractiveLineDraftVertex> &vertices,

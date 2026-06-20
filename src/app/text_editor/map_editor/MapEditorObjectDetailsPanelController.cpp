@@ -492,6 +492,51 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
 
             const bool typeFieldsVisible = commandKind != QStringLiteral("scrap");
             const bool projectionFieldVisible = commandKind == QStringLiteral("scrap");
+            const bool pendingLineLike = commandKind == QStringLiteral("line") || commandKind == QStringLiteral("area");
+            const bool pendingLinePointAvailable = pendingLineLike
+                && context_.pendingInsertLinePointAvailable
+                && context_.pendingInsertLinePointAvailable();
+            const bool pendingLinePointSmooth = pendingLinePointAvailable
+                && context_.pendingInsertLinePointSmooth
+                && context_.pendingInsertLinePointSmooth();
+            const bool pendingLinePointIncomingControl = pendingLinePointAvailable
+                && context_.pendingInsertLinePointIncomingControl
+                && context_.pendingInsertLinePointIncomingControl();
+            const bool pendingLinePointOutgoingControl = pendingLinePointAvailable
+                && context_.pendingInsertLinePointOutgoingControl
+                && context_.pendingInsertLinePointOutgoingControl();
+            const QString pendingLinePointSegmentSubtype =
+                pendingLinePointAvailable && context_.pendingInsertLinePointSegmentSubtype
+                    ? context_.pendingInsertLinePointSegmentSubtype()
+                    : QString();
+            const TherionParsedLine pendingPointParsedLine =
+                TherionDocumentParser::parseLine(QStringLiteral("point 0 0 %1").arg(pendingFields->type.trimmed()));
+            const TherionParsedLine pendingLineParsedLine =
+                TherionDocumentParser::parseLine(QStringLiteral("line %1").arg(pendingFields->type.trimmed()));
+            const bool pendingPointOrientationApplicable = commandKind == QStringLiteral("point")
+                && isOrientationSupportedForParsedLine(pendingPointParsedLine, orientationApplicabilityByCommand());
+            const bool pendingLinePointOrientationApplicable = pendingLinePointAvailable
+                && commandKind == QStringLiteral("line")
+                && isOrientationSupportedForParsedLine(pendingLineParsedLine, orientationApplicabilityByCommand());
+            const bool pendingLinePointLeftSizeApplicable = pendingLinePointAvailable
+                && commandKind == QStringLiteral("line")
+                && isLinePointLeftSizeSupportedForParsedLine(pendingLineParsedLine);
+            const bool pendingOrientationApplicable = pendingPointOrientationApplicable
+                || pendingLinePointOrientationApplicable;
+            const bool pendingOrientationEnabled = pendingLinePointOrientationApplicable
+                && context_.pendingInsertLinePointOrientationEnabled
+                && context_.pendingInsertLinePointOrientationEnabled();
+            const qreal pendingOrientationDegrees =
+                pendingLinePointOrientationApplicable && context_.pendingInsertLinePointOrientationDegrees
+                    ? context_.pendingInsertLinePointOrientationDegrees()
+                    : 0.0;
+            const bool pendingLeftSizeEnabled = pendingLinePointLeftSizeApplicable
+                && context_.pendingInsertLinePointLeftSizeEnabled
+                && context_.pendingInsertLinePointLeftSizeEnabled();
+            const qreal pendingLeftSize =
+                pendingLinePointLeftSizeApplicable && context_.pendingInsertLinePointLeftSize
+                    ? context_.pendingInsertLinePointLeftSize()
+                    : 40.0;
             const bool textFieldVisible = pendingFields->textVisible;
             const bool valueFieldVisible = pendingFields->valueVisible;
             moveProjectionComboForSelection(commandKind);
@@ -543,12 +588,66 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             context_.quickValueEdit->setText(pendingFields->value);
             showStylePreview(commandKind, pendingFields->type, pendingFields->subtype);
 
-            context_.vertexSection->setVisible(false);
-            context_.geometrySection->setVisible(projectionFieldVisible);
+            context_.vertexSection->setVisible((commandKind == QStringLiteral("point") && objectQuickOptionsVisible)
+                                               || pendingLinePointAvailable);
+            context_.geometrySection->setVisible(projectionFieldVisible
+                                                 || pendingLineLike
+                                                 || (commandKind != QStringLiteral("point") && objectQuickOptionsVisible));
             context_.advancedSection->setVisible(false);
             context_.vertexActionsEditor->setVisible(false);
-            context_.orientationEditor->setVisible(false);
-            context_.lineOptionsEditor->setVisible(false);
+            context_.orientationEditor->setVisible((commandKind == QStringLiteral("point") && objectQuickOptionsVisible)
+                                                   || pendingLinePointAvailable
+                                                   || pendingOrientationApplicable
+                                                   || pendingLinePointLeftSizeApplicable);
+            context_.orientationEnabledCheck->setText(commandKind == QStringLiteral("point")
+                                                          ? tr("Orientation override (-orientation)")
+                                                          : tr("Orientation (-orientation)"));
+            context_.orientationEnabledCheck->setVisible(pendingOrientationApplicable);
+            context_.orientationEnabledCheck->setEnabled(pendingLinePointOrientationApplicable);
+            context_.orientationEnabledCheck->setChecked(pendingOrientationEnabled);
+            context_.orientationSpin->setVisible(pendingOrientationApplicable);
+            context_.orientationSpin->setEnabled(pendingLinePointOrientationApplicable && pendingOrientationEnabled);
+            context_.orientationSpin->setValue(pendingOrientationDegrees);
+            context_.lineOptionsEditor->setVisible(pendingLineLike);
+            if (QWidget *controlRow = context_.linePointSmoothCheck->parentWidget(); controlRow != nullptr) {
+                controlRow->setVisible(pendingLinePointAvailable);
+            }
+            context_.linePointPreviousControlCheck->setVisible(pendingLinePointAvailable);
+            context_.linePointPreviousControlCheck->setEnabled(pendingLinePointAvailable);
+            context_.linePointPreviousControlCheck->setChecked(pendingLinePointIncomingControl);
+            context_.linePointSmoothCheck->setVisible(pendingLinePointAvailable);
+            context_.linePointSmoothCheck->setEnabled(pendingLinePointAvailable);
+            context_.linePointSmoothCheck->setChecked(pendingLinePointAvailable && pendingLinePointSmooth);
+            context_.linePointNextControlCheck->setVisible(pendingLinePointAvailable);
+            context_.linePointNextControlCheck->setEnabled(pendingLinePointAvailable);
+            context_.linePointNextControlCheck->setChecked(pendingLinePointOutgoingControl);
+            const QStringList pendingLinePointSubtypeValues =
+                pendingLinePointAvailable
+                    ? inspectorSubtypeValuesForCommandTypeWithEmptyChoice(catalog,
+                                                                          QStringLiteral("line"),
+                                                                          pendingFields->type)
+                    : QStringList();
+            const bool pendingLinePointSegmentSubtypeAvailable = !pendingLinePointSubtypeValues.isEmpty();
+            context_.linePointSegmentSubtypeLabel->setVisible(pendingLinePointSegmentSubtypeAvailable);
+            context_.linePointSegmentSubtypeCombo->setVisible(pendingLinePointSegmentSubtypeAvailable);
+            context_.linePointSegmentSubtypeCombo->setEnabled(pendingLinePointSegmentSubtypeAvailable);
+            if (pendingLinePointSegmentSubtypeAvailable) {
+                setEditableComboValues(context_.linePointSegmentSubtypeCombo,
+                                       pendingLinePointSubtypeValues,
+                                       pendingLinePointSegmentSubtype);
+            } else {
+                context_.linePointSegmentSubtypeCombo->clear();
+            }
+            context_.linePointAltitudeAutoCheck->setVisible(false);
+            context_.linePointAltitudeAutoCheck->setChecked(false);
+            context_.linePointFlagsEditor->setVisible(false);
+            context_.linePointFlagsEdit->setEnabled(false);
+            context_.linePointLeftSizeEnabledCheck->setChecked(pendingLeftSizeEnabled);
+            context_.linePointLeftSizeEnabledCheck->setVisible(pendingLinePointLeftSizeApplicable);
+            context_.linePointLeftSizeEnabledCheck->setEnabled(pendingLinePointLeftSizeApplicable);
+            context_.linePointLeftSizeSpin->setEnabled(pendingLinePointLeftSizeApplicable && pendingLeftSizeEnabled);
+            context_.linePointLeftSizeSpin->setVisible(pendingLinePointLeftSizeApplicable);
+            context_.linePointLeftSizeSpin->setValue(pendingLeftSize);
             context_.objectClipDisabledCheck->setChecked(false);
             context_.objectClipDisabledCheck->setVisible(false);
             context_.pointAlignEditor->setVisible(false);
@@ -556,7 +655,9 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             context_.scrapScaleEditor->setVisible(false);
             moveConfigureButtonForSelection(commandKind, false);
             context_.lineClosedCheck->setChecked(false);
+            context_.lineClosedCheck->setVisible(false);
             context_.lineReversedCheck->setChecked(false);
+            context_.lineReversedCheck->setVisible(false);
             return;
         }
     }
@@ -989,6 +1090,9 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     context_.linePointNextControlCheck->setEnabled(linePointSmoothApplicable);
     context_.linePointNextControlCheck->setChecked(linePointSmoothApplicable && linePointNextControl);
     context_.orientationEnabledCheck->setVisible(orientationApplicable);
+    context_.orientationEnabledCheck->setText(effectiveKind == QStringLiteral("line")
+                                                  ? tr("Orientation (-orientation)")
+                                                  : tr("Orientation override (-orientation)"));
     context_.orientationSpin->setVisible(orientationApplicable);
     context_.linePointLeftSizeEnabledCheck->setVisible(linePointLeftSizeApplicable);
     context_.linePointLeftSizeSpin->setVisible(linePointLeftSizeApplicable);

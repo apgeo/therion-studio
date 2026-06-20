@@ -4922,6 +4922,56 @@ Napriek tomu bod zmazať?</translation>
 <context>
     <name>TherionStudio::MapEditorTab</name>
     <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp" line="302"/>
+        <source>Line point smooth enabled for drawing.</source>
+        <translation>Hladkosť bodu línie pre kreslenie zapnutá.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp" line="303"/>
+        <source>Line point smooth disabled for drawing.</source>
+        <translation>Hladkosť bodu línie pre kreslenie vypnutá.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp" line="304"/>
+        <source>Line point subtype override cleared for drawing.</source>
+        <translation>Prepísanie subtypu bodu línie pre kreslenie zrušené.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp" line="305"/>
+        <source>Line point subtype override set to %1 for drawing.</source>
+        <translation>Prepísanie subtypu bodu línie pre kreslenie nastavené na %1.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp" line="306"/>
+        <source>Line point control handle enabled for drawing.</source>
+        <translation>Vodiaci bod línie pre kreslenie zapnutý.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp" line="307"/>
+        <source>Line point control handle disabled for drawing.</source>
+        <translation>Vodiaci bod línie pre kreslenie vypnutý.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp" line="308"/>
+        <source>Line point orientation enabled for drawing.</source>
+        <translation>Orientácia bodu línie pre kreslenie zapnutá.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp" line="309"/>
+        <source>Line point orientation cleared for drawing.</source>
+        <translation>Orientácia bodu línie pre kreslenie zrušená.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp" line="310"/>
+        <source>Line point left size enabled for drawing.</source>
+        <translation>Ľavá veľkosť bodu línie pre kreslenie zapnutá.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp" line="311"/>
+        <source>Line point left size cleared for drawing.</source>
+        <translation>Ľavá veľkosť bodu línie pre kreslenie zrušená.</translation>
+    </message>
+    <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="1499"/>
         <source>Background</source>
         <translation>Pozadie</translation>
@@ -5294,6 +5344,11 @@ Napriek tomu bod zmazať?</translation>
         <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="281"/>
         <source>Orientation override (-orientation)</source>
         <translation>Prepísanie orientácie (-orientation)</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="566"/>
+        <source>Orientation (-orientation)</source>
+        <translation>Orientácia (-orientation)</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="286"/>

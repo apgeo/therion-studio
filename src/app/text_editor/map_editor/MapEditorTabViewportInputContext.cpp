@@ -108,6 +108,7 @@ MapEditorViewportInputContext MapEditorTab::viewportInputContext()
         .captureInteractiveLineAnchor = [this](const QPointF &anchorScenePoint,
                                                const std::optional<QPointF> &dragScenePoint) {
             captureInteractiveLineAnchor(anchorScenePoint, dragScenePoint);
+            refreshObjectDetailsPanel();
         },
         .commitInteractiveDrawVertices = [this](const QString &geometryKind,
                                                 const QVector<QPointF> &vertices,

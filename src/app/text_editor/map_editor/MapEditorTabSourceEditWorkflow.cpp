@@ -1,9 +1,11 @@
 #include "MapEditorTab.h"
 
+#include "MapEditorObjectDetailsLogic.h"
 #include "MapEditorSceneSupport.h"
 #include "../TextEditorTab.h"
 
 #include "../../../core/TherionBackgroundMetadata.h"
+#include "../../../core/TherionDocumentParser.h"
 
 #include <QGraphicsPathItem>
 #include <QGraphicsScene>
@@ -152,13 +154,35 @@ QStringList MapEditorTab::areaCoordinateRowsForInteractiveDraft() const
 void MapEditorTab::captureInteractiveLineAnchor(const QPointF &anchorScenePoint,
                                                 const std::optional<QPointF> &dragScenePoint)
 {
+    const QString pendingCommand = interactiveDrawState_.pendingInsertFields_.commandKind.trimmed().toLower();
+    const TherionParsedLine pendingLineParsedLine =
+        TherionDocumentParser::parseLine(QStringLiteral("line %1").arg(interactiveDrawState_.pendingInsertFields_.type.trimmed()));
+    const bool pendingLinePointOrientationSupported = pendingCommand == QStringLiteral("line")
+        && isOrientationSupportedForParsedLine(pendingLineParsedLine, orientationApplicabilityByCommand_);
+    const bool pendingLinePointLeftSizeSupported = pendingCommand == QStringLiteral("line")
+        && isLinePointLeftSizeSupportedForParsedLine(pendingLineParsedLine);
     TherionStudio::captureInteractiveLineAnchor(&interactiveDrawState_.lineVertices_,
                                                 anchorScenePoint,
                                                 sourcePointFromScenePosition(anchorScenePoint),
                                                 dragScenePoint,
+                                                interactiveDrawState_.nextLinePointSmooth_,
+                                                interactiveDrawState_.nextLinePointIncomingControl_,
+                                                interactiveDrawState_.nextLinePointOutgoingControl_,
+                                                pendingInsertLinePointSegmentSubtype(),
+                                                pendingLinePointOrientationSupported
+                                                        && interactiveDrawState_.nextLinePointOrientationEnabled_
+                                                    ? std::optional<qreal>(interactiveDrawState_.nextLinePointOrientationDegrees_)
+                                                    : std::nullopt,
+                                                pendingLinePointLeftSizeSupported
+                                                        && interactiveDrawState_.nextLinePointLeftSizeEnabled_
+                                                    ? std::optional<qreal>(interactiveDrawState_.nextLinePointLeftSize_)
+                                                    : std::nullopt,
                                                 [this](const QPointF &scenePoint) {
                                                     return sourcePointFromScenePosition(scenePoint);
                                                 });
+    if (pendingCommand == QStringLiteral("line") || pendingCommand == QStringLiteral("area")) {
+        interactiveDrawState_.pendingInsertFieldsVisible_ = true;
+    }
     updateInteractiveDrawPreview();
 }
 

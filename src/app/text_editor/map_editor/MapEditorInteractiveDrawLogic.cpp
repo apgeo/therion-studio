@@ -2,6 +2,7 @@
 
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSourceReferenceResolver.h"
+#include "../../../core/TherionCommandSyntax.h"
 
 #include <QLineF>
 
@@ -16,6 +17,15 @@ namespace
 constexpr qreal kFreehandSimplifyAverageSampleFactor = 0.65;
 constexpr qreal kFreehandSimplifyBoundsFactor = 0.001;
 constexpr int kFreehandMaximumSafetyAnchors = 256;
+
+qreal normalizedDraftOrientationDegrees(qreal degrees)
+{
+    qreal normalized = std::fmod(degrees, 360.0);
+    if (normalized < 0.0) {
+        normalized += 360.0;
+    }
+    return normalized;
+}
 
 qreal pointSegmentDistance(const QPointF &point, const QPointF &start, const QPointF &end)
 {
@@ -189,6 +199,32 @@ QVector<MapEditorInteractiveLineDraftVertex> bezierDraftVerticesFromAnchors(cons
 
     return vertices;
 }
+
+void appendInteractiveLinePointStandaloneRows(QStringList *rows,
+                                              const MapEditorInteractiveLineDraftVertex &vertex,
+                                              QString *activeSegmentSubtype)
+{
+    if (rows == nullptr) {
+        return;
+    }
+    if (!vertex.isSmooth) {
+        rows->append(QStringLiteral("smooth off"));
+    }
+    const QString segmentSubtype = vertex.segmentSubtype.trimmed();
+    if (!segmentSubtype.isEmpty() && (activeSegmentSubtype == nullptr || *activeSegmentSubtype != segmentSubtype)) {
+        rows->append(QStringLiteral("subtype %1").arg(serializeTherionArgumentToken(segmentSubtype)));
+        if (activeSegmentSubtype != nullptr) {
+            *activeSegmentSubtype = segmentSubtype;
+        }
+    }
+    if (vertex.orientationDegrees.has_value()) {
+        rows->append(QStringLiteral("orientation %1")
+                         .arg(formatSourceCoordinate(normalizedDraftOrientationDegrees(vertex.orientationDegrees.value()))));
+    }
+    if (vertex.leftSize.has_value()) {
+        rows->append(QStringLiteral("l-size %1").arg(formatSourceCoordinate(std::max<qreal>(0.1, vertex.leftSize.value()))));
+    }
+}
 }
 
 QStringList lineCoordinateRowsForInteractiveDraft(const QVector<MapEditorInteractiveLineDraftVertex> &vertices)
@@ -205,6 +241,8 @@ QStringList lineCoordinateRowsForInteractiveDraft(const QVector<MapEditorInterac
     };
 
     rows.append(formatPoint(vertices.first().anchorSource));
+    QString activeSegmentSubtype;
+    appendInteractiveLinePointStandaloneRows(&rows, vertices.first(), &activeSegmentSubtype);
     for (int index = 1; index < vertices.size(); ++index) {
         const MapEditorInteractiveLineDraftVertex &previous = vertices.at(index - 1);
         const MapEditorInteractiveLineDraftVertex &current = vertices.at(index);
@@ -220,6 +258,7 @@ QStringList lineCoordinateRowsForInteractiveDraft(const QVector<MapEditorInterac
         tokens << formatSourceCoordinate(current.anchorSource.x())
                << formatSourceCoordinate(current.anchorSource.y());
         rows.append(tokens.join(QLatin1Char(' ')));
+        appendInteractiveLinePointStandaloneRows(&rows, current, &activeSegmentSubtype);
     }
 
     return rows;
@@ -289,6 +328,12 @@ void captureInteractiveLineAnchor(QVector<MapEditorInteractiveLineDraftVertex> *
                                   const QPointF &anchorScenePoint,
                                   const QPointF &anchorSourcePoint,
                                   const std::optional<QPointF> &dragScenePoint,
+                                  bool smooth,
+                                  bool incomingControl,
+                                  bool outgoingControl,
+                                  const QString &segmentSubtype,
+                                  std::optional<qreal> orientationDegrees,
+                                  std::optional<qreal> leftSize,
                                   const std::function<QPointF(const QPointF &)> &sceneToSource)
 {
     if (vertices == nullptr || sceneToSource == nullptr) {
@@ -298,14 +343,38 @@ void captureInteractiveLineAnchor(QVector<MapEditorInteractiveLineDraftVertex> *
     MapEditorInteractiveLineDraftVertex vertex;
     vertex.anchorScene = anchorScenePoint;
     vertex.anchorSource = anchorSourcePoint;
+    vertex.isSmooth = smooth;
+    vertex.segmentSubtype = segmentSubtype.trimmed();
+    if (orientationDegrees.has_value()) {
+        vertex.orientationDegrees = normalizedDraftOrientationDegrees(orientationDegrees.value());
+    }
+    if (leftSize.has_value()) {
+        vertex.leftSize = std::max<qreal>(0.1, leftSize.value());
+    }
     vertices->append(vertex);
 
-    if (dragScenePoint.has_value()) {
+    if (smooth && dragScenePoint.has_value()) {
         MapEditorInteractiveLineDraftVertex &current = vertices->last();
-        current.outgoingControlScene = dragScenePoint.value();
-        current.outgoingControlSource = sceneToSource(dragScenePoint.value());
-        current.incomingControlScene = current.anchorScene - (dragScenePoint.value() - current.anchorScene);
-        current.incomingControlSource = sceneToSource(current.incomingControlScene.value());
+        if (outgoingControl) {
+            current.outgoingControlScene = dragScenePoint.value();
+            current.outgoingControlSource = sceneToSource(dragScenePoint.value());
+        }
+        if (incomingControl) {
+            current.incomingControlScene = current.anchorScene - (dragScenePoint.value() - current.anchorScene);
+            current.incomingControlSource = sceneToSource(current.incomingControlScene.value());
+        }
+    } else if (smooth && vertices->size() >= 2) {
+        MapEditorInteractiveLineDraftVertex &current = vertices->last();
+        const MapEditorInteractiveLineDraftVertex &previous = vertices->at(vertices->size() - 2);
+        const QPointF deltaScene = current.anchorScene - previous.anchorScene;
+        if (incomingControl) {
+            current.incomingControlScene = current.anchorScene - deltaScene / 3.0;
+            current.incomingControlSource = sceneToSource(current.incomingControlScene.value());
+        }
+        if (outgoingControl) {
+            current.outgoingControlScene = current.anchorScene + deltaScene / 3.0;
+            current.outgoingControlSource = sceneToSource(current.outgoingControlScene.value());
+        }
     }
 }
 

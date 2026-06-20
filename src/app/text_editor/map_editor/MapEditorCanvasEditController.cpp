@@ -1464,6 +1464,9 @@ bool MapEditorCanvasEditController::toggleLineVertexSmoothFromSelection()
     if (target.isSmooth) {
         ensureLineVertexControlHandles(&editedVertices, ownerIndex, lineFeature->closed);
         smoothLineVertexControlHandles(&target);
+    } else {
+        target.incomingControl.reset();
+        target.outgoingControl.reset();
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
@@ -1534,6 +1537,9 @@ bool MapEditorCanvasEditController::setLineVertexSmoothForSelection(bool smooth)
     if (target.isSmooth) {
         ensureLineVertexControlHandles(&editedVertices, ownerIndex, lineFeature->closed);
         smoothLineVertexControlHandles(&target);
+    } else {
+        target.incomingControl.reset();
+        target.outgoingControl.reset();
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);

@@ -16,6 +16,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QIcon>
+#include <QLabel>
 #include <QMainWindow>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -115,11 +116,23 @@ bool runFreehandBezierRowLogicSmoke()
                                  QPointF(0.0, 0.0),
                                  QPointF(0.0, 0.0),
                                  QPointF(0.0, 5.0),
+                                 true,
+                                 true,
+                                 true,
+                                 QString(),
+                                 std::nullopt,
+                                 std::nullopt,
                                  identitySceneToSource);
     captureInteractiveLineAnchor(&firstDraggedDraft,
                                  QPointF(10.0, 0.0),
                                  QPointF(10.0, 0.0),
                                  QPointF(10.0, 5.0),
+                                 true,
+                                 true,
+                                 true,
+                                 QString(),
+                                 std::nullopt,
+                                 std::nullopt,
                                  identitySceneToSource);
     if (!expect(firstDraggedDraft.size() == 2
                     && firstDraggedDraft.first().incomingControlScene == QPointF(0.0, -5.0)
@@ -149,11 +162,23 @@ bool runFreehandBezierRowLogicSmoke()
                                  QPointF(0.0, 0.0),
                                  QPointF(0.0, 0.0),
                                  std::nullopt,
+                                 true,
+                                 true,
+                                 true,
+                                 QString(),
+                                 std::nullopt,
+                                 std::nullopt,
                                  identitySceneToSource);
     captureInteractiveLineAnchor(&xtherionDraft,
                                  QPointF(10.0, 0.0),
                                  QPointF(10.0, 0.0),
                                  QPointF(10.0, 5.0),
+                                 true,
+                                 true,
+                                 true,
+                                 QString(),
+                                 std::nullopt,
+                                 std::nullopt,
                                  identitySceneToSource);
     if (!expect(xtherionDraft.size() == 2
                     && !xtherionDraft.first().outgoingControlScene.has_value()
@@ -166,6 +191,12 @@ bool runFreehandBezierRowLogicSmoke()
                                  QPointF(20.0, 0.0),
                                  QPointF(20.0, 0.0),
                                  QPointF(20.0, 6.0),
+                                 true,
+                                 true,
+                                 true,
+                                 QString(),
+                                 std::nullopt,
+                                 std::nullopt,
                                  identitySceneToSource);
     if (!expect(xtherionDraft.at(1).outgoingControlScene == QPointF(10.0, 5.0)
                     && xtherionDraft.at(2).incomingControlScene == QPointF(20.0, -6.0)
@@ -178,6 +209,45 @@ bool runFreehandBezierRowLogicSmoke()
                     && xtherionRows.at(1) == QStringLiteral("0.0 0.0 10.0 -5.0 10.0 0.0")
                     && xtherionRows.at(2) == QStringLiteral("10.0 5.0 20.0 -6.0 20.0 0.0"),
                 "XTherion-style draft rows should serialize each point's next control in the following segment row.")) {
+        return false;
+    }
+    QVector<MapEditorInteractiveLineDraftVertex> repeatedSubtypeDraft;
+    captureInteractiveLineAnchor(&repeatedSubtypeDraft,
+                                 QPointF(0.0, 0.0),
+                                 QPointF(0.0, 0.0),
+                                 std::nullopt,
+                                 true,
+                                 true,
+                                 true,
+                                 QStringLiteral("presumed"),
+                                 std::nullopt,
+                                 std::nullopt,
+                                 identitySceneToSource);
+    captureInteractiveLineAnchor(&repeatedSubtypeDraft,
+                                 QPointF(10.0, 0.0),
+                                 QPointF(10.0, 0.0),
+                                 std::nullopt,
+                                 true,
+                                 true,
+                                 true,
+                                 QStringLiteral("presumed"),
+                                 std::nullopt,
+                                 std::nullopt,
+                                 identitySceneToSource);
+    captureInteractiveLineAnchor(&repeatedSubtypeDraft,
+                                 QPointF(20.0, 0.0),
+                                 QPointF(20.0, 0.0),
+                                 std::nullopt,
+                                 true,
+                                 true,
+                                 true,
+                                 QStringLiteral("presumed"),
+                                 std::nullopt,
+                                 std::nullopt,
+                                 identitySceneToSource);
+    const QStringList repeatedSubtypeRows = lineCoordinateRowsForInteractiveDraft(repeatedSubtypeDraft);
+    if (!expect(repeatedSubtypeRows.count(QStringLiteral("subtype presumed")) == 1,
+                "Repeated pending line-point subtype should serialize only when the active segment subtype changes.")) {
         return false;
     }
 
@@ -354,6 +424,38 @@ int countDirectiveLines(const QString &text, const QString &directive)
         }
     }
     return count;
+}
+
+int lastDirectiveLineNumber(const QString &text, const QString &directive)
+{
+    if (directive.isEmpty()) {
+        return 0;
+    }
+
+    const QString trimmedDirective = directive.trimmed().toLower();
+    int lineNumber = 0;
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    for (int index = 0; index < lines.size(); ++index) {
+        const QString trimmedLine = lines.at(index).trimmed();
+        if (trimmedLine == trimmedDirective || trimmedLine.startsWith(trimmedDirective + QLatin1Char(' '))) {
+            lineNumber = index + 1;
+        }
+    }
+    return lineNumber;
+}
+
+bool hasVisibleLabelText(QWidget *root, const QString &text)
+{
+    if (root == nullptr) {
+        return false;
+    }
+    const QList<QLabel *> labels = root->findChildren<QLabel *>();
+    for (QLabel *label : labels) {
+        if (label != nullptr && label->isVisible() && label->text() == text) {
+            return true;
+        }
+    }
+    return false;
 }
 
 int lastDraftLineCoordinateTokenCount(const QString &text)
@@ -2371,6 +2473,14 @@ int runDragUndoRedoSmoke()
                 "Esc in Line mode should commit captured vertices and return to Select mode.")) {
         return 1;
     }
+    if (!expect(hasVisibleLabelText(mapTab, QStringLiteral("Line")),
+                "Esc after committing a line draft should leave the inserted line selected.")) {
+        return 1;
+    }
+    if (!expect(mapTab->currentLineNumber() == lastDirectiveLineNumber(mapTab->text(), QStringLiteral("line")),
+                "Esc after committing a line draft should move the Raw cursor to the inserted line.")) {
+        return 1;
+    }
 
     const QString textBeforeAreaClickClose = mapTab->text();
     const int areaDirectivesBeforeClickClose = countDirectiveLines(textBeforeAreaClickClose, QStringLiteral("area"));
@@ -2428,6 +2538,14 @@ int runDragUndoRedoSmoke()
     }
     if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeAreaEscCommit + 1,
                 "Area commit should create a closed border line referenced by the area block.")) {
+        return 1;
+    }
+    if (!expect(hasVisibleLabelText(mapTab, QStringLiteral("Area")),
+                "Esc after committing an area draft should leave the inserted area selected.")) {
+        return 1;
+    }
+    if (!expect(mapTab->currentLineNumber() == lastDirectiveLineNumber(mapTab->text(), QStringLiteral("area")),
+                "Esc after committing an area draft should move the Raw cursor to the inserted area.")) {
         return 1;
     }
     const QString textAfterAreaEscCommit = mapTab->text();

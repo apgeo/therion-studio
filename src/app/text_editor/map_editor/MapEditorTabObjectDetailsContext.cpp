@@ -3,6 +3,7 @@
 #include "MapEditorObjectDetailsContext.h"
 #include "../TextEditorTab.h"
 
+#include <QRegularExpression>
 #include <QTabWidget>
 
 namespace TherionStudio
@@ -35,10 +36,40 @@ QString defaultPendingTypeForCommand(const QString &commandKind)
     return QString();
 }
 
-bool pendingPointNameVisible(const QString &type, const QString &name)
+bool pendingPointNameVisible(const QString &type)
 {
-    return type.trimmed().compare(QStringLiteral("station"), Qt::CaseInsensitive) == 0
-        || !name.trimmed().isEmpty();
+    return type.trimmed().compare(QStringLiteral("station"), Qt::CaseInsensitive) == 0;
+}
+
+QString nextStationName(const QString &stationName)
+{
+    static const QRegularExpression numericTailPattern(QStringLiteral("^(.*?)(\\d+)(@.*)?$"));
+    const QString trimmed = stationName.trimmed();
+    const QRegularExpressionMatch match = numericTailPattern.match(trimmed);
+    if (!match.hasMatch()) {
+        return QString();
+    }
+
+    const QString prefix = match.captured(1);
+    const QString numberToken = match.captured(2);
+    const QString suffix = match.captured(3);
+    bool ok = false;
+    const qulonglong number = numberToken.toULongLong(&ok);
+    if (!ok) {
+        return QString();
+    }
+
+    QString nextNumber = QString::number(number + 1);
+    if (nextNumber.size() < numberToken.size()) {
+        nextNumber = QString(numberToken.size() - nextNumber.size(), QLatin1Char('0')) + nextNumber;
+    }
+    return prefix + nextNumber + suffix;
+}
+
+bool isPendingStationPoint(const QString &commandKind, const QString &type)
+{
+    return commandKind.trimmed().compare(QStringLiteral("point"), Qt::CaseInsensitive) == 0
+        && type.trimmed().compare(QStringLiteral("station"), Qt::CaseInsensitive) == 0;
 }
 
 bool pendingLabelTextVisible(const QString &commandKind, const QString &type, const QString &text)
@@ -128,12 +159,19 @@ void MapEditorTab::beginPendingInsertObject(const QString &commandKind)
     if (normalizedCommand == QStringLiteral("scrap")) {
         fields.identifier = QStringLiteral("new-scrap");
     } else if (normalizedCommand == QStringLiteral("point")) {
-        fields.nameVisible = true;
+        if (fields.type.trimmed().compare(QStringLiteral("station"), Qt::CaseInsensitive) == 0) {
+            fields.name = nextStationName(interactiveDrawState_.lastPendingStationName_);
+        }
+        fields.nameVisible = pendingPointNameVisible(fields.type);
     }
     fields.textVisible = pendingLabelTextVisible(normalizedCommand, fields.type, fields.text);
     fields.valueVisible = pendingValueVisible(inspectorSymbolCatalog_, normalizedCommand, fields.type, fields.value);
     interactiveDrawState_.pendingInsertFields_ = fields;
+    interactiveDrawState_.pendingInsertFieldsVisible_ = true;
     interactiveDrawState_.pendingTargetScrapIdentifier_.clear();
+    if (normalizedCommand == QStringLiteral("line") || normalizedCommand == QStringLiteral("area")) {
+        interactiveDrawState_.currentLinePointSegmentSubtype_.clear();
+    }
     if (normalizedCommand != QStringLiteral("scrap")) {
         if (const std::optional<InspectorScrapContext> targetContext = pendingInsertTargetScrapContext()) {
             if (!targetContext->willBeCreated) {
@@ -147,11 +185,13 @@ void MapEditorTab::clearPendingInsertObject()
 {
     interactiveDrawState_.pendingInsertFields_ = InspectorObjectQuickFields{};
     interactiveDrawState_.pendingTargetScrapIdentifier_.clear();
+    interactiveDrawState_.pendingInsertFieldsVisible_ = false;
 }
 
 std::optional<InspectorObjectQuickFields> MapEditorTab::pendingInsertQuickFields() const
 {
-    if (interactiveDrawState_.pendingInsertFields_.commandKind.trimmed().isEmpty()) {
+    if (!interactiveDrawState_.pendingInsertFieldsVisible_
+        || interactiveDrawState_.pendingInsertFields_.commandKind.trimmed().isEmpty()) {
         return std::nullopt;
     }
     return interactiveDrawState_.pendingInsertFields_;
@@ -195,6 +235,8 @@ void MapEditorTab::setPendingInsertTargetScrapIdentifier(const QString &identifi
 void MapEditorTab::setPendingInsertQuickFields(const InspectorObjectQuickFields &fields)
 {
     const QString existingCommand = interactiveDrawState_.pendingInsertFields_.commandKind;
+    const bool previousStationPoint =
+        isPendingStationPoint(existingCommand, interactiveDrawState_.pendingInsertFields_.type);
     const QString normalizedCommand = normalizedPendingCommandKind(fields.commandKind.isEmpty()
                                                                        ? existingCommand
                                                                        : fields.commandKind);
@@ -204,14 +246,26 @@ void MapEditorTab::setPendingInsertQuickFields(const InspectorObjectQuickFields 
     }
 
     interactiveDrawState_.pendingInsertFields_ = fields;
+    interactiveDrawState_.pendingInsertFieldsVisible_ = true;
     interactiveDrawState_.pendingInsertFields_.commandKind = normalizedCommand;
     interactiveDrawState_.pendingInsertFields_.typeEditable = normalizedCommand != QStringLiteral("scrap");
     if (interactiveDrawState_.pendingInsertFields_.type.trimmed().isEmpty()) {
         interactiveDrawState_.pendingInsertFields_.type = defaultPendingTypeForCommand(normalizedCommand);
     }
     if (normalizedCommand == QStringLiteral("point")) {
-        interactiveDrawState_.pendingInsertFields_.nameVisible = pendingPointNameVisible(interactiveDrawState_.pendingInsertFields_.type,
-                                                                   interactiveDrawState_.pendingInsertFields_.name);
+        const bool currentStationPoint =
+            isPendingStationPoint(normalizedCommand, interactiveDrawState_.pendingInsertFields_.type);
+        if (currentStationPoint) {
+            if (!previousStationPoint
+                && interactiveDrawState_.pendingInsertFields_.name.trimmed().isEmpty()) {
+                interactiveDrawState_.pendingInsertFields_.name =
+                    nextStationName(interactiveDrawState_.lastPendingStationName_);
+            }
+        } else {
+            interactiveDrawState_.pendingInsertFields_.name.clear();
+        }
+        interactiveDrawState_.pendingInsertFields_.nameVisible =
+            pendingPointNameVisible(interactiveDrawState_.pendingInsertFields_.type);
     } else {
         interactiveDrawState_.pendingInsertFields_.nameVisible = false;
         interactiveDrawState_.pendingInsertFields_.name.clear();
@@ -232,6 +286,125 @@ void MapEditorTab::setPendingInsertQuickFields(const InspectorObjectQuickFields 
 QVector<InspectorObjectQuickFields> MapEditorTab::recentPendingInsertQuickFields(const QString &commandKind) const
 {
     return interactiveDrawState_.recentPendingInsertFieldsByCommand_.value(normalizedPendingCommandKind(commandKind));
+}
+
+bool MapEditorTab::pendingInsertLinePointAvailable() const
+{
+    const QString commandKind = interactiveDrawState_.pendingInsertFields_.commandKind.trimmed().toLower();
+    return (commandKind == QStringLiteral("line") || commandKind == QStringLiteral("area"))
+        && interactiveDrawState_.pendingInsertFieldsVisible_;
+}
+
+bool MapEditorTab::pendingInsertLinePointSmooth() const
+{
+    return interactiveDrawState_.nextLinePointSmooth_;
+}
+
+void MapEditorTab::setPendingInsertLinePointSmooth(bool smooth)
+{
+    if (!pendingInsertLinePointAvailable()) {
+        return;
+    }
+    interactiveDrawState_.nextLinePointSmooth_ = smooth;
+    interactiveDrawState_.nextLinePointIncomingControl_ = smooth;
+    interactiveDrawState_.nextLinePointOutgoingControl_ = smooth;
+    toolbarStatusNote_ = smooth
+        ? tr("Line point smooth enabled for drawing.")
+        : tr("Line point smooth disabled for drawing.");
+    refreshToolbarSummary();
+}
+
+bool MapEditorTab::pendingInsertLinePointIncomingControl() const
+{
+    return interactiveDrawState_.nextLinePointIncomingControl_;
+}
+
+bool MapEditorTab::pendingInsertLinePointOutgoingControl() const
+{
+    return interactiveDrawState_.nextLinePointOutgoingControl_;
+}
+
+void MapEditorTab::setPendingInsertLinePointControl(bool incoming, bool enabled)
+{
+    if (!pendingInsertLinePointAvailable()) {
+        return;
+    }
+    if (incoming) {
+        interactiveDrawState_.nextLinePointIncomingControl_ = enabled;
+    } else {
+        interactiveDrawState_.nextLinePointOutgoingControl_ = enabled;
+    }
+    if (!enabled) {
+        interactiveDrawState_.nextLinePointSmooth_ = false;
+    }
+    toolbarStatusNote_ = enabled
+        ? tr("Line point control handle enabled for drawing.")
+        : tr("Line point control handle disabled for drawing.");
+    refreshToolbarSummary();
+}
+
+QString MapEditorTab::pendingInsertLinePointSegmentSubtype() const
+{
+    return interactiveDrawState_.currentLinePointSegmentSubtype_;
+}
+
+void MapEditorTab::setPendingInsertLinePointSegmentSubtype(const QString &subtype)
+{
+    if (!pendingInsertLinePointAvailable()) {
+        return;
+    }
+    const QString normalizedSubtype = subtype.trimmed();
+    interactiveDrawState_.currentLinePointSegmentSubtype_ = normalizedSubtype;
+    toolbarStatusNote_ = normalizedSubtype.isEmpty()
+        ? tr("Line point subtype override cleared for drawing.")
+        : tr("Line point subtype override set to %1 for drawing.").arg(normalizedSubtype);
+    refreshToolbarSummary();
+}
+
+bool MapEditorTab::pendingInsertLinePointOrientationEnabled() const
+{
+    return interactiveDrawState_.nextLinePointOrientationEnabled_;
+}
+
+qreal MapEditorTab::pendingInsertLinePointOrientationDegrees() const
+{
+    return interactiveDrawState_.nextLinePointOrientationDegrees_;
+}
+
+void MapEditorTab::setPendingInsertLinePointOrientation(bool enabled, qreal degrees)
+{
+    if (!pendingInsertLinePointAvailable()) {
+        return;
+    }
+    interactiveDrawState_.nextLinePointOrientationEnabled_ = enabled;
+    interactiveDrawState_.nextLinePointOrientationDegrees_ = normalizeOrientationDegreesForMapDetails(degrees);
+    toolbarStatusNote_ = enabled
+        ? tr("Line point orientation enabled for drawing.")
+        : tr("Line point orientation cleared for drawing.");
+    refreshToolbarSummary();
+}
+
+bool MapEditorTab::pendingInsertLinePointLeftSizeEnabled() const
+{
+    return interactiveDrawState_.nextLinePointLeftSizeEnabled_;
+}
+
+qreal MapEditorTab::pendingInsertLinePointLeftSize() const
+{
+    return interactiveDrawState_.nextLinePointLeftSize_;
+}
+
+void MapEditorTab::setPendingInsertLinePointLeftSize(bool enabled, qreal leftSize)
+{
+    if (!pendingInsertLinePointAvailable()) {
+        return;
+    }
+    interactiveDrawState_.nextLinePointLeftSizeEnabled_ = enabled;
+    interactiveDrawState_.nextLinePointLeftSize_ = qMax<qreal>(0.1, leftSize);
+    toolbarStatusNote_ = enabled
+        ? tr("Line point left size enabled for drawing.")
+        : tr("Line point left size cleared for drawing.");
+    refreshToolbarSummary();
 }
 
 void MapEditorTab::applyRecentPendingInsertQuickFields(int index)
@@ -274,6 +447,26 @@ TherionDraftObjectOptions MapEditorTab::pendingDraftObjectOptions(const QString 
     options.value = interactiveDrawState_.pendingInsertFields_.value;
     options.valueEnabled = interactiveDrawState_.pendingInsertFields_.valueVisible;
     return options;
+}
+
+void MapEditorTab::recordCommittedPendingDraftObjectOptions(const QString &commandKind,
+                                                            const TherionDraftObjectOptions &options)
+{
+    const QString normalizedCommand = commandKind.trimmed().toLower();
+    if (normalizedCommand == QStringLiteral("line") || normalizedCommand == QStringLiteral("area")) {
+        interactiveDrawState_.currentLinePointSegmentSubtype_.clear();
+    }
+    if (isPendingStationPoint(commandKind, options.type)
+        && options.nameEnabled
+        && !options.name.trimmed().isEmpty()) {
+        const QString committedName = options.name.trimmed();
+        interactiveDrawState_.lastPendingStationName_ = committedName;
+        if (isPendingStationPoint(interactiveDrawState_.pendingInsertFields_.commandKind,
+                                  interactiveDrawState_.pendingInsertFields_.type)
+            && interactiveDrawState_.pendingInsertFields_.name.trimmed() == committedName) {
+            interactiveDrawState_.pendingInsertFields_.name = nextStationName(committedName);
+        }
+    }
 }
 
 QString MapEditorTab::pendingScrapPreferredName() const
@@ -427,6 +620,48 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         },
         .recentPendingInsertQuickFields = [this](const QString &commandKind) {
             return recentPendingInsertQuickFields(commandKind);
+        },
+        .pendingInsertLinePointAvailable = [this]() {
+            return pendingInsertLinePointAvailable();
+        },
+        .pendingInsertLinePointSmooth = [this]() {
+            return pendingInsertLinePointSmooth();
+        },
+        .setPendingInsertLinePointSmooth = [this](bool smooth) {
+            setPendingInsertLinePointSmooth(smooth);
+        },
+        .pendingInsertLinePointIncomingControl = [this]() {
+            return pendingInsertLinePointIncomingControl();
+        },
+        .pendingInsertLinePointOutgoingControl = [this]() {
+            return pendingInsertLinePointOutgoingControl();
+        },
+        .setPendingInsertLinePointControl = [this](bool incoming, bool enabled) {
+            setPendingInsertLinePointControl(incoming, enabled);
+        },
+        .pendingInsertLinePointSegmentSubtype = [this]() {
+            return pendingInsertLinePointSegmentSubtype();
+        },
+        .setPendingInsertLinePointSegmentSubtype = [this](const QString &subtype) {
+            setPendingInsertLinePointSegmentSubtype(subtype);
+        },
+        .pendingInsertLinePointOrientationEnabled = [this]() {
+            return pendingInsertLinePointOrientationEnabled();
+        },
+        .pendingInsertLinePointOrientationDegrees = [this]() {
+            return pendingInsertLinePointOrientationDegrees();
+        },
+        .setPendingInsertLinePointOrientation = [this](bool enabled, qreal degrees) {
+            setPendingInsertLinePointOrientation(enabled, degrees);
+        },
+        .pendingInsertLinePointLeftSizeEnabled = [this]() {
+            return pendingInsertLinePointLeftSizeEnabled();
+        },
+        .pendingInsertLinePointLeftSize = [this]() {
+            return pendingInsertLinePointLeftSize();
+        },
+        .setPendingInsertLinePointLeftSize = [this](bool enabled, qreal leftSize) {
+            setPendingInsertLinePointLeftSize(enabled, leftSize);
         },
         .clearInspectorObjectSelection = [this]() {
             clearInspectorObjectSelection();

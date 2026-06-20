@@ -39,6 +39,16 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Keep pending map drawing defaults local to the open map editor: Point, Line, and Area remember deduplicated recent
   type/subtype choices, expose them as compact wrapping quick buttons below symbol preview, and use the newest choice
   for the next new object instead of resetting to built-in defaults every time.
+- Keep repeated pending `point station` drawing ergonomic by advancing the next `Name (-name)` from the last committed
+  station point name while preserving survey suffixes, keeping the panel on the next point draft, and clearing the
+  pending station name when the user changes the next point type away from `station`.
+- Keep pending line/area drawing panels available during drafting: show `Options`, expose forward-applied `Line Point`
+  control handles, smooth, and subtype controls before each click, expose `orientation` / `l-size` only for `line slope`,
+  write supported standalone line-point rows into the committed draft, and clear line-point subtype for every new draft.
+- Keep newly committed pending point/line/area tools focused on the next draft instead of switching the Selection panel
+  to the just-inserted object, so recent choices and draft fields remain available for repeated drawing.
+- Keep `Smooth (-smooth)` behavior visual and source-backed: disabling it removes line-point control handles immediately
+  for draft and selected lines, and committed line tools return to the next line draft after insertion.
 - Keep selected map line/area vertex markers close to XTherion styling: larger red anchor circles with blue
   outlines, smaller blue control-point squares, and a red focused-vertex halo.
 - Keep empty scrap object cleanup explicit through validator warnings and `Apply Fix`, not silent source mutation.

@@ -860,15 +860,27 @@ void MapEditorObjectDetailsEditController::handleObjectOrientationEnabledToggled
         return;
     }
     context_.orientationSpin->setEnabled(checked);
+    if (context_.pendingInsertLinePointAvailable
+        && context_.pendingInsertLinePointAvailable()
+        && context_.setPendingInsertLinePointOrientation) {
+        context_.setPendingInsertLinePointOrientation(checked, context_.orientationSpin->value());
+        context_.refreshObjectDetailsPanel();
+        return;
+    }
     applyObjectOrientationEdits();
 }
 
 void MapEditorObjectDetailsEditController::handleObjectOrientationValueChanged(double value)
 {
-    Q_UNUSED(value);
     if (*context_.updatingUi
         || context_.orientationEnabledCheck == nullptr
         || !context_.orientationEnabledCheck->isChecked()) {
+        return;
+    }
+    if (context_.pendingInsertLinePointAvailable
+        && context_.pendingInsertLinePointAvailable()
+        && context_.setPendingInsertLinePointOrientation) {
+        context_.setPendingInsertLinePointOrientation(true, value);
         return;
     }
     scheduleObjectOrientationApply(context_);
@@ -883,15 +895,27 @@ void MapEditorObjectDetailsEditController::handleLinePointLeftSizeEnabledToggled
     if (checked && context_.linePointLeftSizeSpin->value() <= 0.0) {
         context_.linePointLeftSizeSpin->setValue(40.0);
     }
+    if (context_.pendingInsertLinePointAvailable
+        && context_.pendingInsertLinePointAvailable()
+        && context_.setPendingInsertLinePointLeftSize) {
+        context_.setPendingInsertLinePointLeftSize(checked, context_.linePointLeftSizeSpin->value());
+        context_.refreshObjectDetailsPanel();
+        return;
+    }
     applyObjectOrientationEdits();
 }
 
 void MapEditorObjectDetailsEditController::handleLinePointLeftSizeValueChanged(double value)
 {
-    Q_UNUSED(value);
     if (*context_.updatingUi
         || context_.linePointLeftSizeEnabledCheck == nullptr
         || !context_.linePointLeftSizeEnabledCheck->isChecked()) {
+        return;
+    }
+    if (context_.pendingInsertLinePointAvailable
+        && context_.pendingInsertLinePointAvailable()
+        && context_.setPendingInsertLinePointLeftSize) {
+        context_.setPendingInsertLinePointLeftSize(true, value);
         return;
     }
     scheduleObjectOrientationApply(context_);
@@ -1056,12 +1080,22 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
         return;
     }
     const MapEditorObjectDetailsContext context = context_;
+    const QString selectedObjectKind = context_.selectedObjectKind != nullptr
+        ? context_.selectedObjectKind->trimmed().toLower()
+        : QString();
     applySourceTransactionWithOptionalHook(context_,
                                            tr("Edit Object Fields"),
                                            beforeText,
                                            afterText,
                                            targetLineNumber,
-                                           [context]() {
+                                           [context, selectedObjectKind, targetLineNumber]() {
+                                               if (selectedObjectKind == QStringLiteral("point")
+                                                   && context.restorePointSelectionLater) {
+                                                   context.restorePointSelectionLater(targetLineNumber);
+                                               } else if (selectedObjectKind == QStringLiteral("line")
+                                                          && context.selectMapLine) {
+                                                   context.selectMapLine(targetLineNumber, false);
+                                               }
                                                *context.toolbarStatusNote =
                                                    QCoreApplication::translate("TherionStudio::MapEditorObjectDetailsEditController",
                                                                                "Updated object fields.");
@@ -1180,7 +1214,17 @@ void MapEditorObjectDetailsEditController::deleteVertexFromSelectionPanel()
 
 void MapEditorObjectDetailsEditController::handleLinePointPreviousControlToggled(bool checked)
 {
-    if (*context_.updatingUi || !context_.setLineVertexControlHandleForSelection) {
+    if (*context_.updatingUi) {
+        return;
+    }
+    if (context_.pendingInsertLinePointAvailable
+        && context_.pendingInsertLinePointAvailable()
+        && context_.setPendingInsertLinePointControl) {
+        context_.setPendingInsertLinePointControl(true, checked);
+        context_.refreshObjectDetailsPanel();
+        return;
+    }
+    if (!context_.setLineVertexControlHandleForSelection) {
         return;
     }
     context_.setLineVertexControlHandleForSelection(true, checked);
@@ -1189,6 +1233,16 @@ void MapEditorObjectDetailsEditController::handleLinePointPreviousControlToggled
 
 void MapEditorObjectDetailsEditController::handleLinePointSmoothToggled(bool checked)
 {
+    if (*context_.updatingUi) {
+        return;
+    }
+    if (context_.pendingInsertLinePointAvailable
+        && context_.pendingInsertLinePointAvailable()
+        && context_.setPendingInsertLinePointSmooth) {
+        context_.setPendingInsertLinePointSmooth(checked);
+        context_.refreshObjectDetailsPanel();
+        return;
+    }
     if (*context_.updatingUi || !context_.setLineVertexSmoothForSelection) {
         return;
     }
@@ -1198,7 +1252,17 @@ void MapEditorObjectDetailsEditController::handleLinePointSmoothToggled(bool che
 
 void MapEditorObjectDetailsEditController::handleLinePointNextControlToggled(bool checked)
 {
-    if (*context_.updatingUi || !context_.setLineVertexControlHandleForSelection) {
+    if (*context_.updatingUi) {
+        return;
+    }
+    if (context_.pendingInsertLinePointAvailable
+        && context_.pendingInsertLinePointAvailable()
+        && context_.setPendingInsertLinePointControl) {
+        context_.setPendingInsertLinePointControl(false, checked);
+        context_.refreshObjectDetailsPanel();
+        return;
+    }
+    if (!context_.setLineVertexControlHandleForSelection) {
         return;
     }
     context_.setLineVertexControlHandleForSelection(false, checked);
@@ -1291,8 +1355,20 @@ bool MapEditorObjectDetailsEditController::applyLinePointStandaloneRowsEdits(con
 void MapEditorObjectDetailsEditController::handleLinePointSegmentSubtypeChanged()
 {
     if (*context_.updatingUi
-        || context_.linePointSegmentSubtypeCombo == nullptr
-        || context_.linePointFlagsEdit == nullptr) {
+        || context_.linePointSegmentSubtypeCombo == nullptr) {
+        return;
+    }
+
+    if (context_.pendingInsertLinePointAvailable
+        && context_.pendingInsertLinePointAvailable()
+        && context_.setPendingInsertLinePointSegmentSubtype) {
+        context_.setPendingInsertLinePointSegmentSubtype(
+            normalizedQuickSubtypeForWrite(context_.linePointSegmentSubtypeCombo->currentText()));
+        context_.refreshObjectDetailsPanel();
+        return;
+    }
+
+    if (context_.linePointFlagsEdit == nullptr) {
         return;
     }
 

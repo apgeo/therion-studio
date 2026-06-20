@@ -65,6 +65,7 @@ struct MapEditorInteractiveDrawContext
     std::function<void(const QString &, const QString &, const QString &, int, std::function<void()>)>
         applySourceTextChangeWithSnapshot;
     std::function<TherionDraftObjectOptions(const QString &)> draftObjectOptions;
+    std::function<void(const QString &, const TherionDraftObjectOptions &)> recordCommittedDraftObjectOptions;
     std::function<std::optional<QRectF>()> initialAreaAdjustRectForDraftInsertion;
     std::function<QStringList()> lineCoordinateRowsForInteractiveDraft;
     std::function<QStringList()> areaCoordinateRowsForInteractiveDraft;
@@ -74,6 +75,7 @@ struct MapEditorInteractiveDrawContext
     std::function<bool()> commitSmartAreaPreview;
     std::function<bool()> hasCompletableInteractiveDrawSession;
     std::function<void()> clearPendingInsertObject;
+    std::function<void(int)> selectCommittedDraftObject;
     std::function<void()> refreshObjectDetailsPanel;
     std::function<void()> refreshToolbarSummary;
     std::function<void()> updateCommandSurfaceState;

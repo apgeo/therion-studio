@@ -174,6 +174,21 @@ QLabel *visibleLabelContaining(QWidget *root, const QString &fragment)
     return nullptr;
 }
 
+QCheckBox *visibleCheckBoxWithText(QWidget *root, const QString &text)
+{
+    if (root == nullptr) {
+        return nullptr;
+    }
+
+    const QList<QCheckBox *> checkBoxes = root->findChildren<QCheckBox *>();
+    for (QCheckBox *checkBox : checkBoxes) {
+        if (checkBox != nullptr && checkBox->isVisible() && checkBox->text() == text) {
+            return checkBox;
+        }
+    }
+    return nullptr;
+}
+
 int visibleLabelCount(QWidget *root, const QString &text)
 {
     if (root == nullptr) {
@@ -758,6 +773,124 @@ int runSelectionPanelTypeValuesTest()
                 "Clicking a recent symbol button should apply its type and subtype to the pending object.")) {
         return 1;
     }
+    commitComboEdit(typeCombo, QStringLiteral("wall"));
+    pumpEvents();
+    commitComboEdit(subtypeCombo, QStringLiteral("bedrock"));
+    pumpEvents();
+    auto *smoothCheck = visibleCheckBoxWithText(mapTab, QStringLiteral("Smooth (-smooth)"));
+    if (!expect(smoothCheck != nullptr && smoothCheck->isEnabled() && smoothCheck->isChecked(),
+                "Pending line insert should expose line point smooth before the first vertex.")) {
+        return 1;
+    }
+    if (!expect(visibleCheckBoxWithText(mapTab, QStringLiteral("<<")) != nullptr
+                    && visibleCheckBoxWithText(mapTab, QStringLiteral(">>")) != nullptr,
+                "Pending line insert should expose the complete line point control handle row.")) {
+        return 1;
+    }
+    auto *linePointSubtypeCombo = mapTab->findChild<QComboBox *>(QStringLiteral("linePointSegmentSubtypeCombo"));
+    if (!expect(linePointSubtypeCombo != nullptr
+                    && linePointSubtypeCombo->isVisible()
+                    && linePointSubtypeCombo->isEnabled(),
+                "Pending line insert should expose next line point subtype override before the first vertex.")) {
+        return 1;
+    }
+    if (!expect(visibleCheckBoxWithText(mapTab, QStringLiteral("Orientation (-orientation)")) == nullptr
+                    && visibleCheckBoxWithText(mapTab, QStringLiteral("Left size (-l-size)")) == nullptr,
+                "Pending line wall insert should not expose slope-only line point options.")) {
+        return 1;
+    }
+    commitComboEdit(typeCombo, QStringLiteral("slope"));
+    pumpEvents();
+    if (!expect(visibleCheckBoxWithText(mapTab, QStringLiteral("Orientation (-orientation)")) != nullptr
+                    && visibleCheckBoxWithText(mapTab, QStringLiteral("Left size (-l-size)")) != nullptr,
+                "Pending line slope insert should expose orientation and left size line point options.")) {
+        return 1;
+    }
+    commitComboEdit(typeCombo, QStringLiteral("wall"));
+    pumpEvents();
+    commitComboEdit(subtypeCombo, QStringLiteral("bedrock"));
+    pumpEvents();
+    if (!expect(visibleCheckBoxWithText(mapTab, QStringLiteral("Orientation (-orientation)")) == nullptr
+                    && visibleCheckBoxWithText(mapTab, QStringLiteral("Left size (-l-size)")) == nullptr,
+                "Switching pending line insert from slope back to wall should hide slope-only line point options.")) {
+        return 1;
+    }
+    smoothCheck->setChecked(false);
+    pumpEvents();
+    commitComboEdit(linePointSubtypeCombo, QStringLiteral("presumed"));
+    pumpEvents();
+    sendMouseClick(mapView->viewport(), mapView->mapFromScene(QPointF(30, 30)));
+    pumpEvents();
+    if (!expect(visibleLabelCount(mapTab, QStringLiteral("Options")) >= 1,
+                "Pending line insert should keep the Options panel visible while drawing.")) {
+        return 1;
+    }
+    sendMouseClick(mapView->viewport(), mapView->mapFromScene(QPointF(70, 30)));
+    pumpEvents();
+    mapTab->triggerCompleteDraft();
+    pumpEvents();
+    if (!expect(mapTab->text().contains(QStringLiteral("smooth off")),
+                "Completing a pending line after disabling draft smooth should write a smooth off line-point row.")) {
+        return 1;
+    }
+    if (!expect(mapTab->text().contains(QStringLiteral("subtype presumed")),
+                "Completing a pending line after setting next line point subtype should write a subtype override row.")) {
+        return 1;
+    }
+    if (!expect(visibleLabelStartingWith(mapTab, QStringLiteral("New Line")),
+                "Completing a pending line should keep the Selection panel on the next line draft.")) {
+        return 1;
+    }
+    if (!expect(typeCombo->currentText() == QStringLiteral("wall")
+                    && subtypeCombo->currentText() == QStringLiteral("bedrock"),
+                "Completing a pending line should keep the next draft type and subtype editable.")) {
+        return 1;
+    }
+    if (!expect(visibleRecentSymbolButton(mapTab, QStringLiteral("wall:bedrock")) != nullptr,
+                "Completing a pending line should keep recent symbols available for the next draft.")) {
+        return 1;
+    }
+    smoothCheck = visibleCheckBoxWithText(mapTab, QStringLiteral("Smooth (-smooth)"));
+    if (!expect(smoothCheck != nullptr && smoothCheck->isEnabled() && !smoothCheck->isChecked(),
+                "Completing a pending line should keep line point smooth available for the next draft.")) {
+        return 1;
+    }
+    if (!expect(linePointSubtypeCombo->isVisible()
+                    && linePointSubtypeCombo->currentText().trimmed().isEmpty(),
+                "Completing a pending line should clear the next draft line-point subtype.")) {
+        return 1;
+    }
+    mapTab->triggerAddArea();
+    pumpEvents();
+    if (!expect(typeCombo->isVisible() && typeCombo->currentText() == QStringLiteral("water"),
+                "Area insert should expose pending type fields with the default water type.")) {
+        return 1;
+    }
+    linePointSubtypeCombo = mapTab->findChild<QComboBox *>(QStringLiteral("linePointSegmentSubtypeCombo"));
+    if (!expect(linePointSubtypeCombo != nullptr
+                    && linePointSubtypeCombo->isVisible()
+                    && linePointSubtypeCombo->currentText().trimmed().isEmpty(),
+                "Area insert should not inherit the previous line draft line-point subtype.")) {
+        return 1;
+    }
+    commitComboEdit(typeCombo, QStringLiteral("sand"));
+    pumpEvents();
+    sendMouseClick(mapView->viewport(), mapView->mapFromScene(QPointF(30, 70)));
+    pumpEvents();
+    sendMouseClick(mapView->viewport(), mapView->mapFromScene(QPointF(60, 70)));
+    pumpEvents();
+    sendMouseClick(mapView->viewport(), mapView->mapFromScene(QPointF(60, 100)));
+    pumpEvents();
+    mapTab->triggerCompleteDraft();
+    pumpEvents();
+    if (!expect(visibleLabelStartingWith(mapTab, QStringLiteral("New Area")),
+                "Completing a pending area should keep the Selection panel on the next area draft.")) {
+        return 1;
+    }
+    if (!expect(typeCombo->currentText() == QStringLiteral("sand"),
+                "Completing a pending area should keep the next draft type editable.")) {
+        return 1;
+    }
     subtypeCombo->setFocus(Qt::OtherFocusReason);
     pumpEvents();
     sendKey(subtypeCombo, QEvent::KeyPress, Qt::Key_Escape);
@@ -772,6 +905,90 @@ int runSelectionPanelTypeValuesTest()
     pumpEvents();
     if (!expect(mapTab->isInsertModeActive(),
                 "Point insert should enter insert mode before testing Esc from the external command surface.")) {
+        return 1;
+    }
+    auto *nameEditor = mapTab->findChild<QWidget *>(QStringLiteral("mapObjectQuickNameEditor"));
+    auto *nameEdit = nameEditor != nullptr ? nameEditor->findChild<QLineEdit *>() : nullptr;
+    if (!expect(typeCombo->isVisible() && typeCombo->currentText() == QStringLiteral("station"),
+                "Point insert should start as a station before testing station name auto-advance.")) {
+        return 1;
+    }
+    if (!expect(nameEdit != nullptr,
+                "Point station insert should expose a pending station name editor.")) {
+        return 1;
+    }
+    if (!expect(nameEditor != nullptr,
+                "Point station pending name editor wrapper should exist before testing station name auto-advance.")) {
+        return 1;
+    }
+    if (!expect(nameEditor->isVisible(),
+                "Point station pending name editor wrapper should be visible before testing station name auto-advance.")) {
+        return 1;
+    }
+    if (!expect(nameEdit->isVisible(),
+                "Point station pending name line edit should be visible before testing station name auto-advance.")) {
+        return 1;
+    }
+    if (!expect(visibleCheckBoxWithText(mapTab, QStringLiteral("Smooth (-smooth)")) == nullptr
+                    && visibleCheckBoxWithText(mapTab, QStringLiteral("Left size (-l-size)")) == nullptr,
+                "Pending point options should not leak line-point controls from a previous line draft.")) {
+        return 1;
+    }
+    if (!expect(nameEdit->text().isEmpty(),
+                "Point station insert should start with an empty name before a previous station name is known.")) {
+        return 1;
+    }
+    nameEdit->setText(QStringLiteral("1"));
+    QMetaObject::invokeMethod(nameEdit, "editingFinished", Qt::DirectConnection);
+    pumpEvents();
+    sendMouseClick(mapView->viewport(), mapView->mapFromScene(QPointF(20, 20)));
+    pumpEvents();
+    if (!expect(nameEdit->text() == QStringLiteral("2"),
+                "Point station insert should keep the panel on the next draft and advance the pending name.")) {
+        return 1;
+    }
+    sendMouseClick(mapView->viewport(), mapView->mapFromScene(QPointF(40, 20)));
+    pumpEvents();
+    if (!expect(nameEdit->text() == QStringLiteral("3"),
+                "Point station insert should continue advancing the pending name after repeated clicks.")) {
+        return 1;
+    }
+    mapTab->triggerAddPoint();
+    pumpEvents();
+    if (!expect(nameEdit->isVisible(),
+                "Point station insert should expose the pending station name editor after restarting Point mode.")) {
+        return 1;
+    }
+    nameEdit->setText(QStringLiteral("1.1@survey"));
+    QMetaObject::invokeMethod(nameEdit, "editingFinished", Qt::DirectConnection);
+    pumpEvents();
+    sendMouseClick(mapView->viewport(), mapView->mapFromScene(QPointF(60, 20)));
+    pumpEvents();
+    if (!expect(nameEdit->text() == QStringLiteral("1.2@survey"),
+                "Point station insert should keep the panel on the next suffixed draft name.")) {
+        return 1;
+    }
+    sendMouseClick(mapView->viewport(), mapView->mapFromScene(QPointF(80, 20)));
+    pumpEvents();
+    if (!expect(nameEdit->text() == QStringLiteral("1.3@survey"),
+                "Point station insert should continue advancing suffixed station names after repeated clicks.")) {
+        return 1;
+    }
+    auto *valueEditor = mapTab->findChild<QWidget *>(QStringLiteral("mapObjectQuickValueEditor"));
+    commitComboEdit(typeCombo, QStringLiteral("altitude"));
+    pumpEvents();
+    if (!expect(nameEditor != nullptr && !nameEditor->isVisible(),
+                "Changing pending point type away from station should hide the stale auto-advanced station name.")) {
+        return 1;
+    }
+    if (!expect(valueEditor != nullptr && valueEditor->isVisible(),
+                "Changing pending point type to altitude should show the value editor instead of station name.")) {
+        return 1;
+    }
+    sendMouseClick(mapView->viewport(), mapView->mapFromScene(QPointF(100, 20)));
+    pumpEvents();
+    if (!expect(!mapTab->text().contains(QStringLiteral("1.3@survey")),
+                "Inserting a non-station point after station auto-advance should not write the stale station name.")) {
         return 1;
     }
     externalCommandSurfaceButton->setFocus(Qt::OtherFocusReason);

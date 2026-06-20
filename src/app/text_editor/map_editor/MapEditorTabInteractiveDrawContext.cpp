@@ -102,6 +102,10 @@ MapEditorInteractiveDrawContext MapEditorTab::interactiveDrawContext()
         .draftObjectOptions = [this](const QString &commandKind) {
             return pendingDraftObjectOptions(commandKind);
         },
+        .recordCommittedDraftObjectOptions = [this](const QString &commandKind,
+                                                    const TherionDraftObjectOptions &options) {
+            recordCommittedPendingDraftObjectOptions(commandKind, options);
+        },
         .initialAreaAdjustRectForDraftInsertion = [this]() {
             return initialAreaAdjustRectForDraftInsertion();
         },
@@ -114,6 +118,7 @@ MapEditorInteractiveDrawContext MapEditorTab::interactiveDrawContext()
         .captureInteractiveLineAnchor = [this](const QPointF &anchorScenePoint,
                                                const std::optional<QPointF> &dragScenePoint) {
             captureInteractiveLineAnchor(anchorScenePoint, dragScenePoint);
+            refreshObjectDetailsPanel();
         },
         .previewSmartAreaAt = [this](const QPointF &scenePosition) {
             return previewSmartAreaAt(scenePosition);
@@ -129,6 +134,11 @@ MapEditorInteractiveDrawContext MapEditorTab::interactiveDrawContext()
         },
         .clearPendingInsertObject = [this]() {
             clearPendingInsertObject();
+        },
+        .selectCommittedDraftObject = [this](int lineNumber) {
+            goToLine(lineNumber);
+            selectMapLine(lineNumber, false);
+            syncInspectorObjectSelectionToLine(lineNumber);
         },
         .refreshObjectDetailsPanel = [this]() {
             refreshObjectDetailsPanel();

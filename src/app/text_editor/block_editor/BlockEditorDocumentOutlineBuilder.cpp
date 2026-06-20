@@ -4,6 +4,8 @@
 #include "BlockEditorSourceText.h"
 
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceLogicalDocument.h"
+#include "../../../core/TherionSourceSnapshotCache.h"
 
 #include <utility>
 
@@ -46,26 +48,25 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
         return outline;
     }
 
-    QVector<TherionParsedLine> parsedLines;
-    QVector<BlockEditorLogicalLine> parsedLogicalLines;
-    const QVector<BlockEditorLogicalLine> logicalLines = blockEditorBuildLogicalLines(outline.lines);
-    parsedLines.reserve(logicalLines.size());
-    parsedLogicalLines.reserve(logicalLines.size());
-    for (const BlockEditorLogicalLine &logicalLine : logicalLines) {
-        parsedLines.append(TherionDocumentParser::parseLine(logicalLine.text, logicalLine.startLine));
-        parsedLogicalLines.append(logicalLine);
-    }
+    TherionSourceSnapshotCache sourceSnapshotCache;
+    TherionSourceDocumentMetadata sourceMetadata;
+    sourceMetadata.revisionId = 1;
+    const TherionSourceLogicalDocument &logicalDocument =
+        sourceSnapshotCache.logicalDocument(contents, sourceMetadata);
 
-    outline.entries.reserve(parsedLines.size());
+    outline.entries.reserve(logicalDocument.commands().size());
     QVector<OpenContainer> openStack;
     int activeDataEntryEndLine = 0;
 
-    for (int parsedIndex = 0; parsedIndex < parsedLines.size(); ++parsedIndex) {
-        const TherionParsedLine &parsedLine = parsedLines.at(parsedIndex);
+    for (int parsedIndex = 0; parsedIndex < logicalDocument.commands().size(); ++parsedIndex) {
+        const TherionSourceLogicalCommand &logicalCommand = logicalDocument.commands().at(parsedIndex);
+        const TherionParsedLine &parsedLine = logicalCommand.parsed;
         const int currentLineNumber = parsedLine.lineNumber;
-        const BlockEditorLogicalLine currentLogicalLine = parsedIndex < parsedLogicalLines.size()
-            ? parsedLogicalLines.at(parsedIndex)
-            : BlockEditorLogicalLine{currentLineNumber, currentLineNumber, parsedLine.rawText};
+        const BlockEditorLogicalLine currentLogicalLine{
+            logicalCommand.startLineNumber,
+            logicalCommand.endLineNumber,
+            logicalCommand.text,
+        };
         if (currentLineNumber <= activeDataEntryEndLine) {
             continue;
         }

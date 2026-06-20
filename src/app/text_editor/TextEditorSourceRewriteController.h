@@ -33,9 +33,13 @@ class TextEditorSourceRewriteController final
 public:
     explicit TextEditorSourceRewriteController(TextEditorSourceRewriteContext context);
 
+    TextEditorSourceTransactionResult applyTransactionRequestWithEditorUndoResult(
+        const TextEditorSourceTransactionRequest &request,
+        QString *statusMessage = nullptr);
     bool applyTransactionRequestWithEditorUndo(const TextEditorSourceTransactionRequest &request,
                                                QString *statusMessage = nullptr);
     void applySourceSnapshotForTransaction(const QString &contents);
+    TextEditorSourceTransactionResult replaceTextForSystemNormalizationResult(const QString &contents);
     bool replaceTextForSystemNormalization(const QString &contents);
 
 private:

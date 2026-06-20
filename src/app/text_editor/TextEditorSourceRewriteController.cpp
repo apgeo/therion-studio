@@ -31,8 +31,16 @@ TextEditorSourceRewriteController::TextEditorSourceRewriteController(TextEditorS
 bool TextEditorSourceRewriteController::applyTransactionRequestWithEditorUndo(const TextEditorSourceTransactionRequest &request,
                                                                                QString *statusMessage)
 {
+    return applyTransactionRequestWithEditorUndoResult(request, statusMessage)
+        == TextEditorSourceTransactionResult::Applied;
+}
+
+TextEditorSourceTransactionResult TextEditorSourceRewriteController::applyTransactionRequestWithEditorUndoResult(
+    const TextEditorSourceTransactionRequest &request,
+    QString *statusMessage)
+{
     if (context_.editor == nullptr) {
-        return false;
+        return TextEditorSourceTransactionResult::Unavailable;
     }
 
     const QString currentText = context_.editor->toPlainText();
@@ -42,25 +50,25 @@ bool TextEditorSourceRewriteController::applyTransactionRequestWithEditorUndo(co
             if (statusMessage != nullptr) {
                 *statusMessage = staleSourceTransactionMessage(request);
             }
-            return false;
+            return TextEditorSourceTransactionResult::Stale;
         }
     }
     if (currentText != request.beforeText) {
         if (statusMessage != nullptr) {
             *statusMessage = staleSourceTransactionMessage(request);
         }
-        return false;
+        return TextEditorSourceTransactionResult::Stale;
     }
 
     QString afterText = request.afterText;
     if (!request.sourceEdits.isEmpty()) {
         afterText = request.beforeText;
         if (!TherionDocumentEditor::applySourceTextEdits(&afterText, request.sourceEdits)) {
-            return false;
+            return TextEditorSourceTransactionResult::InvalidEdit;
         }
     }
     if (afterText == request.beforeText) {
-        return false;
+        return TextEditorSourceTransactionResult::NoChange;
     }
 
     const bool rebuildBlocksCanvas = request.projectionInvalidationPolicy
@@ -87,7 +95,7 @@ bool TextEditorSourceRewriteController::applyTransactionRequestWithEditorUndo(co
         && request.selectionRestoreHook) {
         request.selectionRestoreHook();
     }
-    return true;
+    return TextEditorSourceTransactionResult::Applied;
 }
 
 void TextEditorSourceRewriteController::applySourceSnapshotForTransaction(const QString &contents)
@@ -101,8 +109,14 @@ void TextEditorSourceRewriteController::applySourceSnapshotForTransaction(const 
 
 bool TextEditorSourceRewriteController::replaceTextForSystemNormalization(const QString &contents)
 {
+    return replaceTextForSystemNormalizationResult(contents) == TextEditorSourceTransactionResult::Applied;
+}
+
+TextEditorSourceTransactionResult TextEditorSourceRewriteController::replaceTextForSystemNormalizationResult(
+    const QString &contents)
+{
     if (context_.editor == nullptr) {
-        return false;
+        return TextEditorSourceTransactionResult::Unavailable;
     }
 
     TextEditorSourceTransactionRequest request;
@@ -113,7 +127,7 @@ bool TextEditorSourceRewriteController::replaceTextForSystemNormalization(const 
     request.projectionInvalidationPolicy = TextEditorSourceProjectionInvalidationPolicy::FlushPendingRefresh;
     request.selectionRestorePolicy = TextEditorSourceSelectionRestorePolicy::PreserveCurrentSelection;
     request.staleStatusMessage = QStringLiteral("System normalization skipped: document changed.");
-    return applyTransactionRequestWithEditorUndo(request);
+    return applyTransactionRequestWithEditorUndoResult(request);
 }
 
 void TextEditorSourceRewriteController::replaceEditorText(const QString &contents, bool recordUndoStep)

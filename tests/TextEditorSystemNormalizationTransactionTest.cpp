@@ -60,9 +60,9 @@ int runSystemNormalizationApplyUndoRedoTest()
 
     TextEditorSourceRewriteController controller(std::move(context));
 
-    const bool applied = controller.replaceTextForSystemNormalization(afterText);
+    const TextEditorSourceTransactionResult result = controller.replaceTextForSystemNormalizationResult(afterText);
     pumpEvents();
-    if (!expect(applied,
+    if (!expect(result == TextEditorSourceTransactionResult::Applied,
                 "System normalization transaction should apply when encoding directive is missing.")) {
         return 1;
     }
@@ -147,10 +147,11 @@ int runSystemNormalizationNoOpTest()
 
     TextEditorSourceRewriteController controller(std::move(context));
 
-    const bool applied = controller.replaceTextForSystemNormalization(textWithEncoding);
+    const TextEditorSourceTransactionResult result =
+        controller.replaceTextForSystemNormalizationResult(textWithEncoding);
     pumpEvents();
-    if (!expect(!applied,
-                "System normalization should report not-applied when source is already normalized.")) {
+    if (!expect(result == TextEditorSourceTransactionResult::NoChange,
+                "System normalization should report no-change when source is already normalized.")) {
         return 1;
     }
 
@@ -166,6 +167,74 @@ int runSystemNormalizationNoOpTest()
 
     return 0;
 }
+
+int runEditorUndoTransactionStaleRevisionTest()
+{
+    const QString beforeText = QStringLiteral("survey demo\nendsurvey\n");
+    const QString afterText = QStringLiteral("survey changed\nendsurvey\n");
+
+    bool loading = false;
+    int currentLineNumber = 1;
+    int dirtyStateCalls = 0;
+    int rebuildCalls = 0;
+    int textChangedCalls = 0;
+    int contextHelpCalls = 0;
+
+    QPlainTextEdit editor;
+    editor.setPlainText(beforeText);
+    const int expectedRevision = editor.document() != nullptr ? editor.document()->revision() : 0;
+    editor.setPlainText(QStringLiteral("survey concurrent\nendsurvey\n"));
+
+    TextEditorSourceRewriteContext context;
+    context.editor = &editor;
+    context.loading = &loading;
+    context.currentLineNumber = &currentLineNumber;
+    context.applyDirtyStateFromCurrentState = [&dirtyStateCalls]() {
+        ++dirtyStateCalls;
+    };
+    context.rebuildBlocksCanvasFromText = [&rebuildCalls]() {
+        ++rebuildCalls;
+    };
+    context.documentTextChanged = [&textChangedCalls]() {
+        ++textChangedCalls;
+    };
+    context.updateContextHelp = [&contextHelpCalls]() {
+        ++contextHelpCalls;
+    };
+
+    TextEditorSourceRewriteController controller(std::move(context));
+
+    TextEditorSourceTransactionRequest request;
+    request.label = QStringLiteral("Stale Rewrite");
+    request.beforeText = beforeText;
+    request.afterText = afterText;
+    request.expectedSourceRevision = expectedRevision;
+    request.staleStatusMessage = QStringLiteral("rewrite stale");
+
+    QString statusMessage;
+    const TextEditorSourceTransactionResult result =
+        controller.applyTransactionRequestWithEditorUndoResult(request, &statusMessage);
+    pumpEvents();
+
+    if (!expect(result == TextEditorSourceTransactionResult::Stale,
+                "Editor undo transaction should report a stale result for revision drift.")) {
+        return 1;
+    }
+    if (!expect(statusMessage == QStringLiteral("rewrite stale"),
+                "Editor undo transaction should return the stale status message.")) {
+        return 1;
+    }
+    if (!expect(editor.toPlainText() == QStringLiteral("survey concurrent\nendsurvey\n"),
+                "Stale editor undo transaction should preserve concurrent source text.")) {
+        return 1;
+    }
+    if (!expect(dirtyStateCalls == 0 && rebuildCalls == 0 && textChangedCalls == 0 && contextHelpCalls == 0,
+                "Stale editor undo transaction should not trigger update callbacks.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char **argv)
@@ -176,6 +245,9 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runSystemNormalizationNoOpTest() != 0) {
+        return 1;
+    }
+    if (runEditorUndoTransactionStaleRevisionTest() != 0) {
         return 1;
     }
 

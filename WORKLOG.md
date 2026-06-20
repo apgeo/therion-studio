@@ -110,6 +110,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
   after an applied transaction result.
 - Keep non-map text-editor source rewrites result-aware through `TextEditorSourceRewriteController` so system
   normalization, validation fixes, and cursor insertions can distinguish applied, no-op, stale, invalid, and unavailable edits.
+- Keep `TherionSourceSnapshotCache` invalidation covered for revision, undo/redo-style revision replay, encoding,
+  source type, catalog revision, and uncached catalog projections before migrating more Structure/Validation consumers.
 - Slice 2 - Expand `TherionSourceSnapshotCache` into Structure/Validation once stale-projection behavior is covered for text edits, undo/redo, document reload, source type changes, and catalog refresh.
 - Slice 4 - Migrate Blocks cards/details/move planning toward shared logical command and option ranges while preserving one source transaction per user-visible change.
 - Slice 5 - Migrate Map/TH2 object discovery, generic option parsing, reference resolution, and Smart Area insert planning to shared logical commands while keeping map geometry parsing map-specific.

@@ -14,9 +14,12 @@ class TherionSourceSnapshotCacheTest : public QObject
 private slots:
     void cachesSourceDocumentsByRevisionMetadata();
     void doesNotCacheUnrevisionedSourceDocuments();
+    void invalidatesSourceDocumentsWhenEncodingChanges();
     void invalidatesLogicalDocumentsWhenSourceRevisionChanges();
+    void invalidatesLogicalDocumentsAcrossUndoRedoRevisions();
     void invalidatesLogicalDocumentsWhenDocumentTypeChanges();
     void invalidatesCatalogLogicalDocumentsWhenCatalogRevisionChanges();
+    void doesNotReuseCatalogLogicalDocumentsWithoutCatalogRevisionKey();
     void clearInvalidatesCachedSnapshots();
 };
 
@@ -69,6 +72,25 @@ void TherionSourceSnapshotCacheTest::doesNotCacheUnrevisionedSourceDocuments()
     QCOMPARE(second.toText(), QStringLiteral("survey b\n"));
 }
 
+void TherionSourceSnapshotCacheTest::invalidatesSourceDocumentsWhenEncodingChanges()
+{
+    TherionSourceSnapshotCache cache;
+    TherionSourceDocumentMetadata utf8Metadata = metadataForRevision(1);
+    utf8Metadata.encodingName = QStringLiteral("UTF-8");
+    TherionSourceDocumentMetadata latin2Metadata = utf8Metadata;
+    latin2Metadata.encodingName = QStringLiteral("ISO-8859-2");
+
+    const TherionSourceDocument &utf8 =
+        cache.sourceDocument(QStringLiteral("encoding utf-8\nsurvey a\n"), utf8Metadata);
+    const QString utf8EncodingName = utf8.metadata().encodingName;
+    const TherionSourceDocument &latin2 =
+        cache.sourceDocument(QStringLiteral("encoding iso8859-2\nsurvey a\n"), latin2Metadata);
+
+    QCOMPARE(utf8EncodingName, QStringLiteral("UTF-8"));
+    QCOMPARE(latin2.metadata().encodingName, QStringLiteral("ISO-8859-2"));
+    QCOMPARE(latin2.toText(), QStringLiteral("encoding iso8859-2\nsurvey a\n"));
+}
+
 void TherionSourceSnapshotCacheTest::invalidatesLogicalDocumentsWhenSourceRevisionChanges()
 {
     TherionSourceSnapshotCache cache;
@@ -85,6 +107,28 @@ void TherionSourceSnapshotCacheTest::invalidatesLogicalDocumentsWhenSourceRevisi
 
     QCOMPARE(third.commands().constFirst().parsed.tokens.at(1), QStringLiteral("b"));
     QCOMPARE(third.metadata().revisionId, 2);
+}
+
+void TherionSourceSnapshotCacheTest::invalidatesLogicalDocumentsAcrossUndoRedoRevisions()
+{
+    TherionSourceSnapshotCache cache;
+
+    const TherionSourceLogicalDocument &initial =
+        cache.logicalDocument(QStringLiteral("survey initial\nendsurvey\n"), metadataForRevision(1));
+    QCOMPARE(initial.commands().constFirst().parsed.tokens.at(1), QStringLiteral("initial"));
+
+    const TherionSourceLogicalDocument &edited =
+        cache.logicalDocument(QStringLiteral("survey edited\nendsurvey\n"), metadataForRevision(2));
+    QCOMPARE(edited.commands().constFirst().parsed.tokens.at(1), QStringLiteral("edited"));
+
+    const TherionSourceLogicalDocument &undone =
+        cache.logicalDocument(QStringLiteral("survey initial\nendsurvey\n"), metadataForRevision(3));
+    QCOMPARE(undone.commands().constFirst().parsed.tokens.at(1), QStringLiteral("initial"));
+
+    const TherionSourceLogicalDocument &redone =
+        cache.logicalDocument(QStringLiteral("survey edited\nendsurvey\n"), metadataForRevision(4));
+    QCOMPARE(redone.commands().constFirst().parsed.tokens.at(1), QStringLiteral("edited"));
+    QCOMPARE(redone.metadata().revisionId, 4);
 }
 
 void TherionSourceSnapshotCacheTest::invalidatesLogicalDocumentsWhenDocumentTypeChanges()
@@ -110,16 +154,18 @@ void TherionSourceSnapshotCacheTest::invalidatesCatalogLogicalDocumentsWhenCatal
     TherionSourceSnapshotCache cache;
     TherionSourceDocumentMetadata metadata = metadataForRevision(1);
     metadata.sourceType = TherionSourceDocumentType::TherionConfig;
-    const TherionSourceValidationCatalog catalog = catalogWithSourceCommand();
+    const TherionSourceValidationCatalog firstCatalog = catalogWithSourceCommand();
+    TherionSourceValidationCatalog secondCatalog = firstCatalog;
+    secondCatalog.commandNames.clear();
 
     const TherionSourceLogicalDocument &first = cache.logicalDocument(
         QStringLiteral("source index.th\n"),
-        catalog,
+        firstCatalog,
         metadata,
         TherionSourceSnapshotCatalogKey::fromRevision(1));
     const TherionSourceLogicalDocument &second = cache.logicalDocument(
         QStringLiteral("source ignored.th\n"),
-        catalog,
+        firstCatalog,
         metadata,
         TherionSourceSnapshotCatalogKey::fromRevision(1));
 
@@ -129,12 +175,37 @@ void TherionSourceSnapshotCacheTest::invalidatesCatalogLogicalDocumentsWhenCatal
 
     const TherionSourceLogicalDocument &third = cache.logicalDocument(
         QStringLiteral("source index.th\n"),
-        catalog,
+        secondCatalog,
         metadata,
         TherionSourceSnapshotCatalogKey::fromRevision(2));
 
-    QVERIFY(third.commands().constFirst().metadata.catalogCommandKnown);
+    QVERIFY(!third.commands().constFirst().metadata.catalogCommandKnown);
     QCOMPARE(third.commands().constFirst().parsed.tokens.at(1), QStringLiteral("index.th"));
+}
+
+void TherionSourceSnapshotCacheTest::doesNotReuseCatalogLogicalDocumentsWithoutCatalogRevisionKey()
+{
+    TherionSourceSnapshotCache cache;
+    TherionSourceDocumentMetadata metadata = metadataForRevision(1);
+    metadata.sourceType = TherionSourceDocumentType::TherionConfig;
+    const TherionSourceValidationCatalog firstCatalog = catalogWithSourceCommand();
+    TherionSourceValidationCatalog secondCatalog = firstCatalog;
+    secondCatalog.commandNames.clear();
+
+    const TherionSourceLogicalDocument &first = cache.logicalDocument(
+        QStringLiteral("source index.th\n"),
+        firstCatalog,
+        metadata,
+        TherionSourceSnapshotCatalogKey::none());
+    const bool firstKnown = first.commands().constFirst().metadata.catalogCommandKnown;
+    const TherionSourceLogicalDocument &second = cache.logicalDocument(
+        QStringLiteral("source index.th\n"),
+        secondCatalog,
+        metadata,
+        TherionSourceSnapshotCatalogKey::none());
+
+    QVERIFY(firstKnown);
+    QVERIFY(!second.commands().constFirst().metadata.catalogCommandKnown);
 }
 
 void TherionSourceSnapshotCacheTest::clearInvalidatesCachedSnapshots()

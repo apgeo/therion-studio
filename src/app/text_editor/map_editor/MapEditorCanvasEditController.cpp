@@ -519,14 +519,17 @@ void scheduleLineVertexOwnerSelectionRecovery(const MapEditorCanvasEditContext &
         return;
     }
 
-    auto attemptRestore = [context, lineNumber, ownerIndex]() {
+    const quint64 restoreGeneration = context.lineVertexSelectionRestoreGeneration != nullptr
+        ? ++(*context.lineVertexSelectionRestoreGeneration)
+        : 0;
+    auto attemptRestore = [context, lineNumber, ownerIndex, restoreGeneration]() {
+        if (context.lineVertexSelectionRestoreGeneration != nullptr
+            && *context.lineVertexSelectionRestoreGeneration != restoreGeneration) {
+            return;
+        }
         restoreLineVertexOwnerSelectionForContext(context, lineNumber, ownerIndex);
     };
     QTimer::singleShot(0, context.callbackContext, attemptRestore);
-    QTimer::singleShot(20, context.callbackContext, attemptRestore);
-    QTimer::singleShot(80, context.callbackContext, attemptRestore);
-    QTimer::singleShot(160, context.callbackContext, attemptRestore);
-    QTimer::singleShot(320, context.callbackContext, attemptRestore);
 }
 
 MapEditableGeometryVertexItem *resolveSelectedLineVertexItemForContext(const MapEditorCanvasEditContext &context)

@@ -4,6 +4,7 @@
 #include <QPointF>
 #include <QRectF>
 #include <QString>
+#include <QtGlobal>
 #include <QVector>
 
 #include <functional>
@@ -29,6 +30,7 @@ struct MapEditorCanvasEditContext
     QVector<QGraphicsRectItem *> *draftGeometryItems = nullptr;
     QString *toolbarStatusNote = nullptr;
     bool *commandApplyInProgress = nullptr;
+    quint64 *lineVertexSelectionRestoreGeneration = nullptr;
     bool *updatingSelection = nullptr;
     bool *pendingClickSelection = nullptr;
     int *pendingClickLineNumber = nullptr;

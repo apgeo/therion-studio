@@ -4,6 +4,7 @@
 #include <QPointF>
 #include <QRectF>
 #include <QString>
+#include <QtGlobal>
 #include <QVector>
 
 #include <functional>
@@ -30,6 +31,7 @@ struct MapEditorSceneRefreshContext
     QHash<int, QGraphicsItem *> *itemsByLine = nullptr;
     bool *commandApplyInProgress = nullptr;
     bool *sceneRefreshPending = nullptr;
+    quint64 *lineVertexSelectionRestoreGeneration = nullptr;
     bool *autoFitEnabled = nullptr;
     bool *fitBackgroundRequested = nullptr;
     const MapEditorOrientationApplicabilityByCommand *orientationApplicabilityByCommand = nullptr;

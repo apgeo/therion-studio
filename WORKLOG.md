@@ -73,6 +73,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
   smooth/control-handle state without firing from text-editing widgets.
 - Keep selected map line/area vertex markers close to XTherion styling: larger red anchor circles with blue
   outlines, smaller blue control-point squares, and a red focused-vertex halo.
+- Keep map line-point selection restoration generation-keyed so stale delayed restores cannot reselect old or nearby
+  line vertices after source-driven scene refreshes.
 - Keep empty scrap object cleanup explicit through validator warnings and `Apply Fix`, not silent source mutation.
 - Keep deletion-style validation fixes visibly labeled as removals and preview the full source block being removed.
 - Keep inline `type:subtype` map object rendering aligned with inspector preview and `-subtype` rendering.
@@ -201,7 +203,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 
 ## Backlog
 
-- Replace fixed-delay map selection-restore retry timers with explicit scene-refresh completion/generation callbacks.
+- Replace remaining fixed-delay map selection-restore retry timers with explicit scene-refresh completion/generation callbacks.
 - Optional Structure graph view for relationships such as `preview`, `revise`, `join`, `equate`, relationship status, and station-network edges.
 - Compiler-confirmed project-index comparison once lightweight indexing is no longer sufficient.
 - Retire or demote the manual `Validate Project` action after live project diagnostics are reliable for edits, saves, file operations, project-open, and catalog/source-model refresh events.

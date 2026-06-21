@@ -1059,15 +1059,13 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                         linePointType = command->parsed.tokens.value(1).section(QLatin1Char(':'), 0, 0).trimmed();
                         if (isOrientationSupportedForParsedLine(command->parsed, orientationApplicabilityByCommand())) {
                             orientationApplicable = true;
-                            orientationDegrees = linePointOrientationForSourceVertex(context_.textEditor->text(),
-                                                                                    *context_.selectedObjectLineNumber,
-                                                                                    *context_.selectedObjectVertexIndex);
+                            orientationDegrees = lineVertex.orientationDegrees;
                         }
                         if (isLinePointLeftSizeSupportedForParsedLine(command->parsed)) {
                             linePointLeftSizeApplicable = true;
-                            linePointLeftSize = linePointLeftSizeForSourceVertex(context_.textEditor->text(),
-                                                                                 *context_.selectedObjectLineNumber,
-                                                                                 *context_.selectedObjectVertexIndex);
+                            if (lineVertex.leftSize.has_value() && lineVertex.leftSize.value() > 0.0) {
+                                linePointLeftSize = lineVertex.leftSize;
+                            }
                         }
                         linePointFlagsApplicable = true;
                         linePointFlagsRows = linePointStandaloneOptionRowsForSelection(lineFeature.value(),

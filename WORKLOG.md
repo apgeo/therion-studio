@@ -116,7 +116,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
   project-index, raw completion/context, validator string overloads, transient cache paths, and the Blocks canvas
   rebuild/document-outline loops and block-boundary matching share `TherionSourceSnapshotCache` projections.
 - Slice 4 - Migrate Blocks cards/details/move planning toward shared logical command and option ranges while preserving one source transaction per user-visible change.
-- Slice 5 - Migrate Map/TH2 object discovery, generic option parsing, reference resolution, and Smart Area insert planning to shared logical commands while keeping map geometry parsing map-specific; continue switching remaining Map inspector reads after quick fields, `-clip`, and `-align` to logical command ranges.
+- Slice 5 - Migrate Map/TH2 object discovery, generic option parsing, reference resolution, and Smart Area insert planning to shared logical commands while keeping map geometry parsing map-specific; continue switching remaining Map inspector reads after quick fields, `-clip`, `-align`, and structured line-point metadata reads to logical-command or parsed-feature ranges.
 - Slice 6 - Close source transaction ownership by routing remaining user-visible source mutations through `TextEditorSourceTransactionController` or a narrow successor with undo label, expected revision, invalidation, dirty-state, and selection/cursor policy.
 - Slice 7 - Reuse cached logical documents for Structure, project index, namespace/reference resolution, search, and live Validation diagnostics.
 - Slice 8 - Remove duplicate editor-local tokenizers, option parsers, line splitters, numeric classifiers, and source-range heuristics only after migrated consumers have regression coverage.

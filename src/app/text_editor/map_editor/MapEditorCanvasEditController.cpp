@@ -511,25 +511,77 @@ bool restoreLineVertexOwnerSelectionForContext(const MapEditorCanvasEditContext 
     return true;
 }
 
+quint64 startMapSelectionRestoreGeneration(const MapEditorCanvasEditContext &context)
+{
+    return context.mapSelectionRestoreGeneration != nullptr
+        ? ++(*context.mapSelectionRestoreGeneration)
+        : 0;
+}
+
+bool isCurrentMapSelectionRestoreGeneration(const MapEditorCanvasEditContext &context, quint64 restoreGeneration)
+{
+    return context.mapSelectionRestoreGeneration == nullptr
+        || *context.mapSelectionRestoreGeneration == restoreGeneration;
+}
+
+void schedulePointSelectionRecovery(const MapEditorCanvasEditContext &context, int lineNumber)
+{
+    if (!context.restorePointSelectionLater) {
+        return;
+    }
+
+    const quint64 restoreGeneration = startMapSelectionRestoreGeneration(context);
+    auto attemptRestore = [context, lineNumber, restoreGeneration]() {
+        if (!isCurrentMapSelectionRestoreGeneration(context, restoreGeneration)) {
+            return;
+        }
+        context.restorePointSelectionLater(lineNumber);
+    };
+    if (context.callbackContext != nullptr) {
+        QTimer::singleShot(0, context.callbackContext, attemptRestore);
+    } else {
+        attemptRestore();
+    }
+}
+
+void scheduleLineAnchorSelectionRecovery(const MapEditorCanvasEditContext &context,
+                                         int lineNumber,
+                                         int sourceVertexIndex)
+{
+    if (!context.restoreLineAnchorSelectionLater) {
+        return;
+    }
+
+    const quint64 restoreGeneration = startMapSelectionRestoreGeneration(context);
+    auto attemptRestore = [context, lineNumber, sourceVertexIndex, restoreGeneration]() {
+        if (!isCurrentMapSelectionRestoreGeneration(context, restoreGeneration)) {
+            return;
+        }
+        context.restoreLineAnchorSelectionLater(lineNumber, sourceVertexIndex);
+    };
+    if (context.callbackContext != nullptr) {
+        QTimer::singleShot(0, context.callbackContext, attemptRestore);
+    } else {
+        attemptRestore();
+    }
+}
+
 void scheduleLineVertexOwnerSelectionRecovery(const MapEditorCanvasEditContext &context,
                                               int lineNumber,
                                               int ownerIndex)
 {
-    if (context.callbackContext == nullptr) {
-        return;
-    }
-
-    const quint64 restoreGeneration = context.lineVertexSelectionRestoreGeneration != nullptr
-        ? ++(*context.lineVertexSelectionRestoreGeneration)
-        : 0;
+    const quint64 restoreGeneration = startMapSelectionRestoreGeneration(context);
     auto attemptRestore = [context, lineNumber, ownerIndex, restoreGeneration]() {
-        if (context.lineVertexSelectionRestoreGeneration != nullptr
-            && *context.lineVertexSelectionRestoreGeneration != restoreGeneration) {
+        if (!isCurrentMapSelectionRestoreGeneration(context, restoreGeneration)) {
             return;
         }
         restoreLineVertexOwnerSelectionForContext(context, lineNumber, ownerIndex);
     };
-    QTimer::singleShot(0, context.callbackContext, attemptRestore);
+    if (context.callbackContext != nullptr) {
+        QTimer::singleShot(0, context.callbackContext, attemptRestore);
+    } else {
+        attemptRestore();
+    }
 }
 
 MapEditableGeometryVertexItem *resolveSelectedLineVertexItemForContext(const MapEditorCanvasEditContext &context)
@@ -697,19 +749,7 @@ void MapEditorCanvasEditController::recordPointGeometryMove(int lineNumber, cons
 
     auto selectionRestoreHook = [this, lineNumber]() {
         restorePointSelection(lineNumber);
-        if (context_.callbackContext != nullptr) {
-            QTimer::singleShot(0,
-                               context_.callbackContext,
-                               [restorePointSelectionLater = context_.restorePointSelectionLater, lineNumber]() {
-                if (restorePointSelectionLater) {
-                    restorePointSelectionLater(lineNumber);
-                }
-            });
-            return;
-        }
-        if (context_.restorePointSelectionLater) {
-            context_.restorePointSelectionLater(lineNumber);
-        }
+        schedulePointSelectionRecovery(context_, lineNumber);
     };
     sourceTransactionController(context_).applyChangeWithSnapshot(
         sourceTransactionRequest(context_,
@@ -809,11 +849,7 @@ void MapEditorCanvasEditController::recordLineAreaVertexMove(int lineNumber,
             return;
         }
         restoreLineVertexOwnerSelection(lineNumber, lineOwnerIndexToRestore);
-        if (context_.callbackContext != nullptr) {
-            QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, lineOwnerIndexToRestore]() {
-                restoreLineVertexOwnerSelectionForContext(context, lineNumber, lineOwnerIndexToRestore);
-            });
-        }
+        scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, lineOwnerIndexToRestore);
     };
     sourceTransactionController(context_).applyChangeWithSnapshot(
         sourceTransactionRequest(context_,
@@ -862,15 +898,7 @@ void MapEditorCanvasEditController::recordPointOrientationHandleChange(int lineN
 
     auto selectionRestoreHook = [this, lineNumber]() {
         restorePointSelection(lineNumber);
-        if (context_.callbackContext != nullptr) {
-            QTimer::singleShot(0,
-                               context_.callbackContext,
-                               [restorePointSelectionLater = context_.restorePointSelectionLater, lineNumber]() {
-                restorePointSelectionLater(lineNumber);
-            });
-            return;
-        }
-        context_.restorePointSelectionLater(lineNumber);
+        schedulePointSelectionRecovery(context_, lineNumber);
     };
     sourceTransactionController(context_).applyChangeWithSnapshot(
         sourceTransactionRequest(context_,
@@ -937,17 +965,7 @@ void MapEditorCanvasEditController::recordLinePointLeftHandleChange(int lineNumb
 
     auto selectionRestoreHook = [this, lineNumber, sourceVertexIndex]() {
         restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
-        if (context_.callbackContext != nullptr) {
-            QTimer::singleShot(0,
-                               context_.callbackContext,
-                               [restoreLineAnchorSelectionLater = context_.restoreLineAnchorSelectionLater,
-                                lineNumber,
-                                sourceVertexIndex]() {
-                restoreLineAnchorSelectionLater(lineNumber, sourceVertexIndex);
-            });
-            return;
-        }
-        context_.restoreLineAnchorSelectionLater(lineNumber, sourceVertexIndex);
+        scheduleLineAnchorSelectionRecovery(context_, lineNumber, sourceVertexIndex);
     };
     sourceTransactionController(context_).applyChangeWithSnapshot(
         sourceTransactionRequest(context_,
@@ -1313,11 +1331,7 @@ bool MapEditorCanvasEditController::splitLineAtSelection()
     const QString afterText = splitPlan.updatedText;
     auto selectionRestoreHook = [this, lineNumber, anchorIndex]() {
         restoreLineVertexOwnerSelection(lineNumber, anchorIndex);
-        if (context_.callbackContext != nullptr && context_.restoreLineAnchorSelectionLater) {
-            QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, anchorIndex]() {
-                restoreLineVertexOwnerSelectionForContext(context, lineNumber, anchorIndex);
-            });
-        }
+        scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, anchorIndex);
     };
     sourceTransactionController(context_).applyChangeWithSnapshot(
         sourceTransactionRequest(context_,

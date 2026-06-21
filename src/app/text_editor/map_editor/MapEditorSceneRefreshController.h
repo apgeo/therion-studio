@@ -31,7 +31,7 @@ struct MapEditorSceneRefreshContext
     QHash<int, QGraphicsItem *> *itemsByLine = nullptr;
     bool *commandApplyInProgress = nullptr;
     bool *sceneRefreshPending = nullptr;
-    quint64 *lineVertexSelectionRestoreGeneration = nullptr;
+    quint64 *mapSelectionRestoreGeneration = nullptr;
     bool *autoFitEnabled = nullptr;
     bool *fitBackgroundRequested = nullptr;
     const MapEditorOrientationApplicabilityByCommand *orientationApplicabilityByCommand = nullptr;

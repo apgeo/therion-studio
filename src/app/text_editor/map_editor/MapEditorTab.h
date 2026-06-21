@@ -812,7 +812,7 @@ private:
     bool preserveNextSourceDrivenMapRefresh_ = false;
     int preserveMapUndoForSourceRevision_ = 0;
     bool mapSceneRefreshPending_ = false;
-    quint64 lineVertexSelectionRestoreGeneration_ = 0;
+    quint64 mapSelectionRestoreGeneration_ = 0;
     QTimer *sourceDrivenMapRefreshTimer_ = nullptr;
     DetachedPaneState detachedPaneState_;
     SelectionSyncState selectionSyncState_;

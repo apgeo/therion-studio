@@ -73,8 +73,8 @@ Active planning only. Completed history belongs in archive files. Stable archite
   smooth/control-handle state without firing from text-editing widgets.
 - Keep selected map line/area vertex markers close to XTherion styling: larger red anchor circles with blue
   outlines, smaller blue control-point squares, and a red focused-vertex halo.
-- Keep map line-point selection restoration generation-keyed so stale delayed restores cannot reselect old or nearby
-  line vertices after source-driven scene refreshes.
+- Keep map selection restoration generation-keyed so stale delayed restores cannot reselect old or nearby point/line
+  scene items after source-driven scene refreshes.
 - Keep empty scrap object cleanup explicit through validator warnings and `Apply Fix`, not silent source mutation.
 - Keep deletion-style validation fixes visibly labeled as removals and preview the full source block being removed.
 - Keep inline `type:subtype` map object rendering aligned with inspector preview and `-subtype` rendering.

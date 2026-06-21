@@ -76,8 +76,8 @@ void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack(bool pr
     if (mapScene == nullptr) {
         return;
     }
-    if (context_.lineVertexSelectionRestoreGeneration != nullptr) {
-        ++(*context_.lineVertexSelectionRestoreGeneration);
+    if (context_.mapSelectionRestoreGeneration != nullptr) {
+        ++(*context_.mapSelectionRestoreGeneration);
     }
 
     const bool canPreserveViewport = preserveViewport

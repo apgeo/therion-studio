@@ -2,7 +2,9 @@
 
 #include <QDir>
 #include <QFileDialog>
+#include <QPointer>
 #include <QTabWidget>
+#include <QTimer>
 #include <QWidget>
 
 #include "MainWindowDocumentHelpers.h"
@@ -77,6 +79,23 @@ bool MainWindow::isDocumentPathInsideOpenProject(const QString &filePath) const
 
 void MainWindow::handleDocumentTextChanged(QWidget *documentWidget)
 {
+    if (qobject_cast<TherionStudio::MapEditorTab *>(documentWidget) != nullptr) {
+        QPointer<QWidget> guardedDocument(documentWidget);
+        QTimer::singleShot(0, this, [this, guardedDocument]() {
+            if (guardedDocument == nullptr) {
+                return;
+            }
+            if (!projectRootPath_.isEmpty()) {
+                requestStructureSidebarRebuild();
+            }
+            if (currentDocumentWidget() == guardedDocument.data()) {
+                rebuildMapObjectsTree();
+                refreshWorkspaceModeSwitcher();
+            }
+        });
+        return;
+    }
+
     if (!projectRootPath_.isEmpty()) {
         requestStructureSidebarRebuild();
     }

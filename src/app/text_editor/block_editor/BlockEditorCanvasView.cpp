@@ -2,10 +2,12 @@
 
 #include "BlockEditorDragMime.h"
 
+#include <QApplication>
 #include <QDragEnterEvent>
 #include <QDragLeaveEvent>
 #include <QDragMoveEvent>
 #include <QDropEvent>
+#include <QMouseEvent>
 #include <QMimeData>
 #include <QPainter>
 #include <QScrollBar>
@@ -20,6 +22,71 @@ BlockEditorCanvasView::BlockEditorCanvasView(QWidget *parent)
     setAcceptDrops(true);
     setDragMode(QGraphicsView::RubberBandDrag);
     setRenderHint(QPainter::Antialiasing, true);
+}
+
+void BlockEditorCanvasView::mousePressEvent(QMouseEvent *event)
+{
+    QGraphicsView::mousePressEvent(event);
+    movingBlockLineNumber_ = 0;
+    blockMoveActive_ = false;
+    if (event == nullptr || event->button() != Qt::LeftButton || !blockLineAtScenePosition) {
+        return;
+    }
+
+    const QPointF scenePos = mapToScene(event->position().toPoint());
+    const int lineNumber = blockLineAtScenePosition(scenePos);
+    if (lineNumber <= 0) {
+        return;
+    }
+
+    movingBlockLineNumber_ = lineNumber;
+    movePressViewportPos_ = event->position().toPoint();
+    movePressScenePos_ = scenePos;
+}
+
+void BlockEditorCanvasView::mouseMoveEvent(QMouseEvent *event)
+{
+    if (event != nullptr
+        && movingBlockLineNumber_ > 0
+        && (event->buttons() & Qt::LeftButton)) {
+        const int dragDistance = (event->position().toPoint() - movePressViewportPos_).manhattanLength();
+        if (!blockMoveActive_ && dragDistance >= QApplication::startDragDistance()) {
+            blockMoveActive_ = true;
+            setCursor(Qt::ClosedHandCursor);
+        }
+        if (blockMoveActive_) {
+            if (onBlockMovePreview) {
+                onBlockMovePreview(movingBlockLineNumber_, mapToScene(event->position().toPoint()), true);
+            }
+            event->accept();
+            return;
+        }
+    }
+
+    QGraphicsView::mouseMoveEvent(event);
+}
+
+void BlockEditorCanvasView::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event != nullptr && movingBlockLineNumber_ > 0 && event->button() == Qt::LeftButton) {
+        const int lineNumber = movingBlockLineNumber_;
+        const bool moved = blockMoveActive_
+            || (event->position().toPoint() - movePressViewportPos_).manhattanLength() >= QApplication::startDragDistance();
+        const QPointF releaseScenePos = mapToScene(event->position().toPoint());
+        movingBlockLineNumber_ = 0;
+        blockMoveActive_ = false;
+        unsetCursor();
+        if (onBlockMovePreview) {
+            onBlockMovePreview(lineNumber, QPointF(), false);
+        }
+        if (moved && onBlockMoveRequest) {
+            onBlockMoveRequest(lineNumber, releaseScenePos);
+            event->accept();
+            return;
+        }
+    }
+
+    QGraphicsView::mouseReleaseEvent(event);
 }
 
 void BlockEditorCanvasView::wheelEvent(QWheelEvent *event)

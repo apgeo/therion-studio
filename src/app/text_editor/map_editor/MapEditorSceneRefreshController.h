@@ -4,6 +4,7 @@
 #include <QPointF>
 #include <QRectF>
 #include <QString>
+#include <QtGlobal>
 #include <QVector>
 
 #include <functional>
@@ -32,11 +33,15 @@ struct MapEditorSceneRefreshContext
     bool *sceneRefreshPending = nullptr;
     bool *autoFitEnabled = nullptr;
     bool *fitBackgroundRequested = nullptr;
+    quint64 *lineVertexSelectionRestoreGeneration = nullptr;
     const MapEditorOrientationApplicabilityByCommand *orientationApplicabilityByCommand = nullptr;
 
     std::function<QString()> documentText;
     std::function<QVector<TherionParsedLine>()> parsedLinesForCurrentDocument;
     std::function<int()> currentLineNumber;
+    std::function<int()> sceneRefreshSelectionLineNumber;
+    std::function<int()> sceneRefreshSelectionVertexIndex;
+    std::function<QString()> sceneRefreshSelectionKind;
     std::function<QString()> filePath;
     std::function<void()> handleSceneSelectionChanged;
     std::function<void()> updateCommandSurfaceState;
@@ -52,6 +57,8 @@ struct MapEditorSceneRefreshContext
     std::function<void()> restoreBackgroundImageItems;
     std::function<void()> reprojectMetadataBackgroundLayersForCurrentDocument;
     std::function<void()> restoreDraftGeometryItems;
+    std::function<void(int)> restorePointSelection;
+    std::function<void(int, int)> restoreLineAnchorSelection;
     std::function<void(int, bool)> selectMapLine;
     std::function<void()> applyInspectorObjectVisibility;
     std::function<void()> updateGeometrySelectionPresentation;

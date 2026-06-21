@@ -99,6 +99,7 @@ int main(int argc, char *argv[])
     QPlainTextEdit editor;
     editor.setPlainText(QStringLiteral(
         "encoding utf-8\n"
+        "#\n"
         "survey test\n"
         "centreline\n"
         "  date 2006.08.12\n"
@@ -143,6 +144,7 @@ int main(int argc, char *argv[])
     BlockEditorCanvasRebuildController(context).rebuildBlocksCanvasFromText();
 
     bool ok = true;
+    bool foundEmptyComment = false;
     bool foundData = false;
     for (QGraphicsItem *graphicsItem : scene.items()) {
         auto *blockItem = dynamic_cast<BlockCanvasItem *>(graphicsItem);
@@ -150,12 +152,17 @@ int main(int argc, char *argv[])
             continue;
         }
         const QString kind = normalizeDirective(blockItem->kind());
+        if (kind == QStringLiteral("comment") && blockItem->lineNumber() == 2) {
+            foundEmptyComment = true;
+        }
         if (kind == QStringLiteral("data")) {
             foundData = true;
         }
         ok &= expect(kind != QStringLiteral("extend"),
                      "Canvas rebuild should not create standalone extend cards inside data bodies.");
     }
+    ok &= expect(foundEmptyComment,
+                 "Canvas rebuild should create a card for an empty full-line comment.");
     ok &= expect(foundData, "Canvas rebuild should still create the data card.");
 
     return ok ? 0 : 1;

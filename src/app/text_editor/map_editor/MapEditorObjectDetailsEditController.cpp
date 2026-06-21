@@ -149,6 +149,40 @@ bool applyLineCoordinateRowsRewriteEdits(const QString &beforeText,
     return true;
 }
 
+void schedulePointSelectionRecovery(const MapEditorObjectDetailsContext &context, int lineNumber)
+{
+    if (!context.restorePointSelectionLater) {
+        return;
+    }
+
+    auto attemptRestore = [context, lineNumber]() {
+        context.restorePointSelectionLater(lineNumber);
+    };
+    if (context.callbackContext != nullptr) {
+        QTimer::singleShot(0, context.callbackContext, attemptRestore);
+    } else {
+        attemptRestore();
+    }
+}
+
+void scheduleLineAnchorSelectionRecovery(const MapEditorObjectDetailsContext &context,
+                                         int lineNumber,
+                                         int sourceVertexIndex)
+{
+    if (!context.restoreLineAnchorSelectionLater) {
+        return;
+    }
+
+    auto attemptRestore = [context, lineNumber, sourceVertexIndex]() {
+        context.restoreLineAnchorSelectionLater(lineNumber, sourceVertexIndex);
+    };
+    if (context.callbackContext != nullptr) {
+        QTimer::singleShot(0, context.callbackContext, attemptRestore);
+    } else {
+        attemptRestore();
+    }
+}
+
 qreal defaultLinePointOrientationDegrees(const MapGeometryFeature &feature, int vertexIndex)
 {
     if (vertexIndex < 0 || vertexIndex >= feature.lineVertices.size()) {
@@ -810,27 +844,12 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
     if (selectedObjectKind == QStringLiteral("line") && context_.restoreLineAnchorSelectionLater) {
         selectionRestoreHook = [context = context_, selectedLineNumber, selectedSourceVertexIndex]() {
             context.restoreLineAnchorSelectionLater(selectedLineNumber, selectedSourceVertexIndex);
-            if (context.callbackContext != nullptr) {
-                QTimer::singleShot(0,
-                                   context.callbackContext,
-                                   [restoreLineAnchorSelectionLater = context.restoreLineAnchorSelectionLater,
-                                    selectedLineNumber,
-                                    selectedSourceVertexIndex]() {
-                    restoreLineAnchorSelectionLater(selectedLineNumber, selectedSourceVertexIndex);
-                });
-            }
+            scheduleLineAnchorSelectionRecovery(context, selectedLineNumber, selectedSourceVertexIndex);
         };
     } else if (context_.restorePointSelectionLater) {
         selectionRestoreHook = [context = context_, selectedLineNumber]() {
             context.restorePointSelectionLater(selectedLineNumber);
-            if (context.callbackContext != nullptr) {
-                QTimer::singleShot(0,
-                                   context.callbackContext,
-                                   [restorePointSelectionLater = context.restorePointSelectionLater,
-                                    selectedLineNumber]() {
-                    restorePointSelectionLater(selectedLineNumber);
-                });
-            }
+            schedulePointSelectionRecovery(context, selectedLineNumber);
         };
     }
 
@@ -1333,15 +1352,7 @@ bool MapEditorObjectDetailsEditController::applyLinePointStandaloneRowsEdits(con
     const std::function<void()> selectionRestoreHook = context_.restoreLineAnchorSelectionLater
         ? std::function<void()>([context = context_, lineNumber, restoredVertex]() {
               context.restoreLineAnchorSelectionLater(lineNumber, restoredVertex);
-              if (context.callbackContext != nullptr) {
-                  QTimer::singleShot(0,
-                                     context.callbackContext,
-                                     [restoreLineAnchorSelectionLater = context.restoreLineAnchorSelectionLater,
-                                      lineNumber,
-                                      restoredVertex]() {
-                      restoreLineAnchorSelectionLater(lineNumber, restoredVertex);
-                  });
-              }
+              scheduleLineAnchorSelectionRecovery(context, lineNumber, restoredVertex);
           })
         : std::function<void()>();
     const TextEditorSourceTransactionResult transactionResult =

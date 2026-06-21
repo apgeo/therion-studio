@@ -68,6 +68,9 @@ TextEditorTab::~TextEditorTab()
     if (auto *typedCanvasView = dynamic_cast<BlockEditorCanvasView *>(blockCanvasView_); typedCanvasView != nullptr) {
         typedCanvasView->onDropBlock = {};
         typedCanvasView->onDragPreview = {};
+        typedCanvasView->blockLineAtScenePosition = {};
+        typedCanvasView->onBlockMovePreview = {};
+        typedCanvasView->onBlockMoveRequest = {};
     }
     if (blockCanvasScene_ != nullptr) {
         disconnect(blockCanvasScene_, nullptr, this, nullptr);

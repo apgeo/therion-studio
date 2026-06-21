@@ -200,6 +200,9 @@ void MapEditorTab::handleTextEditorCurrentLineChanged(int lineNumber)
         selectionSyncState_.pendingNavigationLineNumber_ = 0;
     }
     if (!selectionSyncState_.textNavigationInProgress_) {
+        selectionSyncState_.sceneRefreshSelectionLineNumber_ = 0;
+        selectionSyncState_.sceneRefreshSelectionVertexIndex_ = -1;
+        selectionSyncState_.sceneRefreshSelectionGeometryKind_.clear();
         syncMapSelectionFromTextCursor(lineNumber, textEditor_ != nullptr ? textEditor_->currentColumnNumber() : 1);
     }
     syncInspectorObjectSelectionToLineForNavigation(lineNumber);
@@ -216,6 +219,9 @@ void MapEditorTab::handleTextEditorCursorPositionChanged(int lineNumber, int col
         return;
     }
 
+    selectionSyncState_.sceneRefreshSelectionLineNumber_ = 0;
+    selectionSyncState_.sceneRefreshSelectionVertexIndex_ = -1;
+    selectionSyncState_.sceneRefreshSelectionGeometryKind_.clear();
     syncMapSelectionFromTextCursor(lineNumber, columnNumber);
 }
 

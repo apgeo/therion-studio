@@ -17,6 +17,7 @@ MapEditorCanvasEditContext MapEditorTab::canvasEditContext()
         .draftGeometryItems = &draftGeometryItems_,
         .toolbarStatusNote = &toolbarStatusNote_,
         .commandApplyInProgress = &mapCommandApplyInProgress_,
+        .lineVertexSelectionRestoreGeneration = &lineVertexSelectionRestoreGeneration_,
         .updatingSelection = &updatingSelection_,
         .pendingClickSelection = &selectionSyncState_.pendingClickSelection_,
         .pendingClickLineNumber = &selectionSyncState_.pendingClickLineNumber_,

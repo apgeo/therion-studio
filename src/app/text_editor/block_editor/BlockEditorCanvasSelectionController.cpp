@@ -72,6 +72,12 @@ void BlockEditorCanvasSelectionController::refreshDetailsSelectionFromScene()
 
     const int lineNumber = blockCanvasItemLineNumber(selectedBlock);
     const QString kind = blockCanvasItemKind(selectedBlock);
+    if (context_.selectedLineNumber != nullptr
+        && context_.selectedKind != nullptr
+        && *context_.selectedLineNumber == lineNumber
+        && context_.selectedKind->trimmed().compare(kind.trimmed(), Qt::CaseInsensitive) == 0) {
+        return;
+    }
     const bool loaded = context_.loadDetailsForSelection
         ? context_.loadDetailsForSelection(kind, lineNumber)
         : false;

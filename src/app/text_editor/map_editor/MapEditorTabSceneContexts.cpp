@@ -64,6 +64,7 @@ MapEditorSceneRefreshContext MapEditorTab::sceneRefreshContext()
         .sceneRefreshPending = &mapSceneRefreshPending_,
         .autoFitEnabled = &autoFitEnabled_,
         .fitBackgroundRequested = &fitBackgroundRequested_,
+        .lineVertexSelectionRestoreGeneration = &lineVertexSelectionRestoreGeneration_,
         .orientationApplicabilityByCommand = &orientationApplicabilityByCommand_,
         .documentText = [self]() {
             return self != nullptr && self->textEditor_ != nullptr ? self->textEditor_->text() : QString();
@@ -73,6 +74,15 @@ MapEditorSceneRefreshContext MapEditorTab::sceneRefreshContext()
         },
         .currentLineNumber = [self]() {
             return self != nullptr && self->textEditor_ != nullptr ? self->textEditor_->currentLineNumber() : 0;
+        },
+        .sceneRefreshSelectionLineNumber = [self]() {
+            return self != nullptr ? self->selectionSyncState_.sceneRefreshSelectionLineNumber_ : 0;
+        },
+        .sceneRefreshSelectionVertexIndex = [self]() {
+            return self != nullptr ? self->selectionSyncState_.sceneRefreshSelectionVertexIndex_ : -1;
+        },
+        .sceneRefreshSelectionKind = [self]() {
+            return self != nullptr ? self->selectionSyncState_.sceneRefreshSelectionGeometryKind_ : QString();
         },
         .filePath = [self]() {
             return self != nullptr ? self->filePath() : QString();
@@ -145,6 +155,16 @@ MapEditorSceneRefreshContext MapEditorTab::sceneRefreshContext()
         .restoreDraftGeometryItems = [self]() {
             if (self != nullptr) {
                 self->restoreDraftGeometryItems();
+            }
+        },
+        .restorePointSelection = [self](int lineNumber) {
+            if (self != nullptr) {
+                self->restorePointSelection(lineNumber);
+            }
+        },
+        .restoreLineAnchorSelection = [self](int lineNumber, int sourceVertexIndex) {
+            if (self != nullptr) {
+                self->restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
             }
         },
         .selectMapLine = [self](int lineNumber, bool centerOnSelection) {

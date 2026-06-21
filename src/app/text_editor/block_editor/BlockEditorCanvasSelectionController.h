@@ -15,6 +15,8 @@ struct BlockEditorCanvasSelectionContext
     bool *tearingDown = nullptr;
     QGraphicsScene *scene = nullptr;
     QGraphicsView *view = nullptr;
+    int *selectedLineNumber = nullptr;
+    QString *selectedKind = nullptr;
     std::function<void()> clearDetailsPane;
     std::function<bool(const QString &, int)> loadDetailsForSelection;
     std::function<void(int, const QString &)> setDetailsSelectionFallback;

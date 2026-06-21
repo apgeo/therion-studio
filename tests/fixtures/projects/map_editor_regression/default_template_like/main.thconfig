@@ -1,0 +1,5 @@
+source main.th
+
+select cave
+
+export map -projection plan -o output/cave.pdf

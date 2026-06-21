@@ -48,6 +48,10 @@ Active planning only. Completed history belongs in archive files. Stable archite
   inferring success from post-apply hooks.
 - Keep map background layer refreshes isolated from viewport-only command-surface updates so loaded raster/XVI metadata
   does not cause inspector blinking or interrupt line vertex/control-handle interaction.
+- Keep map selection restoration scoped to the narrow line-vertex restore generation used before `fb965aa`; point,
+  anchor, inspector, and line-extension restores must not share a broad map-selection veto counter.
+- Keep MainWindow project/sidebar refresh work out of synchronous map-editor source-change handling so project-mode
+  structure/object updates cannot re-enter canvas selection or drag release processing.
 - Keep new raster background insertion metadata compatible with XTherion defaults without changing how existing
   XTherion-authored raster background references are loaded.
 - Keep Objects inspector scrap expansion user-driven by default: source refreshes and text cursor navigation preserve manually
@@ -73,6 +77,12 @@ Active planning only. Completed history belongs in archive files. Stable archite
   smooth/control-handle state without firing from text-editing widgets.
 - Keep selected map line/area vertex markers close to XTherion styling: larger red anchor circles with blue
   outlines, smaller blue control-point squares, and a red focused-vertex halo.
+- Keep map selection restoration generation-keyed so stale delayed restores cannot reselect old or nearby point/line
+  scene items after source-driven scene refreshes.
+- Keep block-editor canvas selection refresh coalesced so transient empty selection states do not flash the Selection
+  inspector or interrupt block item dragging.
+- Render empty full-line comment commands in the block canvas and keep block-card reordering independent of
+  platform-specific `QGraphicsItem` implicit move behavior.
 - Keep empty scrap object cleanup explicit through validator warnings and `Apply Fix`, not silent source mutation.
 - Keep deletion-style validation fixes visibly labeled as removals and preview the full source block being removed.
 - Keep inline `type:subtype` map object rendering aligned with inspector preview and `-subtype` rendering.
@@ -116,7 +126,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
   project-index, raw completion/context, validator string overloads, transient cache paths, and the Blocks canvas
   rebuild/document-outline loops and block-boundary matching share `TherionSourceSnapshotCache` projections.
 - Slice 4 - Migrate Blocks cards/details/move planning toward shared logical command and option ranges while preserving one source transaction per user-visible change.
-- Slice 5 - Migrate Map/TH2 object discovery, generic option parsing, reference resolution, and Smart Area insert planning to shared logical commands while keeping map geometry parsing map-specific; continue switching remaining Map inspector reads after quick fields, `-clip`, and `-align` to logical command ranges.
+- Slice 5 - Migrate Map/TH2 object discovery, generic option parsing, reference resolution, and Smart Area insert planning to shared logical commands while keeping map geometry parsing map-specific; continue switching remaining Map inspector reads after quick fields, `-clip`, `-align`, and structured line-point metadata reads to logical-command or parsed-feature ranges.
 - Slice 6 - Close source transaction ownership by routing remaining user-visible source mutations through `TextEditorSourceTransactionController` or a narrow successor with undo label, expected revision, invalidation, dirty-state, and selection/cursor policy.
 - Slice 7 - Reuse cached logical documents for Structure, project index, namespace/reference resolution, search, and live Validation diagnostics.
 - Slice 8 - Remove duplicate editor-local tokenizers, option parsers, line splitters, numeric classifiers, and source-range heuristics only after migrated consumers have regression coverage.
@@ -137,6 +147,9 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Keep `python3 scripts/check_structure_constraints.py` green and preserve guardrails against map-editor source mutation bypasses.
 - Keep the explicit user-confirmation gate before every `git commit`.
 - Keep optional sample-data dependent tests from aborting CI when fixture directories are absent.
+- Keep small committed map-editor regression fixture projects, including XVI-background and real cave raster/LOX
+  variants, for selection, vertex/control-handle drag, and project-open smoke coverage without depending on local
+  sample data.
 - Keep shared workspace command bars palette-aware across light and dark appearance changes.
 - Keep Linux CI/package Qt runtime module lists aligned with QML inspector imports.
 - Keep UI smoke tests deterministic across platform event-loop timing differences.
@@ -201,7 +214,7 @@ Active planning only. Completed history belongs in archive files. Stable archite
 
 ## Backlog
 
-- Replace fixed-delay map selection-restore retry timers with explicit scene-refresh completion/generation callbacks.
+- Replace remaining fixed-delay map selection-restore retry timers with explicit scene-refresh completion/generation callbacks.
 - Optional Structure graph view for relationships such as `preview`, `revise`, `join`, `equate`, relationship status, and station-network edges.
 - Compiler-confirmed project-index comparison once lightweight indexing is no longer sufficient.
 - Retire or demote the manual `Validate Project` action after live project diagnostics are reliable for edits, saves, file operations, project-open, and catalog/source-model refresh events.

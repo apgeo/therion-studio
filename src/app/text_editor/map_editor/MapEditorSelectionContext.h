@@ -38,6 +38,9 @@ struct MapEditorSelectionContext
     int *pendingClickLineNumber = nullptr;
     int *pendingClickSourceVertexIndex = nullptr;
     QString *pendingClickGeometryKind = nullptr;
+    int *sceneRefreshSelectionLineNumber = nullptr;
+    int *sceneRefreshSelectionVertexIndex = nullptr;
+    QString *sceneRefreshSelectionGeometryKind = nullptr;
     int *selectedObjectLineNumber = nullptr;
     int *selectedObjectVertexIndex = nullptr;
     int *selectedLineSegmentStartVertexIndex = nullptr;

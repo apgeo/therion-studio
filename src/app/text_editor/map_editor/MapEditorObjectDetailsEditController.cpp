@@ -149,30 +149,13 @@ bool applyLineCoordinateRowsRewriteEdits(const QString &beforeText,
     return true;
 }
 
-quint64 startMapSelectionRestoreGeneration(const MapEditorObjectDetailsContext &context)
-{
-    return context.mapSelectionRestoreGeneration != nullptr
-        ? ++(*context.mapSelectionRestoreGeneration)
-        : 0;
-}
-
-bool isCurrentMapSelectionRestoreGeneration(const MapEditorObjectDetailsContext &context, quint64 restoreGeneration)
-{
-    return context.mapSelectionRestoreGeneration == nullptr
-        || *context.mapSelectionRestoreGeneration == restoreGeneration;
-}
-
 void schedulePointSelectionRecovery(const MapEditorObjectDetailsContext &context, int lineNumber)
 {
     if (!context.restorePointSelectionLater) {
         return;
     }
 
-    const quint64 restoreGeneration = startMapSelectionRestoreGeneration(context);
-    auto attemptRestore = [context, lineNumber, restoreGeneration]() {
-        if (!isCurrentMapSelectionRestoreGeneration(context, restoreGeneration)) {
-            return;
-        }
+    auto attemptRestore = [context, lineNumber]() {
         context.restorePointSelectionLater(lineNumber);
     };
     if (context.callbackContext != nullptr) {
@@ -190,11 +173,7 @@ void scheduleLineAnchorSelectionRecovery(const MapEditorObjectDetailsContext &co
         return;
     }
 
-    const quint64 restoreGeneration = startMapSelectionRestoreGeneration(context);
-    auto attemptRestore = [context, lineNumber, sourceVertexIndex, restoreGeneration]() {
-        if (!isCurrentMapSelectionRestoreGeneration(context, restoreGeneration)) {
-            return;
-        }
+    auto attemptRestore = [context, lineNumber, sourceVertexIndex]() {
         context.restoreLineAnchorSelectionLater(lineNumber, sourceVertexIndex);
     };
     if (context.callbackContext != nullptr) {

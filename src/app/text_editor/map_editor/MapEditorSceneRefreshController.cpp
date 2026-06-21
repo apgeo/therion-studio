@@ -1,6 +1,7 @@
 #include "MapEditorSceneRefreshController.h"
 
 #include "MapEditorObjectDetailsLogic.h"
+#include "MapEditorSceneInternals.h"
 #include "MapEditorSceneSupport.h"
 #include "../../../core/TherionDocumentParser.h"
 
@@ -24,6 +25,57 @@ MapEditorSceneRefreshController::MapEditorSceneRefreshController(MapEditorSceneR
 QGraphicsScene *MapEditorSceneRefreshController::scene() const
 {
     return context_.scene != nullptr ? *context_.scene : nullptr;
+}
+
+bool restoreSceneRefreshSelection(const MapEditorSceneRefreshContext &context)
+{
+    const int lineNumber = context.sceneRefreshSelectionLineNumber
+        ? context.sceneRefreshSelectionLineNumber()
+        : 0;
+    if (lineNumber <= 0) {
+        return false;
+    }
+
+    const QString kind = context.sceneRefreshSelectionKind
+        ? context.sceneRefreshSelectionKind().trimmed().toLower()
+        : QString();
+    const int vertexIndex = context.sceneRefreshSelectionVertexIndex
+        ? context.sceneRefreshSelectionVertexIndex()
+        : -1;
+    if (vertexIndex >= 0 && !kind.isEmpty() && context.scene != nullptr && *context.scene != nullptr) {
+        const auto items = (*context.scene)->items();
+        for (QGraphicsItem *item : items) {
+            auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(item);
+            if (vertexItem == nullptr) {
+                continue;
+            }
+            if (vertexItem->lineNumber() != lineNumber || vertexItem->vertexIndex() != vertexIndex) {
+                continue;
+            }
+            const QString vertexKind = vertexItem->geometryKind().trimmed().toLower();
+            const bool kindMatches = kind == QStringLiteral("line control")
+                ? vertexKind.startsWith(kind)
+                : vertexKind == kind;
+            if (!kindMatches) {
+                continue;
+            }
+            (*context.scene)->clearSelection();
+            vertexItem->setVisible(true);
+            vertexItem->setSelected(true);
+            return true;
+        }
+    }
+    if (kind == QStringLiteral("point") && context.restorePointSelection) {
+        context.restorePointSelection(lineNumber);
+        return true;
+    }
+    if (kind == QStringLiteral("line") && vertexIndex >= 0 && context.restoreLineAnchorSelection) {
+        context.restoreLineAnchorSelection(lineNumber, vertexIndex);
+        return true;
+    }
+
+    context.selectMapLine(lineNumber, false);
+    return true;
 }
 
 const MapEditorOrientationApplicabilityByCommand &MapEditorSceneRefreshController::orientationApplicabilityByCommand() const
@@ -76,10 +128,9 @@ void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack(bool pr
     if (mapScene == nullptr) {
         return;
     }
-    if (context_.mapSelectionRestoreGeneration != nullptr) {
-        ++(*context_.mapSelectionRestoreGeneration);
+    if (context_.lineVertexSelectionRestoreGeneration != nullptr) {
+        ++(*context_.lineVertexSelectionRestoreGeneration);
     }
-
     const bool canPreserveViewport = preserveViewport
         && context_.view != nullptr
         && context_.view->viewport() != nullptr;
@@ -154,7 +205,9 @@ void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack(bool pr
     context_.restoreBackgroundImageItems();
     context_.reprojectMetadataBackgroundLayersForCurrentDocument();
     context_.restoreDraftGeometryItems();
-    context_.selectMapLine(context_.currentLineNumber(), !preserveViewport);
+    if (!restoreSceneRefreshSelection(context_)) {
+        context_.selectMapLine(context_.currentLineNumber(), !preserveViewport);
+    }
     context_.applyInspectorObjectVisibility();
     context_.updateGeometrySelectionPresentation();
     if (canPreserveViewport) {

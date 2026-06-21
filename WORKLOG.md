@@ -48,6 +48,10 @@ Active planning only. Completed history belongs in archive files. Stable archite
   inferring success from post-apply hooks.
 - Keep map background layer refreshes isolated from viewport-only command-surface updates so loaded raster/XVI metadata
   does not cause inspector blinking or interrupt line vertex/control-handle interaction.
+- Keep map selection restoration scoped to the narrow line-vertex restore generation used before `fb965aa`; point,
+  anchor, inspector, and line-extension restores must not share a broad map-selection veto counter.
+- Keep MainWindow project/sidebar refresh work out of synchronous map-editor source-change handling so project-mode
+  structure/object updates cannot re-enter canvas selection or drag release processing.
 - Keep new raster background insertion metadata compatible with XTherion defaults without changing how existing
   XTherion-authored raster background references are loaded.
 - Keep Objects inspector scrap expansion user-driven by default: source refreshes and text cursor navigation preserve manually
@@ -143,6 +147,9 @@ Active planning only. Completed history belongs in archive files. Stable archite
 - Keep `python3 scripts/check_structure_constraints.py` green and preserve guardrails against map-editor source mutation bypasses.
 - Keep the explicit user-confirmation gate before every `git commit`.
 - Keep optional sample-data dependent tests from aborting CI when fixture directories are absent.
+- Keep small committed map-editor regression fixture projects, including XVI-background and real cave raster/LOX
+  variants, for selection, vertex/control-handle drag, and project-open smoke coverage without depending on local
+  sample data.
 - Keep shared workspace command bars palette-aware across light and dark appearance changes.
 - Keep Linux CI/package Qt runtime module lists aligned with QML inspector imports.
 - Keep UI smoke tests deterministic across platform event-loop timing differences.

@@ -1,0 +1,8 @@
+encoding utf-8
+
+survey survey1
+  centerline
+    data normal from to tape compass clino
+    1 2 10.00 90.0 0.0
+  endcenterline
+endsurvey

@@ -30,7 +30,7 @@ struct MapEditorCanvasEditContext
     QVector<QGraphicsRectItem *> *draftGeometryItems = nullptr;
     QString *toolbarStatusNote = nullptr;
     bool *commandApplyInProgress = nullptr;
-    quint64 *mapSelectionRestoreGeneration = nullptr;
+    quint64 *lineVertexSelectionRestoreGeneration = nullptr;
     bool *updatingSelection = nullptr;
     bool *pendingClickSelection = nullptr;
     int *pendingClickLineNumber = nullptr;

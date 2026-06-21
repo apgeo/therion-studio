@@ -308,6 +308,9 @@ private:
         int pendingClickSourceVertexIndex_ = -1;
         QString pendingClickGeometryKind_;
         int pendingNavigationLineNumber_ = 0;
+        int sceneRefreshSelectionLineNumber_ = 0;
+        int sceneRefreshSelectionVertexIndex_ = -1;
+        QString sceneRefreshSelectionGeometryKind_;
     };
 
     struct InteractiveDrawState
@@ -812,7 +815,7 @@ private:
     bool preserveNextSourceDrivenMapRefresh_ = false;
     int preserveMapUndoForSourceRevision_ = 0;
     bool mapSceneRefreshPending_ = false;
-    quint64 mapSelectionRestoreGeneration_ = 0;
+    quint64 lineVertexSelectionRestoreGeneration_ = 0;
     QTimer *sourceDrivenMapRefreshTimer_ = nullptr;
     DetachedPaneState detachedPaneState_;
     SelectionSyncState selectionSyncState_;

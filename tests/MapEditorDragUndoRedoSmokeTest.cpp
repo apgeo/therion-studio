@@ -1,6 +1,8 @@
 #include "../src/app/text_editor/map_editor/MapEditorTab.h"
 #include "../src/app/text_editor/map_editor/MapEditorSceneInternals.h"
+#include "../src/app/text_editor/map_editor/MapEditorSceneRefreshController.h"
 #include "../src/app/text_editor/map_editor/MapEditorSceneSupport.h"
+#include "../src/app/text_editor/map_editor/MapEditorSelectionController.h"
 #include "../src/app/text_editor/TextEditorTab.h"
 #include "../src/core/CommandCatalogStore.h"
 #include "../src/core/QtFileSystem.h"
@@ -20,9 +22,11 @@
 #include <QMainWindow>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QPainterPath>
 #include <QPlainTextEdit>
 #include <QRegularExpression>
 #include <QSet>
+#include <QDirIterator>
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QTextBlock>
@@ -56,6 +60,54 @@ bool expect(bool condition, const char *message)
 }
 
 void pumpEvents();
+
+QString repositoryFilePath(const QString &relativePath)
+{
+    const QString fromCurrentDirectory = QDir::current().absoluteFilePath(relativePath);
+    if (QFileInfo::exists(fromCurrentDirectory)) {
+        return QFileInfo(fromCurrentDirectory).absoluteFilePath();
+    }
+
+    const QString fromBuildDirectory = QDir(QCoreApplication::applicationDirPath())
+                                           .absoluteFilePath(QStringLiteral("../") + relativePath);
+    return QFileInfo(fromBuildDirectory).absoluteFilePath();
+}
+
+bool copyDirectoryRecursively(const QString &sourceDirectoryPath, const QString &targetDirectoryPath)
+{
+    QDir sourceDirectory(sourceDirectoryPath);
+    if (!sourceDirectory.exists()) {
+        return false;
+    }
+    if (!QDir().mkpath(targetDirectoryPath)) {
+        return false;
+    }
+
+    QDirIterator iterator(sourceDirectoryPath,
+                          QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot,
+                          QDirIterator::Subdirectories);
+    while (iterator.hasNext()) {
+        const QString sourcePath = iterator.next();
+        const QFileInfo sourceInfo(sourcePath);
+        const QString relativePath = sourceDirectory.relativeFilePath(sourcePath);
+        const QString targetPath = QDir(targetDirectoryPath).filePath(relativePath);
+        if (sourceInfo.isDir()) {
+            if (!QDir().mkpath(targetPath)) {
+                return false;
+            }
+            continue;
+        }
+        if (!QDir().mkpath(QFileInfo(targetPath).absolutePath())) {
+            return false;
+        }
+        QFile::remove(targetPath);
+        if (!QFile::copy(sourcePath, targetPath)) {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 bool tokenIsNumber(const QString &token)
 {
@@ -873,6 +925,27 @@ MapEditableGeometryVertexItem *findSelectedLineVertex(QGraphicsScene *scene)
     return nullptr;
 }
 
+MapEditableGeometryVertexItem *findVisibleLineControl(QGraphicsScene *scene, int lineNumber)
+{
+    if (scene == nullptr || lineNumber <= 0) {
+        return nullptr;
+    }
+
+    const auto items = scene->items();
+    for (QGraphicsItem *rawItem : items) {
+        auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(rawItem);
+        if (vertexItem == nullptr || !vertexItem->isVisible()) {
+            continue;
+        }
+        if (vertexItem->lineNumber() == lineNumber
+            && vertexItem->geometryKind().startsWith(QStringLiteral("line control"))) {
+            return vertexItem;
+        }
+    }
+
+    return nullptr;
+}
+
 struct SelectedLineVertexSnapshot
 {
     int lineNumber = 0;
@@ -1016,6 +1089,299 @@ bool dragItemBySceneDelta(QGraphicsView *view, QGraphicsItem *item, const QPoint
     sendMouse(viewport, QEvent::MouseButtonRelease, end, Qt::LeftButton, Qt::NoButton);
     pumpEvents();
     return true;
+}
+
+bool clickItem(QGraphicsView *view, QGraphicsItem *item)
+{
+    if (view == nullptr || item == nullptr || view->viewport() == nullptr) {
+        return false;
+    }
+
+    view->centerOn(item);
+    pumpEvents();
+    const QPoint clickPosition = view->mapFromScene(item->scenePos());
+    sendMouse(view->viewport(), QEvent::MouseButtonPress, clickPosition, Qt::LeftButton, Qt::LeftButton);
+    pumpEvents();
+    sendMouse(view->viewport(), QEvent::MouseButtonRelease, clickPosition, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    return true;
+}
+
+bool clickScenePoint(QGraphicsView *view, const QPointF &scenePoint)
+{
+    if (view == nullptr || view->viewport() == nullptr) {
+        return false;
+    }
+
+    view->centerOn(scenePoint);
+    pumpEvents();
+    const QPoint clickPosition = view->mapFromScene(scenePoint);
+    sendMouse(view->viewport(), QEvent::MouseButtonPress, clickPosition, Qt::LeftButton, Qt::LeftButton);
+    pumpEvents();
+    sendMouse(view->viewport(), QEvent::MouseButtonRelease, clickPosition, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    return true;
+}
+
+bool runSceneRefreshSelectionSourceSmoke()
+{
+    QObject sceneParent;
+    QGraphicsView view;
+    QGraphicsScene *scene = new QGraphicsScene(&sceneParent);
+    view.setScene(scene);
+
+    QHash<int, QGraphicsItem *> itemsByLine;
+    bool commandApplyInProgress = false;
+    bool sceneRefreshPending = false;
+    bool autoFitEnabled = false;
+    bool fitBackgroundRequested = false;
+    int sceneRefreshSelectionLineNumber = 4;
+    int sceneRefreshSelectionVertexIndex = 7;
+    QString sceneRefreshSelectionKind = QStringLiteral("line control");
+    int cursorLineNumber = 5;
+    int refreshedSelectionLineNumber = 0;
+    int refreshedSelectionVertexIndex = -1;
+    int restoredPointSelectionLineNumber = 0;
+    bool refreshedSelectionCentered = false;
+    bool recreateControlDuringRefresh = true;
+    MapEditorOrientationApplicabilityByCommand orientationApplicability;
+
+    MapEditorSceneRefreshContext context{
+        .sceneParent = &sceneParent,
+        .selectionConnectionContext = &sceneParent,
+        .scene = &scene,
+        .view = &view,
+        .undoStack = nullptr,
+        .itemsByLine = &itemsByLine,
+        .commandApplyInProgress = &commandApplyInProgress,
+        .sceneRefreshPending = &sceneRefreshPending,
+        .autoFitEnabled = &autoFitEnabled,
+        .fitBackgroundRequested = &fitBackgroundRequested,
+        .orientationApplicabilityByCommand = &orientationApplicability,
+        .documentText = []() {
+            return QStringLiteral("encoding utf-8\n");
+        },
+        .parsedLinesForCurrentDocument = []() {
+            return QVector<TherionParsedLine>{};
+        },
+        .currentLineNumber = [&cursorLineNumber]() {
+            return cursorLineNumber;
+        },
+        .sceneRefreshSelectionLineNumber = [&sceneRefreshSelectionLineNumber]() {
+            return sceneRefreshSelectionLineNumber;
+        },
+        .sceneRefreshSelectionVertexIndex = [&sceneRefreshSelectionVertexIndex]() {
+            return sceneRefreshSelectionVertexIndex;
+        },
+        .sceneRefreshSelectionKind = [&sceneRefreshSelectionKind]() {
+            return sceneRefreshSelectionKind;
+        },
+        .filePath = []() {
+            return QString();
+        },
+        .handleSceneSelectionChanged = []() {},
+        .updateCommandSurfaceState = []() {},
+        .clearMapScene = [&scene, &itemsByLine]() {
+            scene->clear();
+            itemsByLine.clear();
+        },
+        .mapSourceBoundsForCurrentDocument = []() {
+            return QRectF();
+        },
+        .mapBackgroundFitBounds = []() {
+            return QRectF();
+        },
+        .recordCardMove = [](int, const QPointF &, const QPointF &) {},
+        .recordCardVisibility = [](int, bool, bool) {},
+        .recordPointGeometryMove = [](int, const QPointF &, const QPointF &) {},
+        .recordLineAreaVertexMove = [](int, const QString &, int, const QPointF &, const QPointF &) {},
+        .recordPointOrientationHandleChange = [](int, qreal) {},
+        .recordLinePointLeftHandleChange = [](int, int, qreal, qreal) {},
+        .restoreBackgroundImageItems = []() {},
+        .reprojectMetadataBackgroundLayersForCurrentDocument = []() {},
+        .restoreDraftGeometryItems = [&scene, &recreateControlDuringRefresh]() {
+            if (!recreateControlDuringRefresh) {
+                return;
+            }
+            auto *controlItem = new MapEditableGeometryVertexItem(4,
+                                                                  QStringLiteral("line control"),
+                                                                  7,
+                                                                  QPointF(30.0, 20.0),
+                                                                  QRectF(0.0, -100.0, 100.0, 100.0),
+                                                                  QRectF(0.0, 0.0, 100.0, 100.0));
+            controlItem->setData(kMapSceneLineNumberRole, 4);
+            controlItem->setData(kMapSceneSelectionGatedRole, true);
+            controlItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineControl);
+            controlItem->setData(kMapSceneOwnerVertexRole, 1);
+            controlItem->setVisible(false);
+            scene->addItem(controlItem);
+        },
+        .restorePointSelection = [&restoredPointSelectionLineNumber](int lineNumber) {
+            restoredPointSelectionLineNumber = lineNumber;
+        },
+        .restoreLineAnchorSelection = [&refreshedSelectionLineNumber, &refreshedSelectionVertexIndex](int lineNumber,
+                                                                                                      int sourceVertexIndex) {
+            refreshedSelectionLineNumber = lineNumber;
+            refreshedSelectionVertexIndex = sourceVertexIndex;
+        },
+        .selectMapLine = [&refreshedSelectionLineNumber, &refreshedSelectionCentered](int lineNumber, bool centerOnSelection) {
+            refreshedSelectionLineNumber = lineNumber;
+            refreshedSelectionCentered = centerOnSelection;
+        },
+        .applyInspectorObjectVisibility = []() {},
+        .updateGeometrySelectionPresentation = []() {},
+        .fitMapToView = [](bool) {},
+        .syncZoomFactorFromView = []() {},
+        .updateInteractiveDrawPreview = []() {},
+        .refreshStatus = []() {},
+        .refreshObjectDetailsPanel = []() {},
+        .updateHelpPanel = []() {},
+    };
+
+    MapEditorSceneRefreshController(context).refreshMapScenePreservingUndoStack();
+    auto *restoredControl = findSelectedLineVertex(scene);
+    if (!expect(restoredControl != nullptr
+                    && restoredControl->lineNumber() == 4
+                    && restoredControl->vertexIndex() == 7
+                    && restoredControl->geometryKind() == QStringLiteral("line control")
+                    && restoredControl->isVisible(),
+                "Scene refresh should restore selected line control points instead of downgrading them to anchor or whole-line selection.")) {
+        return false;
+    }
+    if (!expect(restoredPointSelectionLineNumber == 0,
+                "Scene refresh should not use point restore for a selected line control point.")) {
+        return false;
+    }
+
+    sceneRefreshSelectionLineNumber = 0;
+    sceneRefreshSelectionVertexIndex = -1;
+    sceneRefreshSelectionKind.clear();
+    recreateControlDuringRefresh = false;
+    cursorLineNumber = 5;
+    refreshedSelectionLineNumber = 0;
+    refreshedSelectionVertexIndex = -1;
+    refreshedSelectionCentered = false;
+    MapEditorSceneRefreshController(context).refreshMapScenePreservingUndoStack();
+    if (!expect(refreshedSelectionLineNumber == 5 && refreshedSelectionCentered,
+                "Scene refresh should fall back to the text cursor row when there is no selected map object.")) {
+        return false;
+    }
+
+    return true;
+}
+
+bool runLineSegmentPresentationSmoke()
+{
+    QGraphicsScene scene;
+    QGraphicsView view;
+    view.setScene(&scene);
+
+    QPainterPath path;
+    path.moveTo(0.0, 0.0);
+    path.lineTo(100.0, 0.0);
+    auto *selectedLinePath = new QGraphicsPathItem(path);
+    selectedLinePath->setData(kMapSceneLineNumberRole, 4);
+    selectedLinePath->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeGeneric);
+    selectedLinePath->setFlag(QGraphicsItem::ItemIsSelectable, true);
+    scene.addItem(selectedLinePath);
+    selectedLinePath->setSelected(true);
+
+    auto *startControl = new MapEditableGeometryVertexItem(4,
+                                                           QStringLiteral("line control"),
+                                                           10,
+                                                           QPointF(25.0, 10.0),
+                                                           QRectF(0.0, -100.0, 100.0, 100.0),
+                                                           QRectF(0.0, 0.0, 100.0, 100.0));
+    startControl->setData(kMapSceneLineNumberRole, 4);
+    startControl->setData(kMapSceneSelectionGatedRole, true);
+    startControl->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineControl);
+    startControl->setData(kMapSceneOwnerVertexRole, 1);
+    startControl->setVisible(false);
+    scene.addItem(startControl);
+
+    auto *endControl = new MapEditableGeometryVertexItem(4,
+                                                         QStringLiteral("line control"),
+                                                         11,
+                                                         QPointF(75.0, -10.0),
+                                                         QRectF(0.0, -100.0, 100.0, 100.0),
+                                                         QRectF(0.0, 0.0, 100.0, 100.0));
+    endControl->setData(kMapSceneLineNumberRole, 4);
+    endControl->setData(kMapSceneSelectionGatedRole, true);
+    endControl->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineControl);
+    endControl->setData(kMapSceneOwnerVertexRole, 2);
+    endControl->setVisible(false);
+    scene.addItem(endControl);
+
+    QHash<int, QGraphicsItem *> itemsByLine;
+    QSet<int> hiddenObjectLines;
+    QSet<int> suppressedAutoReselectLineNumbers;
+    bool updatingSelection = false;
+    bool autoFitEnabled = false;
+    bool textNavigationInProgress = false;
+    int lastCursorSyncedLine = 0;
+    int lastCursorSyncedColumn = 0;
+    bool pendingClickSelection = false;
+    QPointF pendingClickScenePosition;
+    QElapsedTimer pendingClickElapsed;
+    int pendingClickLineNumber = 0;
+    int pendingClickSourceVertexIndex = -1;
+    QString pendingClickGeometryKind;
+    int sceneRefreshSelectionLineNumber = 0;
+    int sceneRefreshSelectionVertexIndex = -1;
+    QString sceneRefreshSelectionGeometryKind;
+    int selectedObjectLineNumber = 6;
+    int selectedObjectVertexIndex = 2;
+    int selectedLineSegmentStartVertexIndex = 1;
+    int selectedLineSegmentEndVertexIndex = 2;
+    QString selectedObjectKind = QStringLiteral("line");
+    std::optional<QPointF> selectedObjectCoordinate;
+
+    MapEditorSelectionContext context{
+        .textEditor = nullptr,
+        .scene = &scene,
+        .view = &view,
+        .itemsByLine = &itemsByLine,
+        .hiddenObjectLines = &hiddenObjectLines,
+        .suppressedAutoReselectLineNumbers = &suppressedAutoReselectLineNumbers,
+        .updatingSelection = &updatingSelection,
+        .autoFitEnabled = &autoFitEnabled,
+        .textNavigationInProgress = &textNavigationInProgress,
+        .lastCursorSyncedLine = &lastCursorSyncedLine,
+        .lastCursorSyncedColumn = &lastCursorSyncedColumn,
+        .pendingClickSelection = &pendingClickSelection,
+        .pendingClickScenePosition = &pendingClickScenePosition,
+        .pendingClickElapsed = &pendingClickElapsed,
+        .pendingClickLineNumber = &pendingClickLineNumber,
+        .pendingClickSourceVertexIndex = &pendingClickSourceVertexIndex,
+        .pendingClickGeometryKind = &pendingClickGeometryKind,
+        .sceneRefreshSelectionLineNumber = &sceneRefreshSelectionLineNumber,
+        .sceneRefreshSelectionVertexIndex = &sceneRefreshSelectionVertexIndex,
+        .sceneRefreshSelectionGeometryKind = &sceneRefreshSelectionGeometryKind,
+        .selectedObjectLineNumber = &selectedObjectLineNumber,
+        .selectedObjectVertexIndex = &selectedObjectVertexIndex,
+        .selectedLineSegmentStartVertexIndex = &selectedLineSegmentStartVertexIndex,
+        .selectedLineSegmentEndVertexIndex = &selectedLineSegmentEndVertexIndex,
+        .selectedObjectKind = &selectedObjectKind,
+        .selectedObjectCoordinate = &selectedObjectCoordinate,
+        .currentLineNumber = []() {
+            return 6;
+        },
+        .parsedLinesForCurrentDocument = []() {
+            return QVector<TherionParsedLine>{};
+        },
+        .sourcePointFromScenePosition = [](const QPointF &point) {
+            return point;
+        },
+        .updateCommandSurfaceState = []() {},
+        .updateHelpPanel = []() {},
+        .refreshObjectDetailsPanel = []() {},
+        .clearInspectorObjectSelection = []() {},
+        .syncInspectorObjectSelectionToLineExpanding = [](int) {},
+    };
+
+    MapEditorSelectionController(context).updateGeometrySelectionPresentation();
+    return expect(startControl->isVisible() && endControl->isVisible(),
+                  "Selected line segment controls should remain visible when text selection points at a vertex source row.");
 }
 
 QGraphicsPathItem *findPathItemForLine(QGraphicsScene *scene, int lineNumber, std::optional<int> selectionSubtype = std::nullopt)
@@ -1533,6 +1899,131 @@ int runInspectorObjectMoveSmoke()
                                           intoScrapExpected);
 }
 
+int runTemplateBezierEditScenario(const QString &fixtureName,
+                                  const QString &th2RelativePath,
+                                  int lineNumber,
+                                  bool expectBackgroundLayer)
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory for template Bezier smoke test.")) {
+        return 1;
+    }
+
+    const QString fixtureRoot = repositoryFilePath(
+        QStringLiteral("tests/fixtures/projects/map_editor_regression/%1").arg(fixtureName));
+    const QString projectRoot = QDir(tempDir.path()).filePath(fixtureName);
+    if (!expect(copyDirectoryRecursively(fixtureRoot, projectRoot),
+                "Failed to copy map editor regression fixture project.")) {
+        return 1;
+    }
+    const QString filePath = QDir(projectRoot).filePath(th2RelativePath);
+
+    QtFileSystem fileSystem;
+    FakeSessionStore sessionStore;
+    QMainWindow hostWindow;
+    hostWindow.resize(900, 700);
+    auto *central = new QWidget(&hostWindow);
+    auto *layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), central);
+    mapTab->setProjectRootPath(projectRoot);
+    layout->addWidget(mapTab);
+    hostWindow.setCentralWidget(central);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                "MapEditorTab failed to load template-style Bezier TH2 file.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+    pumpEvents();
+
+    auto *mapView = mapTab->findChild<QGraphicsView *>();
+    if (!expect(mapView != nullptr && mapView->scene() != nullptr,
+                "Map view was not initialized for template-style Bezier smoke test.")) {
+        return 1;
+    }
+
+    if (expectBackgroundLayer
+        && !expect(mapTab->backgroundLayerCount() == 1,
+                   "Background fixture should load one background layer from TH2 metadata.")) {
+        return 1;
+    }
+
+    mapTab->goToLine(lineNumber);
+    pumpEvents();
+    auto *linePath = findPathItemForLine(mapView->scene(), lineNumber);
+    if (!expect(linePath != nullptr, "Template-style Bezier line path was not found.")) {
+        return 1;
+    }
+    const QPointF lineClickPoint = linePath->mapToScene(linePath->path().pointAtPercent(0.5));
+    if (!expect(clickScenePoint(mapView, lineClickPoint), "Failed to click template-style Bezier line path.")) {
+        return 1;
+    }
+    pumpEvents();
+
+    auto *controlItem = findVisibleLineControl(mapView->scene(), lineNumber);
+    if (!expect(controlItem != nullptr,
+                "Clicking a template-style Bezier line segment should reveal editable control handles.")) {
+        return 1;
+    }
+
+    const QString originalText = mapTab->text();
+    mapTab->triggerSelectMode();
+    pumpEvents();
+    if (!expect(dragItemBySceneDelta(mapView, controlItem, QPointF(12.0, -8.0)),
+                "Failed to drag a template-style Bezier line control handle.")) {
+        return 1;
+    }
+    pumpEvents();
+    if (!expect(mapTab->text() != originalText,
+                "Dragging a template-style Bezier line control handle should update TH2 source text.")) {
+        return 1;
+    }
+    if (!expect(mapTab->canUndo(), "Template-style Bezier control drag should be undoable.")) {
+        return 1;
+    }
+
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(mapTab->text() == originalText,
+                "Undo after template-style Bezier control drag should restore original TH2 source text.")) {
+        return 1;
+    }
+
+    hostWindow.close();
+    pumpEvents();
+    return 0;
+}
+
+int runTemplateBezierEditSmoke()
+{
+    if (const int rc = runTemplateBezierEditScenario(QStringLiteral("default_template_like"),
+                                                     QStringLiteral("scraps/scrap1.th2"),
+                                                     6,
+                                                     false);
+        rc != 0) {
+        return rc;
+    }
+    if (const int rc = runTemplateBezierEditScenario(QStringLiteral("xvi_background_like"),
+                                                     QStringLiteral("scraps/scrap1.th2"),
+                                                     9,
+                                                     true);
+        rc != 0) {
+        return rc;
+    }
+    return runTemplateBezierEditScenario(QStringLiteral("real_cave_raster"),
+                                         QStringLiteral("data/clopy01.th2"),
+                                         30,
+                                         true);
+}
+
 int runAreaBorderHitSelectionSmoke()
 {
     QTemporaryDir tempDir;
@@ -1812,7 +2303,6 @@ int runDragUndoRedoSmoke()
                 "Selecting map vertex should move text editor cursor to that vertex coordinate row.")) {
         return 1;
     }
-
     textEditor->goToLineColumn(8, 3);
     const std::optional<SelectedLineVertexSnapshot> selectedVertexFromSmooth =
         waitForSelectedLineVertex(mapView->scene(), 4, 2);
@@ -2057,8 +2547,14 @@ int runDragUndoRedoSmoke()
     if (!expect(dragAnchorItem != nullptr, "No visible editable line anchor was found before drag edit.")) {
         return 1;
     }
-    dragAnchorItem->setSelected(true);
-    pumpEvents();
+    if (!expect(clickItem(mapView, dragAnchorItem), "Failed to click editable map anchor before drag edit.")) {
+        return 1;
+    }
+    dragAnchorItem = findSelectedLineVertex(mapView->scene());
+    if (!expect(dragAnchorItem != nullptr && dragAnchorItem->lineNumber() == 4,
+                "Clicking editable map anchor should select a draggable line vertex.")) {
+        return 1;
+    }
     mapTab->triggerSelectMode();
     pumpEvents();
 
@@ -2722,7 +3218,16 @@ int main(int argc, char **argv)
     if (!runFreehandBezierRowLogicSmoke()) {
         return 1;
     }
+    if (!runSceneRefreshSelectionSourceSmoke()) {
+        return 1;
+    }
+    if (!runLineSegmentPresentationSmoke()) {
+        return 1;
+    }
     if (const int rc = runInspectorObjectMoveSmoke(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runTemplateBezierEditSmoke(); rc != 0) {
         return rc;
     }
     if (const int rc = runAreaBorderHitSelectionSmoke(); rc != 0) {

@@ -157,11 +157,7 @@ bool MapEditorTab::commitLineExtensionSession()
             clearInteractiveDrawSession(true);
             if (restoredSourceVertexIndex >= 0) {
                 restoreLineAnchorSelection(extendedLineNumber, restoredSourceVertexIndex);
-                const quint64 restoreGeneration = ++mapSelectionRestoreGeneration_;
-                QTimer::singleShot(0, this, [this, extendedLineNumber, restoredSourceVertexIndex, restoreGeneration]() {
-                    if (mapSelectionRestoreGeneration_ != restoreGeneration) {
-                        return;
-                    }
+                QTimer::singleShot(0, this, [this, extendedLineNumber, restoredSourceVertexIndex]() {
                     restoreLineAnchorSelection(extendedLineNumber, restoredSourceVertexIndex);
                 });
             }

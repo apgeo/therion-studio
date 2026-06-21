@@ -520,11 +520,7 @@ public:
         setPos(sceneCoordsSourceToPreview(sourcePoint, sourceBounds, previewBounds));
     }
 
-    ~MapEditableGeometryVertexItem() override
-    {
-        clearSnapTargetMarker();
-        clearSnapGuideMarkers();
-    }
+    ~MapEditableGeometryVertexItem() override = default;
 
     int lineNumber() const
     {
@@ -955,7 +951,7 @@ private:
         }
 
         while (snapGuideMarkers_.size() < guidePoints.size()) {
-            auto *marker = new QGraphicsEllipseItem(QRectF(-8.0, -8.0, 16.0, 16.0));
+            auto *marker = new QGraphicsEllipseItem(QRectF(-8.0, -8.0, 16.0, 16.0), this);
             marker->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
             marker->setAcceptedMouseButtons(Qt::NoButton);
             QColor guideFill(QStringLiteral("#00e5ff"));
@@ -970,7 +966,6 @@ private:
             snapGuideMarkers_.append(marker);
         }
 
-        QGraphicsScene *currentScene = scene();
         for (int index = 0; index < snapGuideMarkers_.size(); ++index) {
             QGraphicsEllipseItem *marker = snapGuideMarkers_.at(index);
             if (marker == nullptr) {
@@ -980,15 +975,7 @@ private:
                 marker->hide();
                 continue;
             }
-            if (marker->scene() != currentScene) {
-                if (marker->scene() != nullptr) {
-                    marker->scene()->removeItem(marker);
-                }
-                if (currentScene != nullptr) {
-                    currentScene->addItem(marker);
-                }
-            }
-            marker->setPos(guidePoints.at(index));
+            marker->setPos(mapFromScene(guidePoints.at(index)));
             marker->show();
         }
     }
@@ -1002,14 +989,12 @@ private:
         }
 
         ensureSnapTargetMarkerItem(&snapTargetShadow_,
-                                   currentScene,
                                    QRectF(-10.0, -10.0, 20.0, 20.0),
                                    QColor(QStringLiteral("#1f2937")),
                                    3.4,
                                    200,
                                    30.0);
         ensureSnapTargetMarkerItem(&snapTargetRing_,
-                                   currentScene,
                                    QRectF(-10.0, -10.0, 20.0, 20.0),
                                    QColor(QStringLiteral("#ffe16a")),
                                    2.0,
@@ -1017,38 +1002,31 @@ private:
                                    30.1);
 
         if (snapTargetShadow_ != nullptr) {
-            snapTargetShadow_->setPos(targetPoint);
+            snapTargetShadow_->setPos(mapFromScene(targetPoint));
             snapTargetShadow_->show();
         }
         if (snapTargetRing_ != nullptr) {
-            snapTargetRing_->setPos(targetPoint);
+            snapTargetRing_->setPos(mapFromScene(targetPoint));
             snapTargetRing_->show();
         }
     }
 
     void ensureSnapTargetMarkerItem(QGraphicsEllipseItem **marker,
-                                    QGraphicsScene *targetScene,
                                     const QRectF &rect,
                                     const QColor &baseColor,
                                     qreal width,
                                     int alpha,
                                     qreal zValue)
     {
-        if (marker == nullptr || targetScene == nullptr) {
+        if (marker == nullptr) {
             return;
         }
 
         if (*marker == nullptr) {
-            *marker = new QGraphicsEllipseItem(rect);
+            *marker = new QGraphicsEllipseItem(rect, this);
             (*marker)->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
             (*marker)->setAcceptedMouseButtons(Qt::NoButton);
             (*marker)->setBrush(Qt::NoBrush);
-        }
-        if ((*marker)->scene() != targetScene) {
-            if ((*marker)->scene() != nullptr) {
-                (*marker)->scene()->removeItem(*marker);
-            }
-            targetScene->addItem(*marker);
         }
 
         QColor markerColor = baseColor;
@@ -1071,9 +1049,6 @@ private:
             if (marker == nullptr) {
                 continue;
             }
-            if (marker->scene() != nullptr) {
-                marker->scene()->removeItem(marker);
-            }
             delete marker;
         }
         snapGuideMarkers_.clear();
@@ -1083,9 +1058,6 @@ private:
     {
         if (marker == nullptr || *marker == nullptr) {
             return;
-        }
-        if ((*marker)->scene() != nullptr) {
-            (*marker)->scene()->removeItem(*marker);
         }
         delete *marker;
         *marker = nullptr;

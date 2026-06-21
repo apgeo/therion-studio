@@ -516,7 +516,6 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .hiddenInspectorObjectLines = &hiddenInspectorObjectLines_,
         .lastInspectorClickedObjectLineNumber = &lastInspectorClickedObjectLineNumber_,
         .toolbarStatusNote = &toolbarStatusNote_,
-        .mapSelectionRestoreGeneration = &mapSelectionRestoreGeneration_,
         .selectionLabel = objectDetailsUiState_.objectDetailsSelectionLabel_,
         .emptySelectionSection = objectDetailsUiState_.objectDetailsEmptySelectionSection_,
         .selectionSection = objectDetailsUiState_.objectSelectionSection_,

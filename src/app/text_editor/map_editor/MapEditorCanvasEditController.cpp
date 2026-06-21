@@ -511,17 +511,17 @@ bool restoreLineVertexOwnerSelectionForContext(const MapEditorCanvasEditContext 
     return true;
 }
 
-quint64 startMapSelectionRestoreGeneration(const MapEditorCanvasEditContext &context)
+quint64 startLineVertexSelectionRestoreGeneration(const MapEditorCanvasEditContext &context)
 {
-    return context.mapSelectionRestoreGeneration != nullptr
-        ? ++(*context.mapSelectionRestoreGeneration)
+    return context.lineVertexSelectionRestoreGeneration != nullptr
+        ? ++(*context.lineVertexSelectionRestoreGeneration)
         : 0;
 }
 
-bool isCurrentMapSelectionRestoreGeneration(const MapEditorCanvasEditContext &context, quint64 restoreGeneration)
+bool isCurrentLineVertexSelectionRestoreGeneration(const MapEditorCanvasEditContext &context, quint64 restoreGeneration)
 {
-    return context.mapSelectionRestoreGeneration == nullptr
-        || *context.mapSelectionRestoreGeneration == restoreGeneration;
+    return context.lineVertexSelectionRestoreGeneration == nullptr
+        || *context.lineVertexSelectionRestoreGeneration == restoreGeneration;
 }
 
 void schedulePointSelectionRecovery(const MapEditorCanvasEditContext &context, int lineNumber)
@@ -530,11 +530,7 @@ void schedulePointSelectionRecovery(const MapEditorCanvasEditContext &context, i
         return;
     }
 
-    const quint64 restoreGeneration = startMapSelectionRestoreGeneration(context);
-    auto attemptRestore = [context, lineNumber, restoreGeneration]() {
-        if (!isCurrentMapSelectionRestoreGeneration(context, restoreGeneration)) {
-            return;
-        }
+    auto attemptRestore = [context, lineNumber]() {
         context.restorePointSelectionLater(lineNumber);
     };
     if (context.callbackContext != nullptr) {
@@ -552,11 +548,7 @@ void scheduleLineAnchorSelectionRecovery(const MapEditorCanvasEditContext &conte
         return;
     }
 
-    const quint64 restoreGeneration = startMapSelectionRestoreGeneration(context);
-    auto attemptRestore = [context, lineNumber, sourceVertexIndex, restoreGeneration]() {
-        if (!isCurrentMapSelectionRestoreGeneration(context, restoreGeneration)) {
-            return;
-        }
+    auto attemptRestore = [context, lineNumber, sourceVertexIndex]() {
         context.restoreLineAnchorSelectionLater(lineNumber, sourceVertexIndex);
     };
     if (context.callbackContext != nullptr) {
@@ -570,9 +562,9 @@ void scheduleLineVertexOwnerSelectionRecovery(const MapEditorCanvasEditContext &
                                               int lineNumber,
                                               int ownerIndex)
 {
-    const quint64 restoreGeneration = startMapSelectionRestoreGeneration(context);
+    const quint64 restoreGeneration = startLineVertexSelectionRestoreGeneration(context);
     auto attemptRestore = [context, lineNumber, ownerIndex, restoreGeneration]() {
-        if (!isCurrentMapSelectionRestoreGeneration(context, restoreGeneration)) {
+        if (!isCurrentLineVertexSelectionRestoreGeneration(context, restoreGeneration)) {
             return;
         }
         restoreLineVertexOwnerSelectionForContext(context, lineNumber, ownerIndex);

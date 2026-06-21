@@ -528,6 +528,15 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
         (*context_.selectedLineSegmentEndVertexIndex) = -1;
         (*context_.selectedObjectKind).clear();
         (*context_.selectedObjectCoordinate).reset();
+        if (context_.sceneRefreshSelectionLineNumber != nullptr) {
+            (*context_.sceneRefreshSelectionLineNumber) = 0;
+        }
+        if (context_.sceneRefreshSelectionVertexIndex != nullptr) {
+            (*context_.sceneRefreshSelectionVertexIndex) = -1;
+        }
+        if (context_.sceneRefreshSelectionGeometryKind != nullptr) {
+            context_.sceneRefreshSelectionGeometryKind->clear();
+        }
         context_.clearInspectorObjectSelection();
         updateGeometrySelectionPresentation();
         context_.updateHelpPanel();
@@ -803,6 +812,15 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
     }
 
     if (selectedCard != nullptr) {
+        if (context_.sceneRefreshSelectionLineNumber != nullptr) {
+            (*context_.sceneRefreshSelectionLineNumber) = selectedSourceLineNumber;
+        }
+        if (context_.sceneRefreshSelectionVertexIndex != nullptr) {
+            (*context_.sceneRefreshSelectionVertexIndex) = -1;
+        }
+        if (context_.sceneRefreshSelectionGeometryKind != nullptr) {
+            (*context_.sceneRefreshSelectionGeometryKind) = QStringLiteral("card");
+        }
         if (selectedSourceLineNumber > 0 && context_.syncInspectorObjectSelectionToLineExpanding) {
             context_.syncInspectorObjectSelectionToLineExpanding(selectedSourceLineNumber);
         }
@@ -826,6 +844,24 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
                                   selectedLineNumber);
     }
 
+    if (context_.sceneRefreshSelectionLineNumber != nullptr) {
+        (*context_.sceneRefreshSelectionLineNumber) = selectedSourceLineNumber;
+    }
+    if (context_.sceneRefreshSelectionVertexIndex != nullptr) {
+        (*context_.sceneRefreshSelectionVertexIndex) = -1;
+    }
+    if (context_.sceneRefreshSelectionGeometryKind != nullptr) {
+        (*context_.sceneRefreshSelectionGeometryKind) = *context_.selectedObjectKind;
+    }
+    if (auto *selectedVertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(primarySelectedItem);
+        selectedVertexItem != nullptr) {
+        if (context_.sceneRefreshSelectionVertexIndex != nullptr) {
+            (*context_.sceneRefreshSelectionVertexIndex) = selectedVertexItem->vertexIndex();
+        }
+        if (context_.sceneRefreshSelectionGeometryKind != nullptr) {
+            (*context_.sceneRefreshSelectionGeometryKind) = selectedVertexItem->geometryKind();
+        }
+    }
     if (selectedSourceLineNumber > 0 && context_.syncInspectorObjectSelectionToLineExpanding) {
         context_.syncInspectorObjectSelectionToLineExpanding(selectedSourceLineNumber);
     }
@@ -980,10 +1016,18 @@ void MapEditorSelectionController::updateGeometrySelectionPresentation()
         && (*context_.selectedObjectKind) == QStringLiteral("line")
         && (*context_.selectedLineSegmentStartVertexIndex) >= 0
         && (*context_.selectedLineSegmentEndVertexIndex) >= 0) {
-        selectedLineControlOwnersByLine[(*context_.selectedObjectLineNumber)].insert(
-            (*context_.selectedLineSegmentStartVertexIndex));
-        selectedLineControlOwnersByLine[(*context_.selectedObjectLineNumber)].insert(
-            (*context_.selectedLineSegmentEndVertexIndex));
+        QSet<int> segmentLineNumbers = selectedLines;
+        if (segmentLineNumbers.contains(*context_.selectedObjectLineNumber)) {
+            segmentLineNumbers = {*context_.selectedObjectLineNumber};
+        } else if (segmentLineNumbers.isEmpty()) {
+            segmentLineNumbers.insert(*context_.selectedObjectLineNumber);
+        }
+        for (int lineNumber : std::as_const(segmentLineNumbers)) {
+            selectedLineControlOwnersByLine[lineNumber].insert(
+                (*context_.selectedLineSegmentStartVertexIndex));
+            selectedLineControlOwnersByLine[lineNumber].insert(
+                (*context_.selectedLineSegmentEndVertexIndex));
+        }
     }
     if (context_.textEditor != nullptr) {
         selectedLines.unite(selectedAreaBorderLineNumbers(context_.textEditor->text(), selectedLines));

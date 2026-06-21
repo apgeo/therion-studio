@@ -4,7 +4,6 @@
 #include <QRectF>
 #include <QSet>
 #include <QString>
-#include <QtGlobal>
 #include <QVector>
 
 #include <functional>
@@ -42,7 +41,6 @@ struct MapEditorObjectDetailsContext
     QSet<int> *hiddenInspectorObjectLines = nullptr;
     int *lastInspectorClickedObjectLineNumber = nullptr;
     QString *toolbarStatusNote = nullptr;
-    quint64 *mapSelectionRestoreGeneration = nullptr;
 
     QLabel *selectionLabel = nullptr;
     QWidget *emptySelectionSection = nullptr;

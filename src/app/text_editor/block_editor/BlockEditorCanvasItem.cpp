@@ -4,6 +4,7 @@
 
 #include <QApplication>
 #include <QFile>
+#include <QGraphicsScene>
 #include <QGraphicsSceneMouseEvent>
 #include <QHash>
 #include <QPainter>
@@ -110,7 +111,7 @@ BlockCanvasItem::BlockCanvasItem(const QString &kind,
     , isContainerOpen_(isContainerOpen)
 {
     setFlag(QGraphicsItem::ItemIsSelectable, true);
-    setFlag(QGraphicsItem::ItemIsMovable, movable_);
+    setFlag(QGraphicsItem::ItemIsMovable, false);
     setCursor(movable_ ? Qt::OpenHandCursor : Qt::ArrowCursor);
     setToolTip(inlineComment_.trimmed().isEmpty() ? QString() : inlineComment_.trimmed());
 }
@@ -247,6 +248,12 @@ void BlockCanvasItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
         return;
     }
     QGraphicsObject::mousePressEvent(event);
+    setSelected(true);
+    setFocus();
+    grabMouse();
+    if (event != nullptr) {
+        event->accept();
+    }
 }
 
 void BlockCanvasItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
@@ -261,7 +268,19 @@ void BlockCanvasItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
             setCursor(Qt::ClosedHandCursor);
         }
     }
-    QGraphicsObject::mouseMoveEvent(event);
+    if (dragging_ && event != nullptr) {
+        const QPointF sceneDelta = event->scenePos() - dragStartScenePos_;
+        if (QGraphicsItem *parent = parentItem(); parent != nullptr) {
+            const QPointF parentDelta = parent->mapFromScene(dragStartScenePos_ + sceneDelta)
+                - parent->mapFromScene(dragStartScenePos_);
+            setPos(dragStartItemPos_ + parentDelta);
+        } else {
+            setPos(dragStartItemPos_ + sceneDelta);
+        }
+        event->accept();
+    } else {
+        QGraphicsObject::mouseMoveEvent(event);
+    }
     if (dragging_ && onMovePreview) {
         const QPointF previewScenePos = event != nullptr
             ? event->scenePos()
@@ -272,7 +291,14 @@ void BlockCanvasItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 
 void BlockCanvasItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
-    QGraphicsObject::mouseReleaseEvent(event);
+    if (!dragging_) {
+        QGraphicsObject::mouseReleaseEvent(event);
+    } else if (event != nullptr) {
+        event->accept();
+    }
+    if (scene() != nullptr && scene()->mouseGrabberItem() == this) {
+        ungrabMouse();
+    }
     setCursor(movable_ ? Qt::OpenHandCursor : Qt::ArrowCursor);
     if (!movable_) {
         if (onMovePreview) {
@@ -281,7 +307,12 @@ void BlockCanvasItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
         dragging_ = false;
         return;
     }
-    const bool moved = (pos() - dragStartItemPos_).manhattanLength() >= 2.0;
+    const QPointF releaseScenePos = event != nullptr
+        ? event->scenePos()
+        : mapToScene(boundingRect().center());
+    const bool moved = dragging_
+        || (pos() - dragStartItemPos_).manhattanLength() >= 2.0
+        || (releaseScenePos - dragStartScenePos_).manhattanLength() >= 2.0;
     if (!moved) {
         if (onMovePreview) {
             onMovePreview(lineNumber_, QPointF(), false);
@@ -290,9 +321,7 @@ void BlockCanvasItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
         return;
     }
 
-    const QPointF dropScenePos = event != nullptr
-        ? event->scenePos()
-        : mapToScene(boundingRect().center());
+    const QPointF dropScenePos = releaseScenePos;
     setPos(dragStartItemPos_);
     dragging_ = false;
     if (onMoveRequest) {

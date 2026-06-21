@@ -12,11 +12,13 @@
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QSignalBlocker>
 #include <QTextBrowser>
 #include <QStackedWidget>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 
+#include <optional>
 #include <utility>
 
 #include "../../../core/TherionCommandSyntax.h"
@@ -103,6 +105,22 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
     }
 
     *context_.detailsPopulating = true;
+    std::optional<QSignalBlocker> idEditSignalBlocker;
+    std::optional<QSignalBlocker> additionalPositionalSignalBlocker;
+    std::optional<QSignalBlocker> commentEditSignalBlocker;
+    std::optional<QSignalBlocker> optionsTableSignalBlocker;
+    if (context_.idEdit != nullptr) {
+        idEditSignalBlocker.emplace(context_.idEdit);
+    }
+    if (context_.additionalPositionalEdit != nullptr) {
+        additionalPositionalSignalBlocker.emplace(context_.additionalPositionalEdit);
+    }
+    if (context_.commentEdit != nullptr) {
+        commentEditSignalBlocker.emplace(context_.commentEdit);
+    }
+    if (context_.optionsTable != nullptr) {
+        optionsTableSignalBlocker.emplace(context_.optionsTable);
+    }
 
     const bool supported = context_.supportsDetailsPaneForKind ? context_.supportsDetailsPaneForKind(normalizedKind) : false;
     const bool hasCatalogOptions = !(*context_.commandMetadata).commandOptionTokens.value(normalizedKind).isEmpty();

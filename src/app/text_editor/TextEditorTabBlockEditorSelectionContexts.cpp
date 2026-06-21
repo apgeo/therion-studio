@@ -230,6 +230,8 @@ BlockEditorCanvasSelectionContext TextEditorTab::blockEditorCanvasSelectionConte
     context.tearingDown = &tearingDown_;
     context.scene = blockCanvasScene_;
     context.view = blockCanvasView_;
+    context.selectedLineNumber = &blockDetailsSelectedLineNumber_;
+    context.selectedKind = &blockDetailsSelectedKind_;
     context.clearDetailsPane = [this]() {
         clearBlockDetailsPane();
     };

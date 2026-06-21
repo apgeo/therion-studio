@@ -431,6 +431,7 @@ private:
     bool tearingDown_ = false;
     bool blockDetailsPopulating_ = false;
     bool blockDetailsOptionArgsSyncing_ = false;
+    bool blockDetailsSelectionRefreshPending_ = false;
     BlockDetailsMode blockDetailsMode_ = BlockDetailsMode::None;
     int blockDetailsSelectedLineNumber_ = 0;
     QString blockDetailsSelectedKind_;

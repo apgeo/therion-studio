@@ -209,7 +209,7 @@ bool isFullLineComment(const TherionParsedLine &parsedLine)
         return false;
     }
     const QString beforeComment = parsedLine.rawText.left(parsedLine.commentStart).trimmed();
-    return beforeComment.isEmpty() && !parsedLine.commentText.trimmed().isEmpty();
+    return beforeComment.isEmpty();
 }
 
 QString normalizedCompletionContextToken(const QString &token)

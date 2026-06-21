@@ -37,6 +37,8 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QTextBrowser>
+#include <QTimer>
+#include <QTransform>
 #include <QVBoxLayout>
 
 #include <utility>
@@ -157,6 +159,29 @@ void TextEditorTab::buildBlockEditorPanel()
         } else {
             tabGuard->clearBlockMovePreview();
         }
+    };
+    typedCanvasView->blockLineAtScenePosition = [tabGuard](const QPointF &scenePos) {
+        if (tabGuard.isNull() || tabGuard->tearingDown_ || tabGuard->blockCanvasScene_ == nullptr) {
+            return 0;
+        }
+        return tabGuard->blockCanvasItemLineNumber(
+            tabGuard->resolveBlockCanvasItem(tabGuard->blockCanvasScene_->itemAt(scenePos, QTransform())));
+    };
+    typedCanvasView->onBlockMovePreview = [tabGuard](int lineNumber, const QPointF &scenePos, bool active) {
+        if (tabGuard.isNull() || tabGuard->tearingDown_) {
+            return;
+        }
+        if (active) {
+            tabGuard->updateBlockMovePreview(lineNumber, scenePos);
+        } else {
+            tabGuard->clearBlockMovePreview();
+        }
+    };
+    typedCanvasView->onBlockMoveRequest = [tabGuard](int lineNumber, const QPointF &scenePos) {
+        if (tabGuard.isNull() || tabGuard->tearingDown_) {
+            return;
+        }
+        tabGuard->handleBlockMoveRequest(lineNumber, scenePos);
     };
     blockCanvasView_ = typedCanvasView;
 
@@ -354,14 +379,21 @@ void TextEditorTab::buildBlockEditorPanel()
     blocksLayout->addWidget(blockEditorSplitter_, 1);
 
     connect(blockCanvasScene_, &QGraphicsScene::selectionChanged, this, [this]() {
-        if (tearingDown_) {
+        if (tearingDown_ || blockDetailsSelectionRefreshPending_) {
             return;
         }
-        refreshBlockDetailsSelectionFromScene();
-        if (blockToolboxScopeCombo_ != nullptr
-            && blockToolboxScopeCombo_->currentData().toString() == QStringLiteral("__auto__")) {
-            populateBlockToolbox();
-        }
+        blockDetailsSelectionRefreshPending_ = true;
+        QTimer::singleShot(0, this, [this]() {
+            blockDetailsSelectionRefreshPending_ = false;
+            if (tearingDown_) {
+                return;
+            }
+            refreshBlockDetailsSelectionFromScene();
+            if (blockToolboxScopeCombo_ != nullptr
+                && blockToolboxScopeCombo_->currentData().toString() == QStringLiteral("__auto__")) {
+                populateBlockToolbox();
+            }
+        });
     });
     connect(blockToolboxList_, &QListWidget::currentItemChanged, this, [this](QListWidgetItem *current, QListWidgetItem *) {
         if (tearingDown_) {
@@ -377,6 +409,9 @@ void TextEditorTab::buildBlockEditorPanel()
         showBlockDetailsForToolboxCommand(commandToken);
     });
     connect(blockDetailsOptionsTable_, &QTableWidget::currentCellChanged, this, [this](int, int, int, int) {
+        if (blockDetailsPopulating_) {
+            return;
+        }
         if (blockDetailsRemoveOptionButton_ != nullptr && blockDetailsOptionsTable_ != nullptr) {
             const bool canRemove = blockDetailsOptionsTable_->isVisible()
                 && blockDetailsOptionsTable_->isEnabled()
@@ -397,9 +432,15 @@ void TextEditorTab::buildBlockEditorPanel()
         }
     });
     connect(blockDetailsIdEdit_, &QLineEdit::selectionChanged, this, [this]() {
+        if (blockDetailsPopulating_) {
+            return;
+        }
         updateBlockDetailsHelpForCurrentFocus();
     });
     connect(blockDetailsIdEdit_, &QLineEdit::textChanged, this, [this](const QString &) {
+        if (blockDetailsPopulating_) {
+            return;
+        }
         updateBlockDetailsHelpForCurrentFocus();
         refreshBlockDetailsApplyState();
     });
@@ -407,9 +448,15 @@ void TextEditorTab::buildBlockEditorPanel()
         applyBlockDetailsChanges();
     });
     connect(blockDetailsAdditionalPositionalEdit_, &QLineEdit::selectionChanged, this, [this]() {
+        if (blockDetailsPopulating_) {
+            return;
+        }
         updateBlockDetailsHelpForCurrentFocus();
     });
     connect(blockDetailsAdditionalPositionalEdit_, &QLineEdit::textChanged, this, [this](const QString &) {
+        if (blockDetailsPopulating_) {
+            return;
+        }
         updateBlockDetailsHelpForCurrentFocus();
         refreshBlockDetailsApplyState();
     });
@@ -418,6 +465,9 @@ void TextEditorTab::buildBlockEditorPanel()
     });
     if (auto *readingsTagEditor = blockEditorTokenTagEditor(blockDetailsReadingsTagEditor_); readingsTagEditor != nullptr) {
         readingsTagEditor->onTokensChanged = [this, readingsTagEditor]() {
+            if (blockDetailsPopulating_) {
+                return;
+            }
             if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
                 blockDetailsAdditionalPositionalEdit_->setText(readingsTagEditor->tokens().join(QLatin1Char(' ')));
             }
@@ -426,13 +476,22 @@ void TextEditorTab::buildBlockEditorPanel()
             applyBlockDetailsChanges();
         };
         readingsTagEditor->onFocusContextChanged = [this]() {
+            if (blockDetailsPopulating_) {
+                return;
+            }
             updateBlockDetailsHelpForCurrentFocus();
         };
     }
     connect(blockDetailsCommentEdit_, &QLineEdit::selectionChanged, this, [this]() {
+        if (blockDetailsPopulating_) {
+            return;
+        }
         updateBlockDetailsHelpForCurrentFocus();
     });
     connect(blockDetailsCommentEdit_, &QLineEdit::textChanged, this, [this](const QString &) {
+        if (blockDetailsPopulating_) {
+            return;
+        }
         updateBlockDetailsHelpForCurrentFocus();
         refreshBlockDetailsApplyState();
     });

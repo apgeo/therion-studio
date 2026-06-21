@@ -75,6 +75,10 @@ Active planning only. Completed history belongs in archive files. Stable archite
   outlines, smaller blue control-point squares, and a red focused-vertex halo.
 - Keep map selection restoration generation-keyed so stale delayed restores cannot reselect old or nearby point/line
   scene items after source-driven scene refreshes.
+- Keep block-editor canvas selection refresh coalesced so transient empty selection states do not flash the Selection
+  inspector or interrupt block item dragging.
+- Render empty full-line comment commands in the block canvas and keep block-card reordering independent of
+  platform-specific `QGraphicsItem` implicit move behavior.
 - Keep empty scrap object cleanup explicit through validator warnings and `Apply Fix`, not silent source mutation.
 - Keep deletion-style validation fixes visibly labeled as removals and preview the full source block being removed.
 - Keep inline `type:subtype` map object rendering aligned with inspector preview and `-subtype` rendering.

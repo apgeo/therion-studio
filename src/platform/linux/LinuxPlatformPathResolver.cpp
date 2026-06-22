@@ -4,8 +4,8 @@ namespace TherionStudio::Platform
 {
 QStringList therionExecutableCandidates()
 {
-    // QStandardPaths::findExecutable("therion") in TherionExecutableDetector already covers
-    // PATH-based installs (apt/snap packages). These cover non-standard locations.
+    // QStandardPaths::findExecutable("therion") in TherionExecutableDetector already covers PATH-based installs.
+    // These candidates cover common absolute locations (including standard prefixes) as a fallback.
     return {
         QStringLiteral("/usr/bin/therion"),
         QStringLiteral("/usr/local/bin/therion"),

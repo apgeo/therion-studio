@@ -21,8 +21,7 @@ QString TherionExecutableDetector::detect()
         if (candidate.isEmpty()) {
             continue;
         }
-        const QFileInfo fi(candidate);
-        if (fi.exists() && fi.isExecutable()) {
+        if (fi.exists() && fi.isFile() && fi.isExecutable()) {
             return fi.absoluteFilePath();
         }
     }

@@ -425,7 +425,7 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
         addWelcomeTab();
     }
 
-    // First-run: silently auto-detect Therion executable if the setting is not yet configured.
+    // If the Therion executable is not configured yet, try to auto-detect it silently.
     // Runs after session restore so it never overwrites a path the user has already set.
     if (sessionStore_ != nullptr && sessionStore_->therionExecutablePath().trimmed().isEmpty()) {
         const QString detected = TherionStudio::TherionExecutableDetector::detect();

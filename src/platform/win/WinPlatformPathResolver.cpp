@@ -21,10 +21,12 @@ QString therionExeFromRegistryKey(const QString &keyPath)
         }
         // Value may be a directory or a direct path to the exe
         const QString asExe = QDir(v).absoluteFilePath(QStringLiteral("therion.exe"));
-        if (QFileInfo(asExe).isExecutable()) {
+        const QFileInfo asExeInfo(asExe);
+        if (asExeInfo.exists() && asExeInfo.isFile() && asExeInfo.isExecutable()) {
             return asExe;
         }
-        if (QFileInfo(v).isExecutable()) {
+        const QFileInfo vInfo(v);
+        if (vInfo.exists() && vInfo.isFile() && vInfo.isExecutable()) {
             return v;
         }
     }
@@ -39,7 +41,8 @@ QString therionExeFromUninstallKey(const QString &keyPath)
         return {};
     }
     const QString exe = QDir(dir).absoluteFilePath(QStringLiteral("therion.exe"));
-    return QFileInfo(exe).isExecutable() ? exe : QString();
+    const QFileInfo exeInfo(exe);
+    return (exeInfo.exists() && exeInfo.isFile() && exeInfo.isExecutable()) ? exeInfo.absoluteFilePath() : QString();
 }
 
 QString therionExeFromRegistry()
